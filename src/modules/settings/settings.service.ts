@@ -180,7 +180,7 @@ export class SettingsService {
   }
 
   private mapTranslation(
-    resource: QuranTranslation | null,
+    resource: Omit<QuranTranslation, 'metadata'> | null,
   ): CatalogResourceDto | null {
     if (!resource) {
       return null;
@@ -194,7 +194,9 @@ export class SettingsService {
     };
   }
 
-  private mapTafsir(resource: QuranTafsir | null): CatalogResourceDto | null {
+  private mapTafsir(
+    resource: Omit<QuranTafsir, 'metadata'> | null,
+  ): CatalogResourceDto | null {
     if (!resource) {
       return null;
     }
@@ -207,7 +209,9 @@ export class SettingsService {
     };
   }
 
-  private mapReciter(resource: QuranReciter | null): CatalogResourceDto | null {
+  private mapReciter(
+    resource: Omit<QuranReciter, 'metadata'> | null,
+  ): CatalogResourceDto | null {
     if (!resource) {
       return null;
     }

@@ -1,31 +1,66 @@
-import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Response } from 'express';
+import {
+  HealthCheck,
+  HealthCheckError,
+  HealthCheckService,
+  HealthIndicatorResult,
+} from '@nestjs/terminus';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator';
 import { HealthService } from './health.service';
 
 @ApiTags('Health')
+@SkipThrottle()
 @Controller({
   path: 'health',
   version: '1',
 })
 export class HealthController {
-  constructor(private readonly healthService: HealthService) {}
+  constructor(
+    private readonly health: HealthCheckService,
+    private readonly healthService: HealthService,
+  ) {}
+
+  @Public()
+  @Get('live')
+  @HealthCheck()
+  @ApiOperation({ summary: 'Liveness probe (process up)' })
+  @ApiOkResponse({ description: 'Process is alive' })
+  live() {
+    return this.health.check([]);
+  }
+
+  @Public()
+  @Get('ready')
+  @HealthCheck()
+  @ApiOperation({ summary: 'Readiness probe (database + Redis)' })
+  @ApiOkResponse({ description: 'Dependencies are ready' })
+  ready() {
+    return this.health.check([() => this.dependencies()]);
+  }
 
   @Public()
   @Get()
-  @ApiOperation({ summary: 'Application health check' })
+  @HealthCheck()
+  @ApiOperation({ summary: 'Application health check (alias of ready)' })
   @ApiOkResponse({ description: 'Service dependencies are healthy' })
-  async check(@Res() response: Response): Promise<void> {
-    const result = await this.healthService.check();
-    const statusCode =
-      result.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
+  check() {
+    return this.ready();
+  }
 
-    response.status(statusCode).json({
-      success: result.status === 'ok',
-      data: result,
-      timestamp: new Date().toISOString(),
-      path: response.req.url ?? '/api/v1/health',
-    });
+  private async dependencies(): Promise<HealthIndicatorResult> {
+    const result = await this.healthService.check();
+    const indicator = {
+      database: result.details.database,
+      redis: result.details.redis,
+      application: result.details.application,
+    } as HealthIndicatorResult;
+
+    if (result.status !== 'ok') {
+      throw new HealthCheckError('Service dependencies unhealthy', indicator);
+    }
+
+    return indicator;
   }
 }

@@ -143,37 +143,43 @@ export class GoalsService {
     const activeSeconds = readingDay?.activeSeconds ?? 0;
     const now = new Date();
 
-    const progressItems: GoalProgressItemDto[] = [];
-    for (const goal of goals) {
-      const actualValue = this.actualValueForMetric(
-        goal.metric,
-        versesRead,
-        activeSeconds,
-      );
-      const completed = actualValue >= goal.targetValue;
-      const existing = await this.goalsRepository.findGoalResult(
-        goal.id,
-        localDate,
-      );
-      const completedAt = completed ? (existing?.completedAt ?? now) : null;
+    const existingResults = await this.goalsRepository.findGoalResults(
+      goals.map((goal) => goal.id),
+      localDate,
+    );
+    const existingByGoalId = new Map(
+      existingResults.map((result) => [result.dailyGoalId, result]),
+    );
 
-      const result = await this.goalsRepository.upsertGoalResult({
-        dailyGoalId: goal.id,
-        localDate,
-        actualValue,
-        completedAt,
-      });
+    const progressItems: GoalProgressItemDto[] = await Promise.all(
+      goals.map(async (goal) => {
+        const actualValue = this.actualValueForMetric(
+          goal.metric,
+          versesRead,
+          activeSeconds,
+        );
+        const completed = actualValue >= goal.targetValue;
+        const existing = existingByGoalId.get(goal.id);
+        const completedAt = completed ? (existing?.completedAt ?? now) : null;
 
-      progressItems.push({
-        goalId: goal.id,
-        metric: goal.metric,
-        targetValue: goal.targetValue,
-        actualValue: result.actualValue,
-        percent: this.toPercent(result.actualValue, goal.targetValue),
-        completed,
-        completedAt: result.completedAt,
-      });
-    }
+        const result = await this.goalsRepository.upsertGoalResult({
+          dailyGoalId: goal.id,
+          localDate,
+          actualValue,
+          completedAt,
+        });
+
+        return {
+          goalId: goal.id,
+          metric: goal.metric,
+          targetValue: goal.targetValue,
+          actualValue: result.actualValue,
+          percent: this.toPercent(result.actualValue, goal.targetValue),
+          completed,
+          completedAt: result.completedAt,
+        };
+      }),
+    );
 
     return {
       localDate: localDateIso,

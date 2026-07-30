@@ -1,6 +1,8 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import * as http from 'http';
+import * as https from 'https';
 import { LoggerModule } from 'nestjs-pino';
 import { CONFIG_KEYS, TELEGRAM_API } from '../../common/constants';
 import { TelegramConfig } from '../../config/configuration';
@@ -26,6 +28,14 @@ import { TelegramWebhookBootstrapService } from './telegram-webhook.bootstrap';
         return {
           timeout: config.timeoutMs,
           maxRedirects: 0,
+          httpAgent: new http.Agent({
+            keepAlive: true,
+            maxSockets: config.httpMaxSockets,
+          }),
+          httpsAgent: new https.Agent({
+            keepAlive: true,
+            maxSockets: config.httpMaxSockets,
+          }),
         };
       },
     }),

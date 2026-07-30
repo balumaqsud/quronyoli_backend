@@ -13,6 +13,7 @@ const config: AnalyticsConfig = {
   maxAttempts: 5,
   backoffDelayMs: 5000,
   maxPropertiesBytes: 4096,
+  statsCacheTtlSeconds: 30,
 };
 
 describe('analytics.validation', () => {

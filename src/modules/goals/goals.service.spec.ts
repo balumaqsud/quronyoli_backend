@@ -20,6 +20,7 @@ describe('GoalsService', () => {
       | 'findReadingDay'
       | 'upsertGoalResult'
       | 'findGoalResult'
+      | 'findGoalResults'
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
@@ -77,6 +78,7 @@ describe('GoalsService', () => {
             }),
         ),
       findGoalResult: jest.fn().mockResolvedValue(null),
+      findGoalResults: jest.fn().mockResolvedValue([]),
     };
     usersService = {
       getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),

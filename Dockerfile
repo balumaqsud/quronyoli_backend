@@ -22,7 +22,7 @@ FROM node:${NODE_VERSION}-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
 
-RUN apk add --no-cache libc6-compat openssl \
+RUN apk add --no-cache libc6-compat openssl wget \
   && addgroup -S nestjs \
   && adduser -S nestjs -G nestjs
 
@@ -38,6 +38,6 @@ USER nestjs
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/api/v1/health || exit 1
+  CMD wget -qO- http://127.0.0.1:3000/api/v1/health/live || exit 1
 
 CMD ["node", "dist/main.js"]

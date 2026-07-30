@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CONFIG_KEYS } from '../../common/constants';
+import { RedisService } from '../../infrastructure/cache/redis.service';
 import { UsersService } from '../users/users.service';
 import { AnalyticsRepository } from './analytics.repository';
 import { AnalyticsService } from './analytics.service';
@@ -21,6 +22,7 @@ describe('AnalyticsService', () => {
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
+  let redisService: jest.Mocked<Pick<RedisService, 'get' | 'set'>>;
 
   beforeEach(async () => {
     repository = {
@@ -42,12 +44,17 @@ describe('AnalyticsService', () => {
     usersService = {
       getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
     };
+    redisService = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AnalyticsService,
         { provide: AnalyticsRepository, useValue: repository },
         { provide: UsersService, useValue: usersService },
+        { provide: RedisService, useValue: redisService },
         {
           provide: ConfigService,
           useValue: {
@@ -64,6 +71,7 @@ describe('AnalyticsService', () => {
                   maxAttempts: 5,
                   backoffDelayMs: 5000,
                   maxPropertiesBytes: 4096,
+                  statsCacheTtlSeconds: 30,
                 };
               }
               throw new Error(`Unexpected key ${key}`);

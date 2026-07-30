@@ -14,6 +14,15 @@ export const envValidationSchema = Joi.object({
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['postgres', 'postgresql'] })
     .required(),
+  DATABASE_POOL_MAX: Joi.number().integer().min(1).max(100).default(10),
+  DATABASE_POOL_IDLE_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(1000)
+    .default(10000),
+  DATABASE_POOL_CONNECTION_TIMEOUT_MS: Joi.number()
+    .integer()
+    .min(1000)
+    .default(5000),
 
   REDIS_HOST: Joi.string().hostname().required(),
   REDIS_PORT: Joi.number().port().default(6379),
@@ -49,6 +58,7 @@ export const envValidationSchema = Joi.object({
     .uri({ scheme: ['https'] })
     .required(),
   TELEGRAM_MINI_APP_SHORT_NAME: Joi.string().min(1).default('app'),
+  TELEGRAM_HTTP_MAX_SOCKETS: Joi.number().integer().min(1).max(500).default(50),
 
   NOTIFICATIONS_QUEUE_NAME: Joi.string().default('daily-reminders'),
   NOTIFICATIONS_QUEUE_CONCURRENCY: Joi.number().integer().min(1).default(5),
@@ -70,6 +80,23 @@ export const envValidationSchema = Joi.object({
   ANALYTICS_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
   ANALYTICS_BACKOFF_DELAY_MS: Joi.number().integer().min(100).default(5000),
   ANALYTICS_MAX_PROPERTIES_BYTES: Joi.number().integer().min(256).default(4096),
+  ANALYTICS_STATS_CACHE_TTL_SECONDS: Joi.number().integer().min(0).default(30),
+
+  READING_STREAK_LOOKBACK_DAYS: Joi.number()
+    .integer()
+    .min(7)
+    .max(3660)
+    .default(400),
+
+  HTTP_REQUEST_TIMEOUT_MS: Joi.number().integer().min(1000).default(30000),
+  HTTP_BODY_LIMIT: Joi.string().default('1mb'),
+  TRUST_PROXY: Joi.boolean().truthy('true').falsy('false').default(false),
+  SLOW_REQUEST_MS: Joi.number().integer().min(100).default(1000),
+  SHUTDOWN_DRAIN_MS: Joi.number().integer().min(0).default(5000),
+
+  THROTTLE_TTL_MS: Joi.number().integer().min(1000).default(60000),
+  THROTTLE_LIMIT: Joi.number().integer().min(1).default(120),
+  THROTTLE_AUTH_LIMIT: Joi.number().integer().min(1).default(20),
 
   AUTH_COOKIE_NAME: Joi.string().default('refresh_token'),
   AUTH_COOKIE_PATH: Joi.string().default('/api/v1/auth'),
@@ -98,6 +125,7 @@ export const envValidationSchema = Joi.object({
   QF_TOKEN_SKEW_SECONDS: Joi.number().integer().min(5).default(30),
   QF_RATE_LIMIT_MAX: Joi.number().integer().min(1).default(60),
   QF_RATE_LIMIT_WINDOW_SECONDS: Joi.number().integer().min(1).default(60),
+  QF_HTTP_MAX_SOCKETS: Joi.number().integer().min(1).max(500).default(50),
   QF_CACHE_TTL_CHAPTERS_SECONDS: Joi.number().integer().min(1).default(86400),
   QF_CACHE_TTL_VERSES_SECONDS: Joi.number().integer().min(1).default(3600),
   QF_CACHE_TTL_RESOURCES_SECONDS: Joi.number().integer().min(1).default(86400),
@@ -108,6 +136,6 @@ export const envValidationSchema = Joi.object({
     .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent')
     .default('info'),
 
-  SWAGGER_ENABLED: Joi.boolean().truthy('true').falsy('false').default(true),
+  SWAGGER_ENABLED: Joi.boolean().truthy('true').falsy('false').optional(),
   SWAGGER_PATH: Joi.string().default('docs'),
 });

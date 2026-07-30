@@ -16,6 +16,7 @@ import {
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { HttpCache } from '../../common/decorators/http-cache.decorator';
 import { AuthenticatedUser } from '../../infrastructure/auth/interfaces/jwt-payload.interface';
 import { ReadingService } from '../reading/reading.service';
 import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
@@ -46,6 +47,7 @@ export class QuranController {
   ) {}
 
   @Get('surahs')
+  @HttpCache('private-short')
   @ApiOperation({ summary: 'List surahs/chapters' })
   @ApiOkResponse({ description: 'Surah list from Quran.Foundation' })
   getSurahs(@Query() query: LanguageQueryDto): Promise<unknown> {
@@ -53,6 +55,7 @@ export class QuranController {
   }
 
   @Get('surahs/:id')
+  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get a surah by ID' })
   @ApiParam({ name: 'id', example: 1 })
   getSurah(
@@ -63,6 +66,7 @@ export class QuranController {
   }
 
   @Get('surahs/:id/info')
+  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get surah info' })
   getSurahInfo(
     @Param('id', ParseIntPipe) id: number,
@@ -163,12 +167,14 @@ export class QuranController {
   }
 
   @Get('translations')
+  @HttpCache('private-short')
   @ApiOperation({ summary: 'List translation resources' })
   getTranslations(@Query() query: LanguageQueryDto): Promise<unknown> {
     return this.quranService.getTranslations(query);
   }
 
   @Get('translations/:translationId/info')
+  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get translation resource info' })
   getTranslationInfo(
     @Param('translationId', ParseIntPipe) translationId: number,
@@ -216,6 +222,7 @@ export class QuranController {
   }
 
   @Get('tafsirs')
+  @HttpCache('private-short')
   @ApiOperation({ summary: 'List tafsir resources' })
   getTafsirs(@Query() query: LanguageQueryDto): Promise<unknown> {
     return this.quranService.getTafsirs(query);

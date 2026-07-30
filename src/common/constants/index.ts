@@ -6,6 +6,9 @@ export const CONFIG_KEYS = {
   TELEGRAM: 'telegram',
   NOTIFICATIONS: 'notifications',
   ANALYTICS: 'analytics',
+  READING: 'reading',
+  HTTP: 'http',
+  THROTTLE: 'throttle',
   AUTH_COOKIE: 'authCookie',
   QURAN_FOUNDATION: 'quranFoundation',
 } as const;

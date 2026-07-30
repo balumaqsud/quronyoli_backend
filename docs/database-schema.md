@@ -121,7 +121,8 @@ Supports optional `wordNumber`, `audioOffsetMs`, `label`, `note`, `color`.
 **Cascade:** `ON DELETE CASCADE`
 **Partial unique (migration):** `(user_id, chapter_number, verse_number) WHERE deleted_at IS NULL`
 **Indexes:**
-- `(user_id, created_at DESC, id DESC)` active list keyset
+- `(user_id, created_at DESC, id DESC) WHERE deleted_at IS NULL` active list keyset
+- `(user_id, created_at DESC, id DESC)` general keyset
 - `(user_id, chapter_number, verse_number)` location lookup
 - `(user_id, color)` exact color filter
 - `(user_id, deleted_at DESC, id DESC)` soft-delete / trash
@@ -166,7 +167,7 @@ Unique per-ayah progress for completion percentage and recently-read lists.
 **FK:** `reading_verse_progress.user_id → users.id`
 **Cascade:** `ON DELETE CASCADE`
 **Unique:** `(user_id, chapter_number, verse_number)`
-**Indexes:** `(user_id, last_read_at DESC, chapter_number, verse_number)`, `(user_id, chapter_number)`
+**Indexes:** `(user_id, last_read_at DESC, id DESC)`, `(user_id, chapter_number)`
 
 Stores `firstReadAt`, `lastReadAt`, and `readCount` only — never Quran text.
 
@@ -177,7 +178,7 @@ Daily aggregate for streaks/dashboards.
 **FK:** `reading_days.user_id → users.id`
 **Cascade:** `ON DELETE CASCADE`
 **Unique:** `(user_id, local_date)`
-**Index:** `(user_id, local_date DESC)`
+**Indexes:** `(user_id, local_date DESC)`, partial `(user_id, local_date DESC) WHERE verses_read > 0`
 
 `ReadingAyahHistory` is the source of truth for every ayah open; `ReadingVerseProgress` and `ReadingDay` are query-optimized rollups. `ReadingHistory` remains available for future session-based sync.
 

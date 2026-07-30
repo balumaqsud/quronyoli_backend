@@ -16,6 +16,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator';
 import { TELEGRAM_WEBHOOK_SECRET_HEADER } from '../../common/constants';
 import { parseVerseKey } from '../../common/quran/ayah-coordinate';
@@ -39,6 +40,7 @@ export class TelegramController {
   ) {}
 
   @Public()
+  @SkipThrottle()
   @Post('webhook')
   @HttpCode(HttpStatus.OK)
   @UseGuards(TelegramWebhookGuard)

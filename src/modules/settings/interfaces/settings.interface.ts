@@ -10,9 +10,9 @@ import { UpdateSettingsDto } from '../dto/update-settings.dto';
 export const QURAN_FOUNDATION_PROVIDER = 'quran.foundation';
 
 export type SettingsWithCatalog = UserSettings & {
-  defaultTranslation: QuranTranslation | null;
-  defaultTafsir: QuranTafsir | null;
-  defaultReciter: QuranReciter | null;
+  defaultTranslation: Omit<QuranTranslation, 'metadata'> | null;
+  defaultTafsir: Omit<QuranTafsir, 'metadata'> | null;
+  defaultReciter: Omit<QuranReciter, 'metadata'> | null;
 };
 
 export interface ResolvedCatalogIds {

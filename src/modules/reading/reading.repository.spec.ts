@@ -33,7 +33,7 @@ describe('ReadingRepository recordAyahOpen goal sync', () => {
         findMany: jest.fn().mockResolvedValue([goal]),
       },
       dailyGoalResult: {
-        findUnique: jest.fn().mockResolvedValue(null),
+        findMany: jest.fn().mockResolvedValue([]),
         upsert: upsertResult,
       },
     };

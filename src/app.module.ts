@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
@@ -8,10 +9,15 @@ import configuration, { AppConfig } from './config/configuration';
 import { envValidationSchema } from './config/env.validation';
 import { CONFIG_KEYS, REQUEST_ID_HEADER } from './common/constants';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { HttpCacheInterceptor } from './common/interceptors/http-cache.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { AuthInfrastructureModule } from './infrastructure/auth/auth.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { RedisModule } from './infrastructure/cache/redis.module';
+import { QueueShutdownService } from './infrastructure/queue/queue-shutdown.service';
+import { AppThrottlerGuard } from './infrastructure/throttle/app-throttler.guard';
+import { ThrottlerConfigService } from './infrastructure/throttle/throttler-config.service';
 import { GoalsModule } from './modules/goals/goals.module';
 import { HealthModule } from './modules/health/health.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
@@ -88,6 +94,11 @@ import { AuthModule } from './modules/auth/auth.module';
         };
       },
     }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useClass: ThrottlerConfigService,
+    }),
     DatabaseModule,
     RedisModule,
     AuthInfrastructureModule,
@@ -105,9 +116,22 @@ import { AuthModule } from './modules/auth/auth.module';
     AnalyticsModule,
   ],
   providers: [
+    QueueShutdownService,
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: AppThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: TimeoutInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpCacheInterceptor,
     },
     {
       provide: APP_INTERCEPTOR,

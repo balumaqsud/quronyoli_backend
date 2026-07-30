@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CONFIG_KEYS } from '../../common/constants';
 import { AnalyticsConfig } from '../../config/configuration';
+import { RedisService } from '../../infrastructure/cache/redis.service';
 import { UsersService } from '../users/users.service';
 import { DEFAULT_READING_TIMEZONE } from '../reading/constants/quran-coordinates';
 import { toDateOnly } from '../reading/utils/reading-date.utils';
@@ -24,6 +25,7 @@ export class AnalyticsService {
     private readonly analyticsRepository: AnalyticsRepository,
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
+    private readonly redisService: RedisService,
   ) {
     this.config = this.configService.getOrThrow<AnalyticsConfig>(
       CONFIG_KEYS.ANALYTICS,
@@ -84,6 +86,42 @@ export class AnalyticsService {
     const timezone = query.timezone ?? DEFAULT_READING_TIMEZONE;
     this.assertTimezone(timezone);
 
+    const cacheKey = `analytics:stats:${userId}:${fromIso}:${toIso}:${timezone}`;
+    if (this.config.statsCacheTtlSeconds > 0) {
+      const cached = await this.redisService.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached) as AnalyticsStatisticsResponseDto;
+      }
+    }
+
+    const stats = await this.computeStatistics(
+      userId,
+      from,
+      to,
+      fromIso,
+      toIso,
+      timezone,
+    );
+
+    if (this.config.statsCacheTtlSeconds > 0) {
+      await this.redisService.set(
+        cacheKey,
+        JSON.stringify(stats),
+        this.config.statsCacheTtlSeconds,
+      );
+    }
+
+    return stats;
+  }
+
+  private async computeStatistics(
+    userId: string,
+    from: Date,
+    to: Date,
+    fromIso: string,
+    toIso: string,
+    timezone: string,
+  ): Promise<AnalyticsStatisticsResponseDto> {
     const [
       totalEvents,
       countsByEvent,

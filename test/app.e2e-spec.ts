@@ -249,7 +249,7 @@ describe('Auth & Users (e2e)', () => {
     countUniqueAyahs: jest.fn().mockResolvedValue(1),
     sumReadCounts: jest.fn().mockResolvedValue(2),
     findDaysInRange: jest.fn().mockResolvedValue([]),
-    findAllActiveDays: jest.fn().mockResolvedValue([]),
+    findActiveDayDates: jest.fn().mockResolvedValue([]),
     countActiveDays: jest.fn().mockResolvedValue(0),
     findDay: jest.fn().mockResolvedValue(null),
   };
@@ -525,6 +525,7 @@ describe('Auth & Users (e2e)', () => {
       updatedAt: new Date(),
     }),
     findGoalResult: jest.fn().mockResolvedValue(null),
+    findGoalResults: jest.fn().mockResolvedValue([]),
     upsertGoalResult: jest
       .fn()
       .mockImplementation(
@@ -1447,7 +1448,9 @@ describe('HealthController (e2e)', () => {
     await app.close();
   });
 
-  it('GET /api/v1/health remains public', async () => {
+  it('GET /api/v1/health live and ready remain public', async () => {
+    await request(app.getHttpServer()).get('/api/v1/health/live').expect(200);
+    await request(app.getHttpServer()).get('/api/v1/health/ready').expect(200);
     await request(app.getHttpServer()).get('/api/v1/health').expect(200);
   });
 });

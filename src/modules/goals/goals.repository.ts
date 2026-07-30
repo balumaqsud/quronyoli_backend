@@ -181,6 +181,22 @@ export class GoalsRepository {
     });
   }
 
+  async findGoalResults(
+    dailyGoalIds: string[],
+    localDate: Date,
+  ): Promise<DailyGoalResult[]> {
+    if (dailyGoalIds.length === 0) {
+      return [];
+    }
+
+    return await this.prisma.dailyGoalResult.findMany({
+      where: {
+        dailyGoalId: { in: dailyGoalIds },
+        localDate,
+      },
+    });
+  }
+
   async findGoalResult(
     dailyGoalId: string,
     localDate: Date,

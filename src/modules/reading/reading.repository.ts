@@ -130,39 +130,48 @@ export class ReadingRepository {
         },
       });
 
-      for (const goal of verseGoals) {
-        const existing = await tx.dailyGoalResult.findUnique({
-          where: {
-            dailyGoalId_localDate: {
-              dailyGoalId: goal.id,
-              localDate,
-            },
-          },
-        });
-        const completed = day.versesRead >= goal.targetValue;
-        const completedAt = completed
-          ? (existing?.completedAt ?? openedAt)
-          : null;
-
-        await tx.dailyGoalResult.upsert({
-          where: {
-            dailyGoalId_localDate: {
-              dailyGoalId: goal.id,
-              localDate,
-            },
-          },
-          create: {
-            dailyGoalId: goal.id,
-            localDate,
-            actualValue: day.versesRead,
-            completedAt,
-          },
-          update: {
-            actualValue: day.versesRead,
-            completedAt,
-          },
-        });
+      if (verseGoals.length === 0) {
+        return;
       }
+
+      const existingResults = await tx.dailyGoalResult.findMany({
+        where: {
+          dailyGoalId: { in: verseGoals.map((goal) => goal.id) },
+          localDate,
+        },
+        select: { dailyGoalId: true, completedAt: true },
+      });
+      const completedAtByGoalId = new Map(
+        existingResults.map((row) => [row.dailyGoalId, row.completedAt]),
+      );
+
+      await Promise.all(
+        verseGoals.map((goal) => {
+          const completed = day.versesRead >= goal.targetValue;
+          const completedAt = completed
+            ? (completedAtByGoalId.get(goal.id) ?? openedAt)
+            : null;
+
+          return tx.dailyGoalResult.upsert({
+            where: {
+              dailyGoalId_localDate: {
+                dailyGoalId: goal.id,
+                localDate,
+              },
+            },
+            create: {
+              dailyGoalId: goal.id,
+              localDate,
+              actualValue: day.versesRead,
+              completedAt,
+            },
+            update: {
+              actualValue: day.versesRead,
+              completedAt,
+            },
+          });
+        }),
+      );
     });
   }
 
@@ -268,12 +277,17 @@ export class ReadingRepository {
     });
   }
 
-  async findAllActiveDays(userId: string): Promise<ReadingDay[]> {
+  async findActiveDayDates(
+    userId: string,
+    from: Date,
+  ): Promise<Array<{ localDate: Date }>> {
     return await this.prisma.readingDay.findMany({
       where: {
         userId,
         versesRead: { gt: 0 },
+        localDate: { gte: from },
       },
+      select: { localDate: true },
       orderBy: { localDate: 'desc' },
     });
   }

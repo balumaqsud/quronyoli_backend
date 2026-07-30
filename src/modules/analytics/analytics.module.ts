@@ -1,9 +1,8 @@
 import { BullModule } from '@nestjs/bullmq';
-import { DynamicModule, Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { Module } from '@nestjs/common';
 import { LoggerModule } from 'nestjs-pino';
-import { ANALYTICS_QUEUES, CONFIG_KEYS } from '../../common/constants';
-import { RedisConfig } from '../../config/configuration';
+import { ANALYTICS_QUEUES } from '../../common/constants';
+import { BullRootModule } from '../../infrastructure/queue/bull-root.module';
 import { UsersModule } from '../users/users.module';
 import { AnalyticsTrackingService } from './analytics-tracking.service';
 import { AnalyticsController } from './analytics.controller';
@@ -13,34 +12,19 @@ import { AnalyticsFlushProcessor } from './queues/analytics-flush.processor';
 
 const isTestEnv = process.env.NODE_ENV === 'test';
 
-const bullImports: DynamicModule[] = isTestEnv
-  ? []
-  : [
-      BullModule.forRootAsync({
-        imports: [ConfigModule],
-        inject: [ConfigService],
-        useFactory: (configService: ConfigService) => {
-          const redis = configService.getOrThrow<RedisConfig>(
-            CONFIG_KEYS.REDIS,
-          );
-          return {
-            connection: {
-              host: redis.host,
-              port: redis.port,
-              password: redis.password || undefined,
-              db: redis.db,
-            },
-            prefix: `${redis.keyPrefix}bull`,
-          };
-        },
-      }),
-      BullModule.registerQueue({
-        name: ANALYTICS_QUEUES.FLUSH,
-      }),
-    ];
-
 @Module({
-  imports: [LoggerModule, UsersModule, ...bullImports],
+  imports: [
+    LoggerModule,
+    UsersModule,
+    ...(isTestEnv
+      ? []
+      : [
+          BullRootModule,
+          BullModule.registerQueue({
+            name: ANALYTICS_QUEUES.FLUSH,
+          }),
+        ]),
+  ],
   controllers: [AnalyticsController],
   providers: [
     AnalyticsRepository,

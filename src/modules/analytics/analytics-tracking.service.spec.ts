@@ -63,6 +63,7 @@ describe('AnalyticsTrackingService', () => {
                   maxAttempts: 5,
                   backoffDelayMs: 5000,
                   maxPropertiesBytes: 4096,
+                  statsCacheTtlSeconds: 30,
                 };
               }
               throw new Error(`Unexpected key ${key}`);

@@ -12,10 +12,52 @@ import {
   SettingsWithCatalog,
 } from './interfaces/settings.interface';
 
+const translationSelect = {
+  id: true,
+  provider: true,
+  externalId: true,
+  languageCode: true,
+  name: true,
+  authorName: true,
+  slug: true,
+  isActive: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.QuranTranslationSelect;
+
+const tafsirSelect = {
+  id: true,
+  provider: true,
+  externalId: true,
+  languageCode: true,
+  name: true,
+  authorName: true,
+  slug: true,
+  isActive: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.QuranTafsirSelect;
+
+const reciterSelect = {
+  id: true,
+  provider: true,
+  externalId: true,
+  name: true,
+  arabicName: true,
+  style: true,
+  slug: true,
+  isActive: true,
+  deletedAt: true,
+  createdAt: true,
+  updatedAt: true,
+} satisfies Prisma.QuranReciterSelect;
+
 const settingsInclude = {
-  defaultTranslation: true,
-  defaultTafsir: true,
-  defaultReciter: true,
+  defaultTranslation: { select: translationSelect },
+  defaultTafsir: { select: tafsirSelect },
+  defaultReciter: { select: reciterSelect },
 } satisfies Prisma.UserSettingsInclude;
 
 @Injectable()

@@ -1,5 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { CONFIG_KEYS } from '../../common/constants';
 import { UsersService } from '../users/users.service';
 import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { TOTAL_QURAN_AYAHS } from './constants/quran-coordinates';
@@ -19,7 +21,7 @@ describe('ReadingService', () => {
       | 'countUniqueAyahs'
       | 'sumReadCounts'
       | 'findDaysInRange'
-      | 'findAllActiveDays'
+      | 'findActiveDayDates'
       | 'countActiveDays'
       | 'getTimezone'
       | 'findDay'
@@ -37,7 +39,7 @@ describe('ReadingService', () => {
       countUniqueAyahs: jest.fn(),
       sumReadCounts: jest.fn(),
       findDaysInRange: jest.fn(),
-      findAllActiveDays: jest.fn(),
+      findActiveDayDates: jest.fn(),
       countActiveDays: jest.fn(),
       getTimezone: jest.fn().mockResolvedValue('Asia/Tashkent'),
       findDay: jest.fn(),
@@ -55,6 +57,17 @@ describe('ReadingService', () => {
         { provide: ReadingRepository, useValue: repository },
         { provide: UsersService, useValue: usersService },
         { provide: AnalyticsTrackingService, useValue: analyticsTracking },
+        {
+          provide: ConfigService,
+          useValue: {
+            getOrThrow: (key: string) => {
+              if (key === CONFIG_KEYS.READING) {
+                return { streakLookbackDays: 400 };
+              }
+              throw new Error(`Unexpected key ${key}`);
+            },
+          },
+        },
       ],
     }).compile();
 
@@ -193,51 +206,11 @@ describe('ReadingService', () => {
         updatedAt: new Date(),
       },
     ]);
-    repository.findAllActiveDays.mockResolvedValue([
-      {
-        id: 'd1',
-        userId: 'user-1',
-        localDate: new Date(`${today}T00:00:00.000Z`),
-        timezone: 'UTC',
-        versesRead: 2,
-        activeSeconds: 0,
-        sessionsCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 'd0',
-        userId: 'user-1',
-        localDate: new Date(`${yesterday}T00:00:00.000Z`),
-        timezone: 'UTC',
-        versesRead: 1,
-        activeSeconds: 0,
-        sessionsCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 'd-old-2',
-        userId: 'user-1',
-        localDate: new Date(`${olderNext}T00:00:00.000Z`),
-        timezone: 'UTC',
-        versesRead: 1,
-        activeSeconds: 0,
-        sessionsCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 'd-old-1',
-        userId: 'user-1',
-        localDate: new Date(`${older}T00:00:00.000Z`),
-        timezone: 'UTC',
-        versesRead: 1,
-        activeSeconds: 0,
-        sessionsCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+    repository.findActiveDayDates.mockResolvedValue([
+      { localDate: new Date(`${today}T00:00:00.000Z`) },
+      { localDate: new Date(`${yesterday}T00:00:00.000Z`) },
+      { localDate: new Date(`${olderNext}T00:00:00.000Z`) },
+      { localDate: new Date(`${older}T00:00:00.000Z`) },
     ]);
 
     const stats = await service.getStatistics('user-1');
@@ -254,29 +227,9 @@ describe('ReadingService', () => {
 
   it('returns streak summary for the authenticated user', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-07-30T12:00:00.000Z'));
-    repository.findAllActiveDays.mockResolvedValue([
-      {
-        id: 'd1',
-        userId: 'user-1',
-        localDate: new Date('2026-07-30T00:00:00.000Z'),
-        timezone: 'UTC',
-        versesRead: 1,
-        activeSeconds: 0,
-        sessionsCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        id: 'd2',
-        userId: 'user-1',
-        localDate: new Date('2026-07-29T00:00:00.000Z'),
-        timezone: 'UTC',
-        versesRead: 1,
-        activeSeconds: 0,
-        sessionsCount: 0,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
+    repository.findActiveDayDates.mockResolvedValue([
+      { localDate: new Date('2026-07-30T00:00:00.000Z') },
+      { localDate: new Date('2026-07-29T00:00:00.000Z') },
     ]);
 
     const streak = await service.getStreak('user-1');

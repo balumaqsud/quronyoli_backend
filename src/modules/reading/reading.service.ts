@@ -1,15 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   decodeKeysetCursor,
   encodeKeysetCursor,
 } from '../../common/pagination/keyset-cursor';
 import { parseVerseKey } from '../../common/quran/ayah-coordinate';
+import { CONFIG_KEYS } from '../../common/constants';
 import {
   ReadingAyahHistory,
   ReadingDay,
   ReadingProgress,
   ReadingVerseProgress,
 } from '../../generated/prisma';
+import { ReadingConfig } from '../../config/configuration';
 import { UsersService } from '../users/users.service';
 import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { TOTAL_QURAN_AYAHS } from './constants/quran-coordinates';
@@ -33,11 +36,18 @@ import { computeStreaks } from './utils/reading-streak.utils';
 
 @Injectable()
 export class ReadingService {
+  private readonly streakLookbackDays: number;
+
   constructor(
     private readonly readingRepository: ReadingRepository,
     private readonly usersService: UsersService,
     private readonly analyticsTracking: AnalyticsTrackingService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.streakLookbackDays = this.configService.getOrThrow<ReadingConfig>(
+      CONFIG_KEYS.READING,
+    ).streakLookbackDays;
+  }
 
   async recordAyahOpen(userId: string, verseKey: string): Promise<void> {
     const coordinate = parseVerseKey(verseKey);
@@ -185,13 +195,17 @@ export class ReadingService {
     const from7 = shiftIsoDate(today, -6);
     const from30 = shiftIsoDate(today, -29);
 
+    const streakFrom = toDateOnly(
+      shiftIsoDate(today, -(this.streakLookbackDays - 1)),
+    );
+
     const [
       uniqueAyahsRead,
       totalOpens,
       totalActiveDays,
       continueReading,
       days30,
-      allActiveDays,
+      activeDayDates,
     ] = await Promise.all([
       this.readingRepository.countUniqueAyahs(userId),
       this.readingRepository.sumReadCounts(userId),
@@ -202,7 +216,7 @@ export class ReadingService {
         toDateOnly(from30),
         toDateOnly(today),
       ),
-      this.readingRepository.findAllActiveDays(userId),
+      this.readingRepository.findActiveDayDates(userId, streakFrom),
     ]);
 
     const dayMap = new Map(
@@ -210,7 +224,7 @@ export class ReadingService {
     );
 
     const { currentStreakDays, longestStreakDays } = computeStreaks(
-      allActiveDays.map((day) => this.toIsoDate(day.localDate)),
+      activeDayDates.map((day) => this.toIsoDate(day.localDate)),
       today,
     );
 
@@ -232,9 +246,14 @@ export class ReadingService {
     await this.usersService.getActiveByIdOrThrow(userId);
     const timezone = await this.readingRepository.getTimezone(userId);
     const today = formatLocalDate(new Date(), timezone);
-    const allActiveDays =
-      await this.readingRepository.findAllActiveDays(userId);
-    const activeDates = allActiveDays.map((day) =>
+    const streakFrom = toDateOnly(
+      shiftIsoDate(today, -(this.streakLookbackDays - 1)),
+    );
+    const activeDayDates = await this.readingRepository.findActiveDayDates(
+      userId,
+      streakFrom,
+    );
+    const activeDates = activeDayDates.map((day) =>
       this.toIsoDate(day.localDate),
     );
     const { currentStreakDays, longestStreakDays } = computeStreaks(

@@ -15,6 +15,7 @@ import {
   ApiTags,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -38,6 +39,7 @@ export class AuthController {
   ) {}
 
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('telegram')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate with Telegram Mini App initData' })
@@ -53,6 +55,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

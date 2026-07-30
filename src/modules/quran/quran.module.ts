@@ -1,6 +1,8 @@
 import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import * as http from 'http';
+import * as https from 'https';
 import { CONFIG_KEYS } from '../../common/constants';
 import { QuranFoundationConfig } from '../../config/configuration';
 import { ReadingModule } from '../reading/reading.module';
@@ -28,6 +30,14 @@ import { QuranService } from './quran.service';
         return {
           timeout: config.timeoutMs,
           maxRedirects: 0,
+          httpAgent: new http.Agent({
+            keepAlive: true,
+            maxSockets: config.httpMaxSockets,
+          }),
+          httpsAgent: new https.Agent({
+            keepAlive: true,
+            maxSockets: config.httpMaxSockets,
+          }),
         };
       },
     }),

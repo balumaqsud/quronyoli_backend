@@ -10,10 +10,17 @@ export interface AppConfig {
   logLevel: string;
   swaggerEnabled: boolean;
   swaggerPath: string;
+  trustProxy: boolean;
+  bodyLimit: string;
+  slowRequestMs: number;
+  shutdownDrainMs: number;
 }
 
 export interface DatabaseConfig {
   url: string;
+  poolMax: number;
+  poolIdleTimeoutMs: number;
+  poolConnectionTimeoutMs: number;
 }
 
 export interface RedisConfig {
@@ -42,6 +49,7 @@ export interface TelegramConfig {
   webhookAutoRegister: boolean;
   miniAppUrl: string;
   miniAppShortName: string;
+  httpMaxSockets: number;
 }
 
 export interface NotificationsConfig {
@@ -63,6 +71,21 @@ export interface AnalyticsConfig {
   maxAttempts: number;
   backoffDelayMs: number;
   maxPropertiesBytes: number;
+  statsCacheTtlSeconds: number;
+}
+
+export interface ReadingConfig {
+  streakLookbackDays: number;
+}
+
+export interface HttpConfig {
+  requestTimeoutMs: number;
+}
+
+export interface ThrottleConfig {
+  ttlMs: number;
+  limit: number;
+  authLimit: number;
 }
 
 export type CookieSameSite = 'lax' | 'strict' | 'none';
@@ -102,6 +125,7 @@ export interface QuranFoundationConfig {
   tokenSkewSeconds: number;
   rateLimitMax: number;
   rateLimitWindowSeconds: number;
+  httpMaxSockets: number;
   cacheTtl: QuranFoundationCacheTtlConfig;
 }
 
@@ -113,6 +137,9 @@ export interface AppConfiguration {
   telegram: TelegramConfig;
   notifications: NotificationsConfig;
   analytics: AnalyticsConfig;
+  reading: ReadingConfig;
+  http: HttpConfig;
+  throttle: ThrottleConfig;
   authCookie: AuthCookieConfig;
   quranFoundation: QuranFoundationConfig;
 }
@@ -229,11 +256,30 @@ export default (): AppConfiguration => {
       apiVersion: process.env.API_VERSION ?? '1',
       corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
       logLevel: process.env.LOG_LEVEL ?? 'info',
-      swaggerEnabled: process.env.SWAGGER_ENABLED !== 'false',
+      swaggerEnabled:
+        process.env.SWAGGER_ENABLED !== undefined
+          ? process.env.SWAGGER_ENABLED === 'true'
+          : nodeEnv !== 'production',
       swaggerPath: process.env.SWAGGER_PATH ?? 'docs',
+      trustProxy: process.env.TRUST_PROXY === 'true',
+      bodyLimit: process.env.HTTP_BODY_LIMIT ?? '1mb',
+      slowRequestMs: Number.parseInt(process.env.SLOW_REQUEST_MS ?? '1000', 10),
+      shutdownDrainMs: Number.parseInt(
+        process.env.SHUTDOWN_DRAIN_MS ?? '5000',
+        10,
+      ),
     },
     database: {
       url: getRequiredEnv('DATABASE_URL'),
+      poolMax: Number.parseInt(process.env.DATABASE_POOL_MAX ?? '10', 10),
+      poolIdleTimeoutMs: Number.parseInt(
+        process.env.DATABASE_POOL_IDLE_TIMEOUT_MS ?? '10000',
+        10,
+      ),
+      poolConnectionTimeoutMs: Number.parseInt(
+        process.env.DATABASE_POOL_CONNECTION_TIMEOUT_MS ?? '5000',
+        10,
+      ),
     },
     redis: {
       host: getRequiredEnv('REDIS_HOST'),
@@ -267,6 +313,10 @@ export default (): AppConfiguration => {
         process.env.TELEGRAM_WEBHOOK_AUTO_REGISTER === 'true',
       miniAppUrl: getRequiredEnv('TELEGRAM_MINI_APP_URL'),
       miniAppShortName: process.env.TELEGRAM_MINI_APP_SHORT_NAME ?? 'app',
+      httpMaxSockets: Number.parseInt(
+        process.env.TELEGRAM_HTTP_MAX_SOCKETS ?? '50',
+        10,
+      ),
     },
     notifications: {
       queueName: process.env.NOTIFICATIONS_QUEUE_NAME ?? 'daily-reminders',
@@ -323,6 +373,27 @@ export default (): AppConfiguration => {
         process.env.ANALYTICS_MAX_PROPERTIES_BYTES ?? '4096',
         10,
       ),
+      statsCacheTtlSeconds: Number.parseInt(
+        process.env.ANALYTICS_STATS_CACHE_TTL_SECONDS ?? '30',
+        10,
+      ),
+    },
+    reading: {
+      streakLookbackDays: Number.parseInt(
+        process.env.READING_STREAK_LOOKBACK_DAYS ?? '400',
+        10,
+      ),
+    },
+    http: {
+      requestTimeoutMs: Number.parseInt(
+        process.env.HTTP_REQUEST_TIMEOUT_MS ?? '30000',
+        10,
+      ),
+    },
+    throttle: {
+      ttlMs: Number.parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
+      limit: Number.parseInt(process.env.THROTTLE_LIMIT ?? '120', 10),
+      authLimit: Number.parseInt(process.env.THROTTLE_AUTH_LIMIT ?? '20', 10),
     },
     authCookie: {
       name: process.env.AUTH_COOKIE_NAME ?? 'refresh_token',
@@ -356,6 +427,10 @@ export default (): AppConfiguration => {
       rateLimitMax: Number.parseInt(process.env.QF_RATE_LIMIT_MAX ?? '60', 10),
       rateLimitWindowSeconds: Number.parseInt(
         process.env.QF_RATE_LIMIT_WINDOW_SECONDS ?? '60',
+        10,
+      ),
+      httpMaxSockets: Number.parseInt(
+        process.env.QF_HTTP_MAX_SOCKETS ?? '50',
         10,
       ),
       cacheTtl: {
