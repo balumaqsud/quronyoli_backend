@@ -21,7 +21,10 @@ describe('AuthService', () => {
     >
   >;
   let sessionsRepository: jest.Mocked<
-    Pick<SessionsRepository, 'create' | 'findById' | 'rotate' | 'revoke'>
+    Pick<
+      SessionsRepository,
+      'create' | 'findById' | 'rotate' | 'rotateIfHashMatches' | 'revoke'
+    >
   >;
   let tokenService: jest.Mocked<
     Pick<TokenService, 'generateTokenPair' | 'verifyRefreshToken'>
@@ -72,6 +75,7 @@ describe('AuthService', () => {
       create: jest.fn(),
       findById: jest.fn(),
       rotate: jest.fn(),
+      rotateIfHashMatches: jest.fn(),
       revoke: jest.fn(),
     };
     tokenService = {
@@ -197,7 +201,7 @@ describe('AuthService', () => {
       accessToken: 'new-access',
       refreshToken: 'new-refresh',
     });
-    sessionsRepository.rotate.mockResolvedValue({
+    sessionsRepository.rotateIfHashMatches.mockResolvedValue({
       id: 'session-1',
       userId: 'user-1',
       refreshTokenHash: 'rotated',
@@ -222,7 +226,7 @@ describe('AuthService', () => {
       startParam: null,
     });
 
-    expect(sessionsRepository.rotate).toHaveBeenCalled();
+    expect(sessionsRepository.rotateIfHashMatches).toHaveBeenCalled();
     expect(authCookieService.setRefreshToken).toHaveBeenCalledWith(
       response,
       'new-refresh',

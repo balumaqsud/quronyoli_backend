@@ -17,6 +17,7 @@ describe('AnalyticsTrackingService', () => {
     ltrim: jest.Mock;
     lrange: jest.Mock;
     lpush: jest.Mock;
+    eval: jest.Mock;
   };
   let queue: { add: jest.Mock };
 
@@ -31,6 +32,7 @@ describe('AnalyticsTrackingService', () => {
       ltrim: jest.fn().mockResolvedValue('OK'),
       lrange: jest.fn().mockResolvedValue([]),
       lpush: jest.fn().mockResolvedValue(1),
+      eval: jest.fn().mockResolvedValue([]),
     };
     queue = {
       add: jest.fn().mockResolvedValue({ id: 'job-1' }),
@@ -108,7 +110,7 @@ describe('AnalyticsTrackingService', () => {
   });
 
   it('claims buffered events and inserts them', async () => {
-    redisClient.lrange.mockResolvedValue([
+    redisClient.eval.mockResolvedValue([
       JSON.stringify({
         userId: 'user-1',
         eventName: 'SEARCH',
@@ -120,7 +122,7 @@ describe('AnalyticsTrackingService', () => {
     ]);
 
     await expect(service.flushBuffer()).resolves.toBe(1);
-    expect(redisClient.ltrim).toHaveBeenCalled();
+    expect(redisClient.eval).toHaveBeenCalled();
     expect(repository.insertMany).toHaveBeenCalled();
   });
 
@@ -133,7 +135,7 @@ describe('AnalyticsTrackingService', () => {
       properties: null,
       idempotencyKey: 'k2',
     });
-    redisClient.lrange.mockResolvedValue([raw]);
+    redisClient.eval.mockResolvedValue([raw]);
     repository.insertMany.mockRejectedValue(new Error('db down'));
 
     await expect(service.flushBuffer()).rejects.toThrow('db down');

@@ -4,13 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Favorite } from '../../generated/prisma';
+import { throwIfUniqueConflict } from '../../common/database/prisma-errors';
 import {
-  decodeKeysetCursor,
-  encodeKeysetCursor,
-} from '../../common/pagination/keyset-cursor';
+  parseKeysetCursor,
+  toKeysetPage,
+} from '../../common/pagination/paginate-keyset';
 import { assertAyahCoordinateOrThrow } from '../../common/quran/ayah-coordinate';
 import { toVerseKey } from '../../common/quran/quran-coordinates';
-import { throwIfUniqueConflict } from '../../common/database/prisma-errors';
 import { UsersService } from '../users/users.service';
 import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import {
@@ -140,30 +140,22 @@ export class FavoritesService {
     }
 
     const limit = query.limit ?? 20;
-    const decoded = query.cursor ? decodeKeysetCursor(query.cursor) : undefined;
+    const { cursorAt, cursorId } = parseKeysetCursor(query.cursor);
     const rows = await this.favoritesRepository.list({
       userId,
       limit: limit + 1,
-      cursorAt: decoded ? new Date(decoded.at) : undefined,
-      cursorId: decoded?.id,
+      cursorAt,
+      cursorId,
       chapterNumber: query.chapterNumber,
       verseNumber: query.verseNumber,
     });
 
-    const hasMore = rows.length > limit;
-    const page = hasMore ? rows.slice(0, limit) : rows;
-    const last = page[page.length - 1];
-
-    return {
-      items: page.map((row) => this.toResponse(row)),
-      nextCursor:
-        hasMore && last
-          ? encodeKeysetCursor({
-              at: last.createdAt.toISOString(),
-              id: last.id,
-            })
-          : null,
-    };
+    return toKeysetPage(rows, {
+      limit,
+      getCursorAt: (row) => row.createdAt,
+      getCursorId: (row) => row.id,
+      mapItem: (row) => this.toResponse(row),
+    });
   }
 
   toResponse(favorite: Favorite): FavoriteResponseDto {

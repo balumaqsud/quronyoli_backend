@@ -42,10 +42,10 @@ export class NotificationService {
     });
 
     if (!claim.claimed) {
-      if (
-        claim.delivery.status === NotificationDeliveryStatus.SENT ||
-        claim.delivery.status === NotificationDeliveryStatus.PENDING
-      ) {
+      if (claim.delivery.status === NotificationDeliveryStatus.SENT) {
+        return { status: 'already_sent' };
+      }
+      if (claim.delivery.status === NotificationDeliveryStatus.PENDING) {
         return { status: 'already_sent' };
       }
       return {

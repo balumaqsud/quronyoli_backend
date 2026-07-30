@@ -101,8 +101,11 @@ export class NotificationsRepository {
   async claimDelivery(input: {
     userId: string;
     localDate: string;
+    /** Reclaim PENDING rows older than this many minutes (default 15). */
+    stalePendingMinutes?: number;
   }): Promise<{ claimed: boolean; delivery: NotificationDelivery }> {
     const localDate = toDateOnly(input.localDate);
+    const staleMinutes = input.stalePendingMinutes ?? 15;
 
     try {
       const delivery = await this.prisma.notificationDelivery.create({
@@ -131,7 +134,54 @@ export class NotificationsRepository {
         if (!existing) {
           throw error;
         }
-        return { claimed: false, delivery: existing };
+
+        const terminal =
+          existing.status === NotificationDeliveryStatus.SENT ||
+          existing.status === NotificationDeliveryStatus.SKIPPED;
+        if (terminal) {
+          return { claimed: false, delivery: existing };
+        }
+
+        const staleCutoff = new Date(Date.now() - staleMinutes * 60_000);
+        const canReclaim =
+          existing.status === NotificationDeliveryStatus.FAILED ||
+          (existing.status === NotificationDeliveryStatus.PENDING &&
+            existing.updatedAt <= staleCutoff);
+
+        if (!canReclaim) {
+          return { claimed: false, delivery: existing };
+        }
+
+        const reclaimed = await this.prisma.notificationDelivery.updateMany({
+          where: {
+            id: existing.id,
+            status: {
+              in: [
+                NotificationDeliveryStatus.FAILED,
+                NotificationDeliveryStatus.PENDING,
+              ],
+            },
+          },
+          data: {
+            status: NotificationDeliveryStatus.PENDING,
+            errorMessage: null,
+            telegramMessageId: null,
+            sentAt: null,
+          },
+        });
+
+        if (reclaimed.count === 0) {
+          const latest = await this.prisma.notificationDelivery.findUnique({
+            where: { id: existing.id },
+          });
+          return { claimed: false, delivery: latest ?? existing };
+        }
+
+        const delivery =
+          await this.prisma.notificationDelivery.findUniqueOrThrow({
+            where: { id: existing.id },
+          });
+        return { claimed: true, delivery };
       }
       throw error;
     }

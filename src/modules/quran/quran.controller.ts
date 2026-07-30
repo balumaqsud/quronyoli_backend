@@ -18,7 +18,6 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { HttpCache } from '../../common/decorators/http-cache.decorator';
 import { AuthenticatedUser } from '../../infrastructure/auth/interfaces/jwt-payload.interface';
-import { ReadingService } from '../reading/reading.service';
 import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
 import {
   AudioTimestampQueryDto,
@@ -41,10 +40,7 @@ import { QuranService } from './quran.service';
   version: '1',
 })
 export class QuranController {
-  constructor(
-    private readonly quranService: QuranService,
-    private readonly readingService: ReadingService,
-  ) {}
+  constructor(private readonly quranService: QuranService) {}
 
   @Get('surahs')
   @HttpCache('private-short')
@@ -95,8 +91,7 @@ export class QuranController {
     @CurrentUser() currentUser: AuthenticatedUser,
     @Query() query: VersesQueryDto,
   ): Promise<DailyAyahResponseDto> {
-    const timezone = await this.readingService.getTimezone(currentUser.sub);
-    return this.quranService.getDailyAyah(currentUser.sub, timezone, query);
+    return this.quranService.getDailyAyahForUser(currentUser.sub, query);
   }
 
   @Get('ayahs/by-key/:verseKey')
@@ -110,9 +105,11 @@ export class QuranController {
     @Param('verseKey') verseKey: string,
     @Query() query: VersesQueryDto,
   ): Promise<unknown> {
-    const content = await this.quranService.getAyahByKey(verseKey, query);
-    await this.readingService.recordAyahOpen(currentUser.sub, verseKey);
-    return content;
+    return this.quranService.getAyahByKeyForUser(
+      currentUser.sub,
+      verseKey,
+      query,
+    );
   }
 
   @Get('ayahs/by-juz/:juz')

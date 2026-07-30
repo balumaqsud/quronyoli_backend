@@ -39,7 +39,12 @@ export class AuthController {
   ) {}
 
   @Public()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle({
+    default: {
+      limit: Number.parseInt(process.env.THROTTLE_AUTH_LIMIT ?? '20', 10),
+      ttl: Number.parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
+    },
+  })
   @Post('telegram')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Authenticate with Telegram Mini App initData' })
@@ -55,7 +60,12 @@ export class AuthController {
   }
 
   @Public()
-  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  @Throttle({
+    default: {
+      limit: Number.parseInt(process.env.THROTTLE_AUTH_LIMIT ?? '20', 10),
+      ttl: Number.parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
+    },
+  })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

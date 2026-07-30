@@ -141,7 +141,6 @@ export class GoalsService {
 
     const versesRead = readingDay?.versesRead ?? 0;
     const activeSeconds = readingDay?.activeSeconds ?? 0;
-    const now = new Date();
 
     const existingResults = await this.goalsRepository.findGoalResults(
       goals.map((goal) => goal.id),
@@ -151,35 +150,53 @@ export class GoalsService {
       existingResults.map((result) => [result.dailyGoalId, result]),
     );
 
-    const progressItems: GoalProgressItemDto[] = await Promise.all(
-      goals.map(async (goal) => {
-        const actualValue = this.actualValueForMetric(
-          goal.metric,
-          versesRead,
-          activeSeconds,
-        );
-        const completed = actualValue >= goal.targetValue;
-        const existing = existingByGoalId.get(goal.id);
-        const completedAt = completed ? (existing?.completedAt ?? now) : null;
+    const now = new Date();
+    const upsertInputs = goals.map((goal) => {
+      const actualValue = this.actualValueForMetric(
+        goal.metric,
+        versesRead,
+        activeSeconds,
+      );
+      const completed = actualValue >= goal.targetValue;
+      const existing = existingByGoalId.get(goal.id);
+      const completedAt = completed ? (existing?.completedAt ?? now) : null;
+      return {
+        dailyGoalId: goal.id,
+        localDate,
+        actualValue,
+        completedAt,
+        metric: goal.metric,
+        targetValue: goal.targetValue,
+        completed,
+      };
+    });
 
-        const result = await this.goalsRepository.upsertGoalResult({
-          dailyGoalId: goal.id,
-          localDate,
+    const results = await this.goalsRepository.upsertGoalResults(
+      upsertInputs.map(
+        ({ dailyGoalId, localDate: date, actualValue, completedAt }) => ({
+          dailyGoalId,
+          localDate: date,
           actualValue,
           completedAt,
-        });
-
-        return {
-          goalId: goal.id,
-          metric: goal.metric,
-          targetValue: goal.targetValue,
-          actualValue: result.actualValue,
-          percent: this.toPercent(result.actualValue, goal.targetValue),
-          completed,
-          completedAt: result.completedAt,
-        };
-      }),
+        }),
+      ),
     );
+    const resultByGoalId = new Map(
+      results.map((result) => [result.dailyGoalId, result]),
+    );
+
+    const progressItems: GoalProgressItemDto[] = upsertInputs.map((item) => {
+      const result = resultByGoalId.get(item.dailyGoalId)!;
+      return {
+        goalId: item.dailyGoalId,
+        metric: item.metric,
+        targetValue: item.targetValue,
+        actualValue: result.actualValue,
+        percent: this.toPercent(result.actualValue, item.targetValue),
+        completed: item.completed,
+        completedAt: result.completedAt,
+      };
+    });
 
     return {
       localDate: localDateIso,

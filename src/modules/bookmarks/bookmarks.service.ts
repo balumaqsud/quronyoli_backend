@@ -6,9 +6,9 @@ import {
 import { Bookmark } from '../../generated/prisma';
 import { throwIfUniqueConflict } from '../../common/database/prisma-errors';
 import {
-  decodeKeysetCursor,
-  encodeKeysetCursor,
-} from '../../common/pagination/keyset-cursor';
+  parseKeysetCursor,
+  toKeysetPage,
+} from '../../common/pagination/paginate-keyset';
 import { assertAyahCoordinateOrThrow } from '../../common/quran/ayah-coordinate';
 import { toVerseKey } from '../../common/quran/quran-coordinates';
 import { UsersService } from '../users/users.service';
@@ -156,12 +156,12 @@ export class BookmarksService {
     }
 
     const limit = query.limit ?? 20;
-    const decoded = query.cursor ? decodeKeysetCursor(query.cursor) : undefined;
+    const { cursorAt, cursorId } = parseKeysetCursor(query.cursor);
     const rows = await this.bookmarksRepository.listActive({
       userId,
       limit: limit + 1,
-      cursorAt: decoded ? new Date(decoded.at) : undefined,
-      cursorId: decoded?.id,
+      cursorAt,
+      cursorId,
       chapterNumber: query.chapterNumber,
       verseNumber: query.verseNumber,
       color: query.color,
@@ -169,20 +169,12 @@ export class BookmarksService {
       to: query.to ? new Date(query.to) : undefined,
     });
 
-    const hasMore = rows.length > limit;
-    const page = hasMore ? rows.slice(0, limit) : rows;
-    const last = page[page.length - 1];
-
-    return {
-      items: page.map((row) => this.toResponse(row)),
-      nextCursor:
-        hasMore && last
-          ? encodeKeysetCursor({
-              at: last.createdAt.toISOString(),
-              id: last.id,
-            })
-          : null,
-    };
+    return toKeysetPage(rows, {
+      limit,
+      getCursorAt: (row) => row.createdAt,
+      getCursorId: (row) => row.id,
+      mapItem: (row) => this.toResponse(row),
+    });
   }
 
   toResponse(bookmark: Bookmark): BookmarkResponseDto {

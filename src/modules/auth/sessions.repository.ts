@@ -43,6 +43,36 @@ export class SessionsRepository {
     });
   }
 
+  /**
+   * Atomically rotate when the presented refresh hash still matches.
+   * Returns null when another concurrent refresh already rotated or revoked.
+   */
+  async rotateIfHashMatches(
+    input: RotateSessionInput & { expectedRefreshTokenHash: string },
+  ): Promise<UserSession | null> {
+    const result = await this.prisma.userSession.updateMany({
+      where: {
+        id: input.sessionId,
+        refreshTokenHash: input.expectedRefreshTokenHash,
+        revokedAt: null,
+      },
+      data: {
+        refreshTokenHash: input.refreshTokenHash,
+        expiresAt: input.expiresAt,
+        ipAddress: input.ipAddress,
+        userAgent: input.userAgent,
+        lastUsedAt: new Date(),
+      },
+    });
+
+    if (result.count === 0) {
+      return null;
+    }
+
+    return await this.findById(input.sessionId);
+  }
+
+  /** @deprecated Prefer rotateIfHashMatches for concurrent-safe rotation. */
   async rotate(input: RotateSessionInput): Promise<UserSession> {
     return await this.prisma.userSession.update({
       where: { id: input.sessionId },

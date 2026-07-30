@@ -25,6 +25,8 @@ erDiagram
   User ||--o{ ReadingDay : aggregates
   User ||--o{ DailyGoal : sets
   User ||--o{ AnalyticsEvent : emits
+  User ||--o| TelegramReminderPreference : prefers
+  User ||--o{ NotificationDelivery : delivers
   DailyGoal ||--o{ DailyGoalResult : snapshots
   QuranTranslation ||--o{ UserSettings : "default optional"
   QuranTafsir ||--o{ UserSettings : "default optional"
@@ -33,6 +35,17 @@ erDiagram
   QuranTafsir ||--o{ ReadingProgress : "last used optional"
   QuranReciter ||--o{ ReadingProgress : "last used optional"
 ```
+
+### Prisma vs SQL-only constraints
+
+Prisma models describe columns, FKs, and most uniques. Several invariants exist **only in SQL migrations** (not fully expressible / not mirrored in `schema.prisma`):
+
+| Kind | Examples |
+| --- | --- |
+| Partial unique indexes | Active bookmark per user/ayah (`deleted_at IS NULL`); one open-ended active goal per `(user_id, metric)` |
+| CHECK constraints | Chapter/verse ranges, font sizes > 0, `active_seconds >= 0`, goal date ranges, reminder `local_time ~ HH:mm` |
+
+Always review `prisma/migrations/**/*.sql` when changing uniqueness or validation rules — regenerating from Prisma alone will not recreate these.
 
 ## Core identity
 
@@ -152,6 +165,8 @@ Stores start/end coordinates and timestamps, `versesRead`, `activeSeconds`, and 
 **Cascade:** `ON DELETE CASCADE`
 **Unique:** `(user_id, client_session_key)` (PostgreSQL allows multiple NULL keys)
 
+**Status:** Schema and migrations exist, but **no application writers or readers** use this model today. `GET /reading/history` reads `ReadingAyahHistory`, not `ReadingHistory`. Reserved for future session-based sync.
+
 ### `ReadingAyahHistory` (`reading_ayah_histories`)
 Append-only record of every successful single-ayah open.
 
@@ -182,6 +197,8 @@ Daily aggregate for streaks/dashboards.
 
 `ReadingAyahHistory` is the source of truth for every ayah open; `ReadingVerseProgress` and `ReadingDay` are query-optimized rollups. `ReadingHistory` remains available for future session-based sync.
 
+Ayah-open writes set / leave `ReadingDay.activeSeconds` at **0** (only `versesRead` increments). There is currently no heartbeat or session writer for active time.
+
 ---
 
 ## Goals
@@ -189,8 +206,10 @@ Daily aggregate for streaks/dashboards.
 ### `DailyGoal` (`daily_goals`)
 Concurrent goals are supported via `DailyGoalMetric`:
 
-- `VERSES`
-- `MINUTES`
+- `VERSES` — progress from `ReadingDay.versesRead`
+- `MINUTES` — progress from `floor(ReadingDay.activeSeconds / 60)`
+
+Because ayah opens never increment `activeSeconds`, **MINUTES goals report 0 progress** until an active-seconds writer lands (see [future-improvements.md](./future-improvements.md)).
 
 Soft-deletable and date-ranged (`effectiveFrom` / `effectiveTo`).
 
@@ -312,9 +331,12 @@ All Quran content is retrieved from Quran.Foundation using external resource IDs
 ## Migrations
 
 1. `20260730120000_init_auth` — users + sessions
-2. `20260730130000_quran_domain_schema` — domain schema, checks, partial active-goal uniqueness
+2. `20260730130000_quran_domain_schema` — domain schema, CHECKs, partial active-goal uniqueness
 3. `20260730140000_reading_ayah_tracking` — ayah open history, unique verse progress, daily DESC index
 4. `20260730150000_favorites_bookmarks_indexes` — favorites/bookmarks keyset indexes + active bookmark uniqueness
+5. `20260730160000_telegram_notifications` — reminder preferences + notification deliveries (+ `local_time` CHECK)
+6. `20260730170000_analytics_user_event_index` — analytics `(user_id, event_name, occurred_at)` index
+7. `20260730180000_production_hardening_indexes` — additional production indexes
 
 Apply with:
 

@@ -155,30 +155,50 @@ export class GoalsRepository {
     });
   }
 
+  async upsertGoalResults(
+    inputs: Array<{
+      dailyGoalId: string;
+      localDate: Date;
+      actualValue: number;
+      completedAt: Date | null;
+    }>,
+  ): Promise<DailyGoalResult[]> {
+    if (inputs.length === 0) {
+      return [];
+    }
+
+    return await this.prisma.$transaction(
+      inputs.map((input) =>
+        this.prisma.dailyGoalResult.upsert({
+          where: {
+            dailyGoalId_localDate: {
+              dailyGoalId: input.dailyGoalId,
+              localDate: input.localDate,
+            },
+          },
+          create: {
+            dailyGoalId: input.dailyGoalId,
+            localDate: input.localDate,
+            actualValue: input.actualValue,
+            completedAt: input.completedAt,
+          },
+          update: {
+            actualValue: input.actualValue,
+            completedAt: input.completedAt,
+          },
+        }),
+      ),
+    );
+  }
+
   async upsertGoalResult(input: {
     dailyGoalId: string;
     localDate: Date;
     actualValue: number;
     completedAt: Date | null;
   }): Promise<DailyGoalResult> {
-    return await this.prisma.dailyGoalResult.upsert({
-      where: {
-        dailyGoalId_localDate: {
-          dailyGoalId: input.dailyGoalId,
-          localDate: input.localDate,
-        },
-      },
-      create: {
-        dailyGoalId: input.dailyGoalId,
-        localDate: input.localDate,
-        actualValue: input.actualValue,
-        completedAt: input.completedAt,
-      },
-      update: {
-        actualValue: input.actualValue,
-        completedAt: input.completedAt,
-      },
-    });
+    const [result] = await this.upsertGoalResults([input]);
+    return result;
   }
 
   async findGoalResults(

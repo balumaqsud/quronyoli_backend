@@ -119,17 +119,25 @@ export class AnalyticsTrackingService {
   async flushBuffer(bufferKey = 'analytics:buffer'): Promise<number> {
     const client = this.redisService.getClient();
     const namespaced = this.redisService.buildKey(bufferKey);
-    const rawItems = await client.lrange(
-      namespaced,
-      0,
-      this.config.flushMaxBatch - 1,
-    );
 
-    if (rawItems.length === 0) {
+    // Atomically take up to flushMaxBatch items off the buffer.
+    const rawItems = (await client.eval(
+      `
+      local items = redis.call('LRANGE', KEYS[1], 0, ARGV[1] - 1)
+      local count = #items
+      if count > 0 then
+        redis.call('LTRIM', KEYS[1], count, -1)
+      end
+      return items
+      `,
+      1,
+      namespaced,
+      String(this.config.flushMaxBatch),
+    )) as string[];
+
+    if (!rawItems || rawItems.length === 0) {
       return 0;
     }
-
-    await client.ltrim(namespaced, rawItems.length, -1);
 
     const events: NormalizedAnalyticsEvent[] = [];
     for (const raw of rawItems) {

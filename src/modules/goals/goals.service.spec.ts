@@ -19,6 +19,7 @@ describe('GoalsService', () => {
       | 'findActiveGoalsForDate'
       | 'findReadingDay'
       | 'upsertGoalResult'
+      | 'upsertGoalResults'
       | 'findGoalResult'
       | 'findGoalResults'
     >
@@ -39,6 +40,22 @@ describe('GoalsService', () => {
   };
 
   beforeEach(async () => {
+    const upsertImpl = (input: {
+      dailyGoalId: string;
+      localDate: Date;
+      actualValue: number;
+      completedAt: Date | null;
+    }) =>
+      Promise.resolve({
+        id: 'result-1',
+        dailyGoalId: input.dailyGoalId,
+        localDate: input.localDate,
+        actualValue: input.actualValue,
+        completedAt: input.completedAt,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
     repository = {
       getTimezone: jest.fn().mockResolvedValue('Asia/Tashkent'),
       list: jest.fn().mockResolvedValue([goal]),
@@ -58,25 +75,17 @@ describe('GoalsService', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
       }),
-      upsertGoalResult: jest
-        .fn()
-        .mockImplementation(
-          (input: {
+      upsertGoalResult: jest.fn().mockImplementation(upsertImpl),
+      upsertGoalResults: jest.fn().mockImplementation(
+        async (
+          inputs: Array<{
             dailyGoalId: string;
             localDate: Date;
             actualValue: number;
             completedAt: Date | null;
-          }) =>
-            Promise.resolve({
-              id: 'result-1',
-              dailyGoalId: input.dailyGoalId,
-              localDate: input.localDate,
-              actualValue: input.actualValue,
-              completedAt: input.completedAt,
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            }),
-        ),
+          }>,
+        ) => Promise.all(inputs.map((input) => upsertImpl(input))),
+      ),
       findGoalResult: jest.fn().mockResolvedValue(null),
       findGoalResults: jest.fn().mockResolvedValue([]),
     };
@@ -121,7 +130,7 @@ describe('GoalsService', () => {
       percent: 40,
       completed: false,
     });
-    expect(repository.upsertGoalResult).toHaveBeenCalled();
+    expect(repository.upsertGoalResults).toHaveBeenCalled();
   });
 
   it('marks goal completed when target is met', async () => {

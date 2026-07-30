@@ -10,12 +10,18 @@ import { Request, Response } from 'express';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AppConfig } from '../../config/configuration';
 import { CONFIG_KEYS, REQUEST_ID_HEADER } from '../constants';
+import { AppErrorCode, statusToAppErrorCode } from '../errors/app-error';
 import { ApiErrorResponse } from '../interfaces/api-response.interface';
 
 interface ExceptionResponseBody {
   message?: string | string[];
   error?: string;
   statusCode?: number;
+  code?: string;
+}
+
+export interface ApiErrorResponseWithCode extends ApiErrorResponse {
+  code?: string;
 }
 
 @Catch()
@@ -48,6 +54,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     let message: string | string[] = 'Internal server error';
     let error = HttpStatus[statusCode] ?? 'Error';
+    let code: string = statusToAppErrorCode(statusCode);
 
     if (typeof exceptionResponse === 'string') {
       message = exceptionResponse;
@@ -55,30 +62,39 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const payload = exceptionResponse as ExceptionResponseBody;
       message = payload.message ?? message;
       error = payload.error ?? error;
+      if (typeof payload.code === 'string') {
+        code = payload.code;
+      }
     } else if (exception instanceof Error && !isProduction) {
       message = exception.message;
     }
 
     if (isProduction && statusCode >= 500) {
       message = 'Internal server error';
+      code = AppErrorCode.INTERNAL_ERROR;
     }
 
-    this.logger.error(
-      {
-        err: exception,
-        statusCode,
-        path: request.url,
-        method: request.method,
-        requestId,
-      },
-      'Request failed',
-    );
+    const logPayload = {
+      err: exception,
+      statusCode,
+      code,
+      path: request.url,
+      method: request.method,
+      requestId,
+    };
 
-    const body: ApiErrorResponse = {
+    if (statusCode >= 500) {
+      this.logger.error(logPayload, 'Request failed');
+    } else {
+      this.logger.warn(logPayload, 'Request rejected');
+    }
+
+    const body: ApiErrorResponseWithCode = {
       success: false,
       statusCode,
       error,
       message,
+      code,
       timestamp: new Date().toISOString(),
       path: request.url,
       ...(requestId ? { requestId } : {}),

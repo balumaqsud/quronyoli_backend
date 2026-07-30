@@ -15,7 +15,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/main",
+    "start:prod": "node dist/src/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -27,7 +27,8 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:validate": "prisma validate",
-    "check": "npm run lint && npm run test && npm run build"
+    "qf:discover": "ts-node --transpile-only scripts/qf-discovery-sample.ts",
+    "check": "npm run lint && npm run test && npm run prisma:validate && npm run build"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

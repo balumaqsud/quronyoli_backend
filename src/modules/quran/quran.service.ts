@@ -4,6 +4,7 @@ import { CONFIG_KEYS } from '../../common/constants';
 import { resolveDailyAyahForDate } from '../../common/quran/daily-ayah';
 import { QuranFoundationConfig } from '../../config/configuration';
 import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
+import { ReadingService } from '../reading/reading.service';
 import { formatLocalDate } from '../reading/utils/reading-date.utils';
 import { QuranCacheService } from './cache/quran-cache.service';
 import { QuranFoundationClient } from './client/quran-foundation.client';
@@ -30,6 +31,7 @@ export class QuranService {
     private readonly cache: QuranCacheService,
     private readonly configService: ConfigService,
     private readonly analyticsTracking: AnalyticsTrackingService,
+    private readonly readingService: ReadingService,
   ) {
     this.config = this.configService.getOrThrow<QuranFoundationConfig>(
       CONFIG_KEYS.QURAN_FOUNDATION,
@@ -79,6 +81,29 @@ export class QuranService {
       this.verseQuery(query),
       this.config.cacheTtl.versesSeconds,
     );
+  }
+
+  /**
+   * Fetch ayah by key and record reading progress for the authenticated user.
+   * Side effect retained for Mini App compatibility (GET remains non-idempotent).
+   */
+  async getAyahByKeyForUser(
+    userId: string,
+    verseKey: string,
+    query: VersesQueryDto,
+  ): Promise<unknown> {
+    const content = await this.getAyahByKey(verseKey, query);
+    await this.readingService.recordAyahOpen(userId, verseKey);
+    return content;
+  }
+
+  async getDailyAyahForUser(
+    userId: string,
+    query: VersesQueryDto,
+    now: Date = new Date(),
+  ): Promise<DailyAyahResponseDto> {
+    const timezone = await this.readingService.getTimezone(userId);
+    return this.getDailyAyah(userId, timezone, query, now);
   }
 
   async getDailyAyah(

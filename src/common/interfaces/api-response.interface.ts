@@ -11,6 +11,8 @@ export interface ApiErrorResponse {
   statusCode: number;
   error: string;
   message: string | string[];
+  /** Stable application error code for clients */
+  code?: string;
   timestamp: string;
   path: string;
   requestId?: string;

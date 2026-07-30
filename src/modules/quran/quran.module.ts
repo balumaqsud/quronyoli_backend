@@ -1,9 +1,7 @@
-import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import * as http from 'http';
-import * as https from 'https';
-import { CONFIG_KEYS } from '../../common/constants';
+import { ConfigService } from '@nestjs/config';
+import { CONFIG_KEYS, QURAN_FOUNDATION_CLIENT } from '../../common/constants';
+import { createKeepAliveHttpModule } from '../../common/http/create-keepalive-http-module';
 import { QuranFoundationConfig } from '../../config/configuration';
 import { ReadingModule } from '../reading/reading.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
@@ -19,38 +17,29 @@ import { QuranService } from './quran.service';
   imports: [
     ReadingModule,
     AnalyticsModule,
-    HttpModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const config = configService.getOrThrow<QuranFoundationConfig>(
-          CONFIG_KEYS.QURAN_FOUNDATION,
-        );
-
-        return {
-          timeout: config.timeoutMs,
-          maxRedirects: 0,
-          httpAgent: new http.Agent({
-            keepAlive: true,
-            maxSockets: config.httpMaxSockets,
-          }),
-          httpsAgent: new https.Agent({
-            keepAlive: true,
-            maxSockets: config.httpMaxSockets,
-          }),
-        };
-      },
+    createKeepAliveHttpModule((configService: ConfigService) => {
+      const config = configService.getOrThrow<QuranFoundationConfig>(
+        CONFIG_KEYS.QURAN_FOUNDATION,
+      );
+      return {
+        timeoutMs: config.timeoutMs,
+        maxSockets: config.httpMaxSockets,
+      };
     }),
   ],
   controllers: [QuranController],
   providers: [
     QuranService,
     QuranFoundationClient,
+    {
+      provide: QURAN_FOUNDATION_CLIENT,
+      useExisting: QuranFoundationClient,
+    },
     QuranFoundationTokenService,
     QuranCacheService,
     QuranFoundationErrorMapper,
     QuranRateLimitGuard,
   ],
-  exports: [QuranService],
+  exports: [QuranService, QURAN_FOUNDATION_CLIENT],
 })
 export class QuranModule {}

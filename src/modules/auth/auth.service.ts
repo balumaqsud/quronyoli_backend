@@ -126,13 +126,20 @@ export class AuthService {
       session.id,
     );
 
-    await this.sessionsRepository.rotate({
+    const rotated = await this.sessionsRepository.rotateIfHashMatches({
       sessionId: session.id,
+      expectedRefreshTokenHash: incomingHash,
       refreshTokenHash: this.hashToken(tokens.refreshToken),
       expiresAt: this.resolveRefreshExpiry(),
       ipAddress: context.ipAddress,
       userAgent: context.userAgent,
     });
+
+    if (!rotated) {
+      await this.sessionsRepository.revoke(session.id);
+      this.authCookieService.clearRefreshToken(response);
+      throw new UnauthorizedException('Refresh token reuse detected');
+    }
 
     this.authCookieService.setRefreshToken(response, tokens.refreshToken);
 

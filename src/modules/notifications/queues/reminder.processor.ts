@@ -9,7 +9,12 @@ import { NotificationService } from '../notification.service';
 import { DeliverDailyReminderJobData } from './reminder-jobs';
 import { ReminderScanService } from './reminder-scan.service';
 
-@Processor(NOTIFICATION_QUEUES.DAILY_REMINDERS)
+@Processor(NOTIFICATION_QUEUES.DAILY_REMINDERS, {
+  concurrency: Number.parseInt(
+    process.env.NOTIFICATIONS_QUEUE_CONCURRENCY ?? '5',
+    10,
+  ),
+})
 export class ReminderProcessor extends WorkerHost {
   constructor(
     private readonly reminderScanService: ReminderScanService,

@@ -1,10 +1,8 @@
-import { HttpModule } from '@nestjs/axios';
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import * as http from 'http';
-import * as https from 'https';
+import { ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { CONFIG_KEYS, TELEGRAM_API } from '../../common/constants';
+import { createKeepAliveHttpModule } from '../../common/http/create-keepalive-http-module';
 import { TelegramConfig } from '../../config/configuration';
 import { TelegramHttpApi } from './client/telegram-http.api';
 import { TelegramErrorMapper } from './errors/telegram-error.mapper';
@@ -18,26 +16,14 @@ import { TelegramWebhookBootstrapService } from './telegram-webhook.bootstrap';
 @Module({
   imports: [
     LoggerModule,
-    HttpModule.registerAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const config = configService.getOrThrow<TelegramConfig>(
-          CONFIG_KEYS.TELEGRAM,
-        );
-        return {
-          timeout: config.timeoutMs,
-          maxRedirects: 0,
-          httpAgent: new http.Agent({
-            keepAlive: true,
-            maxSockets: config.httpMaxSockets,
-          }),
-          httpsAgent: new https.Agent({
-            keepAlive: true,
-            maxSockets: config.httpMaxSockets,
-          }),
-        };
-      },
+    createKeepAliveHttpModule((configService: ConfigService) => {
+      const config = configService.getOrThrow<TelegramConfig>(
+        CONFIG_KEYS.TELEGRAM,
+      );
+      return {
+        timeoutMs: config.timeoutMs,
+        maxSockets: config.httpMaxSockets,
+      };
     }),
   ],
   controllers: [TelegramController],

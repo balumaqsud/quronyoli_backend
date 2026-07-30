@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CONFIG_KEYS } from '../../common/constants';
 import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
+import { ReadingService } from '../reading/reading.service';
 import { QuranCacheService } from './cache/quran-cache.service';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { QuranService } from './quran.service';
@@ -36,12 +37,18 @@ describe('QuranService', () => {
       track: jest.fn().mockResolvedValue(undefined),
     };
 
+    const readingService = {
+      recordAyahOpen: jest.fn().mockResolvedValue(undefined),
+      getTimezone: jest.fn().mockResolvedValue('Asia/Tashkent'),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QuranService,
         { provide: QuranFoundationClient, useValue: client },
         { provide: QuranCacheService, useValue: cache },
         { provide: AnalyticsTrackingService, useValue: analyticsTracking },
+        { provide: ReadingService, useValue: readingService },
         {
           provide: ConfigService,
           useValue: {
