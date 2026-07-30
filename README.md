@@ -1,85 +1,91 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Quron Yo'li Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Production-ready NestJS foundation for the **Quron Yo'li** Telegram Mini App.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Stack
 
-## Description
+- NestJS 11 + TypeScript (strict)
+- PostgreSQL + Prisma ORM 7
+- Redis (`ioredis`)
+- JWT authentication infrastructure
+- Swagger / OpenAPI
+- Pino structured logging
+- Docker Compose
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Requirements
 
-## Project setup
+- Node.js 22+
+- npm 10+
+- Docker (optional, for local PostgreSQL/Redis)
+
+## Quick start
 
 ```bash
-$ npm install
+cp .env.example .env
+npm install
+npx prisma generate
+docker compose up -d postgres redis
+npm run start:dev
 ```
 
-## Compile and run the project
+API base path: `http://localhost:3000/api/v1`  
+Swagger: `http://localhost:3000/docs`  
+Health: `http://localhost:3000/api/v1/health`
+
+## Scripts
+
+| Script | Description |
+| --- | --- |
+| `npm run start:dev` | Start in watch mode |
+| `npm run build` | Compile the project |
+| `npm run start:prod` | Run compiled output |
+| `npm run lint` | ESLint with autofix |
+| `npm run test` | Unit tests |
+| `npm run test:e2e` | End-to-end tests |
+| `npm run prisma:generate` | Generate Prisma Client |
+| `npm run prisma:migrate:dev` | Create/apply migrations |
+| `npm run check` | Lint + test + build |
+
+## Architecture
+
+```
+src/
+  config/                 # Typed env configuration + Joi validation
+  common/                 # Filters, interceptors, decorators, contracts
+  infrastructure/
+    auth/                 # JWT strategy, guard, token service (no auth endpoints)
+    database/             # Prisma / PostgreSQL
+    cache/                # Redis
+  modules/
+    health/               # Public health feature
+  main.ts
+  app.module.ts
+```
+
+This foundation intentionally excludes business modules. JWT infrastructure is ready for future auth/user features via `@Public()`, `@CurrentUser()`, and `TokenService`.
+
+## Docker
+
+Start the full stack:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cp .env.example .env
+docker compose up --build
 ```
 
-## Run tests
+Services:
 
-```bash
-# unit tests
-$ npm run test
+- `api` — NestJS application
+- `postgres` — PostgreSQL 16
+- `redis` — Redis 7
 
-# e2e tests
-$ npm run test:e2e
+## Configuration
 
-# test coverage
-$ npm run test:cov
-```
+All runtime settings are validated at boot through `ConfigModule` + Joi. See [`.env.example`](.env.example) for the full list.
 
-## Resources
+Critical variables:
 
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- `DATABASE_URL`
+- `REDIS_HOST` / `REDIS_PORT`
+- `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` (min 32 chars)
+- `CORS_ORIGINS`
