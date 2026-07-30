@@ -48,6 +48,7 @@ export interface TelegramConfig {
   webhookSecret: string;
   webhookAutoRegister: boolean;
   miniAppUrl: string;
+  webAppUrl: string;
   miniAppShortName: string;
   httpMaxSockets: number;
 }
@@ -321,6 +322,7 @@ export default (): AppConfiguration => {
       webhookAutoRegister:
         process.env.TELEGRAM_WEBHOOK_AUTO_REGISTER === 'true',
       miniAppUrl: getRequiredEnv('TELEGRAM_MINI_APP_URL'),
+      webAppUrl: getRequiredEnv('TELEGRAM_WEB_APP_URL'),
       miniAppShortName: process.env.TELEGRAM_MINI_APP_SHORT_NAME ?? 'app',
       httpMaxSockets: Number.parseInt(
         process.env.TELEGRAM_HTTP_MAX_SOCKETS ?? '50',

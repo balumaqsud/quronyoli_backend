@@ -57,6 +57,9 @@ export const envValidationSchema = Joi.object({
   TELEGRAM_MINI_APP_URL: Joi.string()
     .uri({ scheme: ['https'] })
     .required(),
+  TELEGRAM_WEB_APP_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .required(),
   TELEGRAM_MINI_APP_SHORT_NAME: Joi.string().min(1).default('app'),
   TELEGRAM_HTTP_MAX_SOCKETS: Joi.number().integer().min(1).max(500).default(50),
 

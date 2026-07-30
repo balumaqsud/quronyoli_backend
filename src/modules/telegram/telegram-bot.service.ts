@@ -41,24 +41,15 @@ export class TelegramBotService {
     }
 
     if (payload === 'app' || !payload) {
-      await this.sendOpenMiniApp(
-        message.chat.id,
-        `Assalomu alaykum! Open <b>Quron Yo'li</b> to continue reading.`,
-      );
+      await this.sendOpenMiniApp(message.chat.id, this.welcomeMessage());
       return;
     }
 
-    await this.sendOpenMiniApp(
-      message.chat.id,
-      `Welcome to <b>Quron Yo'li</b>. Tap below to open the Mini App.`,
-    );
+    await this.sendOpenMiniApp(message.chat.id, this.welcomeMessage());
   }
 
   async handleAppCommand(message: TelegramIncomingMessage): Promise<void> {
-    await this.sendOpenMiniApp(
-      message.chat.id,
-      `Open the <b>Quron Yo'li</b> Mini App to continue.`,
-    );
+    await this.sendOpenMiniApp(message.chat.id, this.welcomeMessage());
   }
 
   async sendDailyReminder(input: {
@@ -101,13 +92,42 @@ export class TelegramBotService {
       text,
       parseMode: 'HTML',
       disableWebPagePreview: true,
-      replyMarkup: this.openMiniAppKeyboard(links.miniAppDeepLink),
+      replyMarkup: this.openMiniAppKeyboard(
+        links.miniAppDeepLink,
+        startParam === undefined,
+      ),
     });
   }
 
-  private openMiniAppKeyboard(url: string): TelegramInlineKeyboardMarkup {
+  private welcomeMessage(): string {
+    return [
+      'Assalomu alaykum va rahmatullohi va barokatuh!',
+      '',
+      `<b>Quron Yo'li</b> ilovasiga xush kelibsiz!`,
+      '',
+      `Qur'oni Karim bilan har kuni yaqinroq bo'ling: tilovat qiling, ma'nolarini o'rganing, qiroatlarni tinglang va o'qish davomiyligingizni kuzatib boring.`,
+      '',
+      `Alloh taolo ilmimizni ziyoda, qalbimizni Qur'on nuri bilan munavvar qilsin.`,
+      '',
+      'Boshlash uchun quyidagi tugmani bosing.',
+    ].join('\n');
+  }
+
+  private openMiniAppKeyboard(
+    url: string,
+    openDirectly = false,
+  ): TelegramInlineKeyboardMarkup {
     return {
-      inline_keyboard: [[{ text: 'Open Mini App', url }]],
+      inline_keyboard: [
+        [
+          openDirectly
+            ? {
+                text: 'Ilovani ochish',
+                web_app: { url: this.config.webAppUrl },
+              }
+            : { text: 'Ilovani ochish', url },
+        ],
+      ],
     };
   }
 

@@ -11,6 +11,7 @@ describe('TelegramBotService', () => {
     getOrThrow: () => ({
       botUsername: 'QuronYoliBot',
       miniAppUrl: 'https://t.me/QuronYoliBot/app',
+      webAppUrl: 'https://quronyoli-front.vercel.app',
     }),
   } as never);
 
@@ -18,6 +19,7 @@ describe('TelegramBotService', () => {
     getOrThrow: () => ({
       botUsername: 'QuronYoliBot',
       miniAppUrl: 'https://t.me/QuronYoliBot/app',
+      webAppUrl: 'https://quronyoli-front.vercel.app',
     }),
   } as unknown as ConfigService;
 
@@ -34,20 +36,39 @@ describe('TelegramBotService', () => {
     from: { id: 42, is_bot: false, first_name: 'Test' },
   };
 
+  const expectedWelcome = [
+    'Assalomu alaykum va rahmatullohi va barokatuh!',
+    '',
+    `<b>Quron Yo'li</b> ilovasiga xush kelibsiz!`,
+    '',
+    `Qur'oni Karim bilan har kuni yaqinroq bo'ling: tilovat qiling, ma'nolarini o'rganing, qiroatlarni tinglang va o'qish davomiyligingizni kuzatib boring.`,
+    '',
+    `Alloh taolo ilmimizni ziyoda, qalbimizni Qur'on nuri bilan munavvar qilsin.`,
+    '',
+    'Boshlash uchun quyidagi tugmani bosing.',
+  ].join('\n');
+
   beforeEach(() => {
     sendMessage.mockClear();
   });
 
-  it('sends a url button (not web_app) for /start', async () => {
+  it('sends a welcoming Uzbek message and url button for /start', async () => {
     await service.handleStartCommand({ ...baseMessage, text: '/start' });
 
     expect(sendMessage).toHaveBeenCalledTimes(1);
     expect(sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
         chatId: 42,
+        text: expectedWelcome,
+        parseMode: 'HTML',
         replyMarkup: {
           inline_keyboard: [
-            [{ text: 'Open Mini App', url: 'https://t.me/QuronYoliBot/app' }],
+            [
+              {
+                text: 'Ilovani ochish',
+                web_app: { url: 'https://quronyoli-front.vercel.app' },
+              },
+            ],
           ],
         },
       }),
@@ -68,7 +89,7 @@ describe('TelegramBotService', () => {
           inline_keyboard: [
             [
               {
-                text: 'Open Mini App',
+                text: 'Ilovani ochish',
                 url: 'https://t.me/QuronYoliBot/app?startapp=ayah_2_255',
               },
             ],
