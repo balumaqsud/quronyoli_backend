@@ -3,6 +3,8 @@
 The `QuranModule` proxies Quran.Foundation Content v4 and Search v1 APIs.
 It does **not** store Quran text, translation text, tafsir text, or audio blobs in PostgreSQL.
 
+**Shapes, endpoint inventory, auth matrix, pagination/cache, resource IDs, and typed client design:** see [`qf-integration-contract.md`](./qf-integration-contract.md) (source of truth for integration shapes). Curated IDs: [`qf-resource-ids.md`](./qf-resource-ids.md). Samples: [`qf-discovery-samples.json`](./qf-discovery-samples.json). Design-only TS: `src/modules/quran/contracts/`.
+
 ## Official sources
 
 - Docs: https://api-docs.quran.foundation/
