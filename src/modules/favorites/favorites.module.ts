@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
 import { FavoritesController } from './favorites.controller';
 import { FavoritesRepository } from './favorites.repository';
 import { FavoritesService } from './favorites.service';
 
 @Module({
-  imports: [UsersModule],
+  imports: [UsersModule, AnalyticsModule],
   controllers: [FavoritesController],
   providers: [FavoritesRepository, FavoritesService],
   exports: [FavoritesService],

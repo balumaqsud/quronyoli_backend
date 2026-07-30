@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { CONFIG_KEYS } from '../../common/constants';
 import { resolveDailyAyahForDate } from '../../common/quran/daily-ayah';
 import { QuranFoundationConfig } from '../../config/configuration';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { formatLocalDate } from '../reading/utils/reading-date.utils';
 import { QuranCacheService } from './cache/quran-cache.service';
 import { QuranFoundationClient } from './client/quran-foundation.client';
@@ -28,6 +29,7 @@ export class QuranService {
     private readonly client: QuranFoundationClient,
     private readonly cache: QuranCacheService,
     private readonly configService: ConfigService,
+    private readonly analyticsTracking: AnalyticsTrackingService,
   ) {
     this.config = this.configService.getOrThrow<QuranFoundationConfig>(
       CONFIG_KEYS.QURAN_FOUNDATION,
@@ -80,6 +82,7 @@ export class QuranService {
   }
 
   async getDailyAyah(
+    userId: string,
     timezone: string,
     query: VersesQueryDto,
     now: Date = new Date(),
@@ -87,6 +90,18 @@ export class QuranService {
     const localDate = formatLocalDate(now, timezone);
     const coordinate = resolveDailyAyahForDate(localDate);
     const content = await this.getAyahByKey(coordinate.verseKey, query);
+
+    await this.analyticsTracking.track({
+      userId,
+      eventName: 'DAILY_AYAH',
+      properties: {
+        chapterNumber: coordinate.chapterNumber,
+        verseNumber: coordinate.verseNumber,
+        verseKey: coordinate.verseKey,
+        localDate,
+        timezone,
+      },
+    });
 
     return {
       localDate,
@@ -370,7 +385,7 @@ export class QuranService {
     );
   }
 
-  search(query: SearchQueryDto): Promise<unknown> {
+  async search(userId: string, query: SearchQueryDto): Promise<unknown> {
     const params = this.pick(query, [
       'query',
       'mode',
@@ -383,11 +398,22 @@ export class QuranService {
     ]);
 
     const cacheKey = this.cache.buildKey('search', '/search', params);
-    return this.cache.getOrSet(
+    const result = await this.cache.getOrSet(
       cacheKey,
       this.config.cacheTtl.searchSeconds,
       () => this.client.getSearch<unknown>('/search', params),
     );
+
+    await this.analyticsTracking.track({
+      userId,
+      eventName: 'SEARCH',
+      properties: {
+        queryLength: query.query?.length ?? 0,
+        source: 'quran-search',
+      },
+    });
+
+    return result;
   }
 
   private cachedContent(

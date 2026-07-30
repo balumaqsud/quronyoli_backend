@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CONFIG_KEYS } from '../../common/constants';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { QuranCacheService } from './cache/quran-cache.service';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { QuranService } from './quran.service';
@@ -15,6 +16,7 @@ describe('QuranService', () => {
     buildKey: jest.Mock;
     getOrSet: jest.Mock;
   };
+  let analyticsTracking: jest.Mocked<Pick<AnalyticsTrackingService, 'track'>>;
 
   beforeEach(async () => {
     client = {
@@ -30,12 +32,16 @@ describe('QuranService', () => {
             loader(),
         ),
     };
+    analyticsTracking = {
+      track: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QuranService,
         { provide: QuranFoundationClient, useValue: client },
         { provide: QuranCacheService, useValue: cache },
+        { provide: AnalyticsTrackingService, useValue: analyticsTracking },
         {
           provide: ConfigService,
           useValue: {
@@ -84,12 +90,18 @@ describe('QuranService', () => {
     client.getSearch.mockResolvedValue({ result: {} });
 
     await expect(
-      service.search({ query: 'fatiha', mode: 'quick' }),
+      service.search('user-1', { query: 'fatiha', mode: 'quick' }),
     ).resolves.toEqual({ result: {} });
 
     expect(client.getSearch).toHaveBeenCalledWith(
       '/search',
       expect.objectContaining({ query: 'fatiha', mode: 'quick' }),
+    );
+    expect(analyticsTracking.track).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        eventName: 'SEARCH',
+      }),
     );
   });
 });

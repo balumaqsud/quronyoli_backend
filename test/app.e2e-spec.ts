@@ -16,6 +16,8 @@ import { SessionsRepository } from '../src/modules/auth/sessions.repository';
 import { TelegramInitDataVerifier } from '../src/modules/auth/telegram/telegram-init-data.verifier';
 import { BookmarksRepository } from '../src/modules/bookmarks/bookmarks.repository';
 import { FavoritesRepository } from '../src/modules/favorites/favorites.repository';
+import { AnalyticsRepository } from '../src/modules/analytics/analytics.repository';
+import { AnalyticsTrackingService } from '../src/modules/analytics/analytics-tracking.service';
 import { GoalsRepository } from '../src/modules/goals/goals.repository';
 import { NotificationsRepository } from '../src/modules/notifications/notifications.repository';
 import { QuranFoundationClient } from '../src/modules/quran/client/quran-foundation.client';
@@ -595,6 +597,29 @@ describe('Auth & Users (e2e)', () => {
     }),
   };
 
+  const analyticsRepository = {
+    insertMany: jest.fn().mockResolvedValue({ accepted: 1, duplicates: 0 }),
+    countTotal: jest.fn().mockResolvedValue(2),
+    countByEventName: jest.fn().mockResolvedValue([
+      { eventName: 'APP_OPEN', count: 1 },
+      { eventName: 'SHARE', count: 1 },
+    ]),
+    dailySeries: jest
+      .fn()
+      .mockResolvedValue([{ localDate: '2026-07-30', count: 2 }]),
+    uniqueActiveDays: jest.fn().mockResolvedValue(1),
+    topProperty: jest.fn().mockResolvedValue([{ key: '2', count: 1 }]),
+    findFirstLast: jest.fn().mockResolvedValue({
+      firstEventAt: new Date('2026-07-30T10:00:00.000Z'),
+      lastEventAt: new Date('2026-07-30T12:00:00.000Z'),
+    }),
+  };
+
+  const analyticsTracking = {
+    track: jest.fn().mockResolvedValue(undefined),
+    flushBuffer: jest.fn().mockResolvedValue(0),
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -623,6 +648,10 @@ describe('Auth & Users (e2e)', () => {
       .useValue(goalsRepository)
       .overrideProvider(NotificationsRepository)
       .useValue(notificationsRepository)
+      .overrideProvider(AnalyticsRepository)
+      .useValue(analyticsRepository)
+      .overrideProvider(AnalyticsTrackingService)
+      .useValue(analyticsTracking)
       .overrideProvider(TELEGRAM_API)
       .useValue(telegramApi)
       .compile();
@@ -1277,6 +1306,97 @@ describe('Auth & Users (e2e)', () => {
       .delete('/api/v1/notifications/reminders/daily')
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
+  });
+
+  it('ingests analytics events and returns statistics', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    analyticsRepository.insertMany.mockResolvedValueOnce({
+      accepted: 1,
+      duplicates: 0,
+    });
+
+    const single = await request(app.getHttpServer())
+      .post('/api/v1/analytics/events')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        eventName: 'APP_OPEN',
+        properties: { source: 'home' },
+        idempotencyKey: 'e2e-app-open-1',
+      })
+      .expect(201);
+
+    expect(single.body).toMatchObject({
+      success: true,
+      data: { accepted: 1, duplicates: 0 },
+    });
+
+    analyticsRepository.insertMany.mockResolvedValueOnce({
+      accepted: 1,
+      duplicates: 1,
+    });
+
+    const batch = await request(app.getHttpServer())
+      .post('/api/v1/analytics/events/batch')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        events: [
+          { eventName: 'SHARE', properties: { shareTarget: 'telegram' } },
+          {
+            eventName: 'SHARE',
+            properties: { shareTarget: 'telegram' },
+            idempotencyKey: 'dup-key',
+          },
+        ],
+      })
+      .expect(201);
+
+    expect(batch.body).toMatchObject({
+      success: true,
+      data: { accepted: 1, duplicates: 1 },
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/v1/analytics/events')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ eventName: 'NOT_A_REAL_EVENT' })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .post('/api/v1/analytics/events')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        eventName: 'APP_OPEN',
+        properties: { token: 'secret' },
+      })
+      .expect(400);
+
+    const stats = await request(app.getHttpServer())
+      .get('/api/v1/analytics/statistics')
+      .query({
+        from: '2026-07-01',
+        to: '2026-07-30',
+        timezone: 'Asia/Tashkent',
+      })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(stats.body).toMatchObject({
+      success: true,
+      data: {
+        from: '2026-07-01',
+        to: '2026-07-30',
+        timezone: 'Asia/Tashkent',
+        totalEvents: 2,
+        uniqueActiveDays: 1,
+        searchCount: 0,
+        shareCount: 1,
+        audioPlayCount: 0,
+      },
+    });
   });
 });
 

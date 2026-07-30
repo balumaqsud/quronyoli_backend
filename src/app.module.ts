@@ -12,17 +12,18 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { AuthInfrastructureModule } from './infrastructure/auth/auth.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { RedisModule } from './infrastructure/cache/redis.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
-import { FavoritesModule } from './modules/favorites/favorites.module';
 import { GoalsModule } from './modules/goals/goals.module';
 import { HealthModule } from './modules/health/health.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { QuranModule } from './modules/quran/quran.module';
 import { ReadingModule } from './modules/reading/reading.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
 import { UsersModule } from './modules/users/users.module';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -101,6 +102,7 @@ import { UsersModule } from './modules/users/users.module';
     GoalsModule,
     TelegramModule,
     NotificationsModule,
+    AnalyticsModule,
   ],
   providers: [
     {

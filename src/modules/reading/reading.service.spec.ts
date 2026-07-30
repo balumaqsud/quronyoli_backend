@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from '../users/users.service';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { TOTAL_QURAN_AYAHS } from './constants/quran-coordinates';
 import { ReadingRepository } from './reading.repository';
 import { ReadingService } from './reading.service';
@@ -25,6 +26,7 @@ describe('ReadingService', () => {
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
+  let analyticsTracking: jest.Mocked<Pick<AnalyticsTrackingService, 'track'>>;
 
   beforeEach(async () => {
     repository = {
@@ -43,12 +45,16 @@ describe('ReadingService', () => {
     usersService = {
       getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
     };
+    analyticsTracking = {
+      track: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReadingService,
         { provide: ReadingRepository, useValue: repository },
         { provide: UsersService, useValue: usersService },
+        { provide: AnalyticsTrackingService, useValue: analyticsTracking },
       ],
     }).compile();
 
@@ -63,6 +69,12 @@ describe('ReadingService', () => {
       chapterNumber: 2,
       verseNumber: 255,
     });
+    expect(analyticsTracking.track).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        eventName: 'AYAH_OPEN',
+      }),
+    );
   });
 
   it('rejects invalid verse keys', async () => {

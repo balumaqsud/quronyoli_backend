@@ -2,6 +2,7 @@ import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThemePreference } from '../../generated/prisma';
 import { UsersService } from '../users/users.service';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { SettingsWithCatalog } from './interfaces/settings.interface';
 import { SettingsRepository } from './settings.repository';
 import { SettingsService } from './settings.service';
@@ -19,6 +20,7 @@ describe('SettingsService', () => {
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
+  let analyticsTracking: jest.Mocked<Pick<AnalyticsTrackingService, 'track'>>;
 
   const baseSettings: SettingsWithCatalog = {
     userId: 'user-1',
@@ -42,7 +44,7 @@ describe('SettingsService', () => {
 
   beforeEach(async () => {
     repository = {
-      upsertDefaults: jest.fn(),
+      upsertDefaults: jest.fn().mockResolvedValue(baseSettings),
       upsertWithUpdate: jest.fn(),
       findActiveTranslationByExternalId: jest.fn(),
       findActiveTafsirByExternalId: jest.fn(),
@@ -51,12 +53,16 @@ describe('SettingsService', () => {
     usersService = {
       getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
     };
+    analyticsTracking = {
+      track: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SettingsService,
         { provide: SettingsRepository, useValue: repository },
         { provide: UsersService, useValue: usersService },
+        { provide: AnalyticsTrackingService, useValue: analyticsTracking },
       ],
     }).compile();
 
@@ -155,6 +161,12 @@ describe('SettingsService', () => {
     });
     expect(result.theme).toBe(ThemePreference.DARK);
     expect(result.translation?.id).toBe('131');
+    expect(analyticsTracking.track).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        eventName: 'TRANSLATION_CHANGE',
+      }),
+    );
   });
 
   it('clears resource selections when null is provided', async () => {

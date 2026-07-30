@@ -253,6 +253,13 @@ Product analytics separate from canonical reading history.
 
 Optional `idempotencyKey` is globally unique for safe retries.
 
+**Indexes:**
+- `(user_id, occurred_at)` — recent user activity
+- `(event_name, occurred_at)` — global event timelines
+- `(user_id, event_name, occurred_at)` — per-user filtered statistics
+
+See [analytics.md](./analytics.md) for ingestion, buffering, and statistics APIs.
+
 ---
 
 ## Cascade summary

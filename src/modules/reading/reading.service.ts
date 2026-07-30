@@ -11,6 +11,7 @@ import {
   ReadingVerseProgress,
 } from '../../generated/prisma';
 import { UsersService } from '../users/users.service';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { TOTAL_QURAN_AYAHS } from './constants/quran-coordinates';
 import {
   ContinueReadingResponseDto,
@@ -35,6 +36,7 @@ export class ReadingService {
   constructor(
     private readonly readingRepository: ReadingRepository,
     private readonly usersService: UsersService,
+    private readonly analyticsTracking: AnalyticsTrackingService,
   ) {}
 
   async recordAyahOpen(userId: string, verseKey: string): Promise<void> {
@@ -43,6 +45,16 @@ export class ReadingService {
       userId,
       chapterNumber: coordinate.chapterNumber,
       verseNumber: coordinate.verseNumber,
+    });
+    await this.analyticsTracking.track({
+      userId,
+      eventName: 'AYAH_OPEN',
+      properties: {
+        chapterNumber: coordinate.chapterNumber,
+        verseNumber: coordinate.verseNumber,
+        verseKey: coordinate.verseKey,
+        source: 'by-key',
+      },
     });
   }
 

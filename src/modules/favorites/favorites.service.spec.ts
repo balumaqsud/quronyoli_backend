@@ -6,6 +6,7 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma } from '../../generated/prisma';
 import { UsersService } from '../users/users.service';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { FavoritesRepository } from './favorites.repository';
 import { FavoritesService } from './favorites.service';
 
@@ -18,6 +19,7 @@ describe('FavoritesService', () => {
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
+  let analyticsTracking: jest.Mocked<Pick<AnalyticsTrackingService, 'track'>>;
 
   const favorite = {
     id: 'fav-1',
@@ -39,12 +41,16 @@ describe('FavoritesService', () => {
     usersService = {
       getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
     };
+    analyticsTracking = {
+      track: jest.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FavoritesService,
         { provide: FavoritesRepository, useValue: repository },
         { provide: UsersService, useValue: usersService },
+        { provide: AnalyticsTrackingService, useValue: analyticsTracking },
       ],
     }).compile();
 

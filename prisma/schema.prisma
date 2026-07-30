@@ -370,6 +370,7 @@ model AnalyticsEvent {
 
   @@index([userId, occurredAt])
   @@index([eventName, occurredAt])
+  @@index([userId, eventName, occurredAt])
   @@map("analytics_events")
 }
 

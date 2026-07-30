@@ -52,6 +52,19 @@ export interface NotificationsConfig {
   backoffDelayMs: number;
 }
 
+export interface AnalyticsConfig {
+  maxBatchSize: number;
+  maxClockSkewSeconds: number;
+  dbChunkSize: number;
+  bufferTtlSeconds: number;
+  flushDelayMs: number;
+  flushMaxBatch: number;
+  queueName: string;
+  maxAttempts: number;
+  backoffDelayMs: number;
+  maxPropertiesBytes: number;
+}
+
 export type CookieSameSite = 'lax' | 'strict' | 'none';
 
 export interface AuthCookieConfig {
@@ -99,6 +112,7 @@ export interface AppConfiguration {
   jwt: JwtConfig;
   telegram: TelegramConfig;
   notifications: NotificationsConfig;
+  analytics: AnalyticsConfig;
   authCookie: AuthCookieConfig;
   quranFoundation: QuranFoundationConfig;
 }
@@ -268,6 +282,45 @@ export default (): AppConfiguration => {
       ),
       backoffDelayMs: Number.parseInt(
         process.env.NOTIFICATIONS_BACKOFF_DELAY_MS ?? '5000',
+        10,
+      ),
+    },
+    analytics: {
+      maxBatchSize: Number.parseInt(
+        process.env.ANALYTICS_MAX_BATCH_SIZE ?? '100',
+        10,
+      ),
+      maxClockSkewSeconds: Number.parseInt(
+        process.env.ANALYTICS_MAX_CLOCK_SKEW_SECONDS ?? '300',
+        10,
+      ),
+      dbChunkSize: Number.parseInt(
+        process.env.ANALYTICS_DB_CHUNK_SIZE ?? '100',
+        10,
+      ),
+      bufferTtlSeconds: Number.parseInt(
+        process.env.ANALYTICS_BUFFER_TTL_SECONDS ?? '3600',
+        10,
+      ),
+      flushDelayMs: Number.parseInt(
+        process.env.ANALYTICS_FLUSH_DELAY_MS ?? '2000',
+        10,
+      ),
+      flushMaxBatch: Number.parseInt(
+        process.env.ANALYTICS_FLUSH_MAX_BATCH ?? '500',
+        10,
+      ),
+      queueName: process.env.ANALYTICS_QUEUE_NAME ?? 'analytics-flush',
+      maxAttempts: Number.parseInt(
+        process.env.ANALYTICS_MAX_ATTEMPTS ?? '5',
+        10,
+      ),
+      backoffDelayMs: Number.parseInt(
+        process.env.ANALYTICS_BACKOFF_DELAY_MS ?? '5000',
+        10,
+      ),
+      maxPropertiesBytes: Number.parseInt(
+        process.env.ANALYTICS_MAX_PROPERTIES_BYTES ?? '4096',
         10,
       ),
     },

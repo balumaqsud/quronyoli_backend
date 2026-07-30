@@ -5,6 +5,7 @@ export const CONFIG_KEYS = {
   JWT: 'jwt',
   TELEGRAM: 'telegram',
   NOTIFICATIONS: 'notifications',
+  ANALYTICS: 'analytics',
   AUTH_COOKIE: 'authCookie',
   QURAN_FOUNDATION: 'quranFoundation',
 } as const;
@@ -22,4 +23,12 @@ export const NOTIFICATION_QUEUES = {
 export const NOTIFICATION_JOBS = {
   SCAN_DUE_REMINDERS: 'scan-due-reminders',
   DELIVER_DAILY_REMINDER: 'deliver-daily-reminder',
+} as const;
+
+export const ANALYTICS_QUEUES = {
+  FLUSH: 'analytics-flush',
+} as const;
+
+export const ANALYTICS_JOBS = {
+  FLUSH_BUFFER: 'flush-analytics-buffer',
 } as const;

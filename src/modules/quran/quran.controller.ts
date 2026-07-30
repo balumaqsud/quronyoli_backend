@@ -92,7 +92,7 @@ export class QuranController {
     @Query() query: VersesQueryDto,
   ): Promise<DailyAyahResponseDto> {
     const timezone = await this.readingService.getTimezone(currentUser.sub);
-    return this.quranService.getDailyAyah(timezone, query);
+    return this.quranService.getDailyAyah(currentUser.sub, timezone, query);
   }
 
   @Get('ayahs/by-key/:verseKey')
@@ -327,7 +327,10 @@ export class QuranController {
 
   @Get('search')
   @ApiOperation({ summary: 'Search Quran content via Quran.Foundation Search' })
-  search(@Query() query: SearchQueryDto): Promise<unknown> {
-    return this.quranService.search(query);
+  search(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query() query: SearchQueryDto,
+  ): Promise<unknown> {
+    return this.quranService.search(currentUser.sub, query);
   }
 }

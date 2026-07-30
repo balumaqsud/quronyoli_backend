@@ -56,6 +56,21 @@ export const envValidationSchema = Joi.object({
   NOTIFICATIONS_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
   NOTIFICATIONS_BACKOFF_DELAY_MS: Joi.number().integer().min(100).default(5000),
 
+  ANALYTICS_MAX_BATCH_SIZE: Joi.number().integer().min(1).max(500).default(100),
+  ANALYTICS_MAX_CLOCK_SKEW_SECONDS: Joi.number().integer().min(0).default(300),
+  ANALYTICS_DB_CHUNK_SIZE: Joi.number().integer().min(1).max(500).default(100),
+  ANALYTICS_BUFFER_TTL_SECONDS: Joi.number().integer().min(60).default(3600),
+  ANALYTICS_FLUSH_DELAY_MS: Joi.number().integer().min(100).default(2000),
+  ANALYTICS_FLUSH_MAX_BATCH: Joi.number()
+    .integer()
+    .min(1)
+    .max(2000)
+    .default(500),
+  ANALYTICS_QUEUE_NAME: Joi.string().default('analytics-flush'),
+  ANALYTICS_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
+  ANALYTICS_BACKOFF_DELAY_MS: Joi.number().integer().min(100).default(5000),
+  ANALYTICS_MAX_PROPERTIES_BYTES: Joi.number().integer().min(256).default(4096),
+
   AUTH_COOKIE_NAME: Joi.string().default('refresh_token'),
   AUTH_COOKIE_PATH: Joi.string().default('/api/v1/auth'),
   AUTH_COOKIE_DOMAIN: Joi.string().allow('').optional(),

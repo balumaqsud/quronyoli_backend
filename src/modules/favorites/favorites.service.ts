@@ -12,6 +12,7 @@ import { assertAyahCoordinateOrThrow } from '../../common/quran/ayah-coordinate'
 import { toVerseKey } from '../../common/quran/quran-coordinates';
 import { throwIfUniqueConflict } from '../../common/database/prisma-errors';
 import { UsersService } from '../users/users.service';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import {
   CreateFavoriteDto,
   ListFavoritesQueryDto,
@@ -28,6 +29,7 @@ export class FavoritesService {
   constructor(
     private readonly favoritesRepository: FavoritesRepository,
     private readonly usersService: UsersService,
+    private readonly analyticsTracking: AnalyticsTrackingService,
   ) {}
 
   async create(
@@ -45,6 +47,15 @@ export class FavoritesService {
         userId,
         chapterNumber: coordinate.chapterNumber,
         verseNumber: coordinate.verseNumber,
+      });
+      await this.analyticsTracking.track({
+        userId,
+        eventName: 'FAVORITE_ADDED',
+        properties: {
+          chapterNumber: coordinate.chapterNumber,
+          verseNumber: coordinate.verseNumber,
+          verseKey: coordinate.verseKey,
+        },
       });
       return this.toResponse(favorite);
     } catch (error) {

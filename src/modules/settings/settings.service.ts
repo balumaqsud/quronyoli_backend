@@ -5,6 +5,7 @@ import {
   QuranTranslation,
 } from '../../generated/prisma';
 import { UsersService } from '../users/users.service';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import {
   CatalogResourceDto,
   SettingsResponseDto,
@@ -21,6 +22,7 @@ export class SettingsService {
   constructor(
     private readonly settingsRepository: SettingsRepository,
     private readonly usersService: UsersService,
+    private readonly analyticsTracking: AnalyticsTrackingService,
   ) {}
 
   async getForUser(userId: string): Promise<SettingsResponseDto> {
@@ -34,11 +36,28 @@ export class SettingsService {
     dto: UpdateSettingsDto,
   ): Promise<SettingsResponseDto> {
     await this.usersService.getActiveByIdOrThrow(userId);
+    const previous = await this.settingsRepository.upsertDefaults(userId);
     const data = await this.buildUpdateData(dto);
     const settings = await this.settingsRepository.upsertWithUpdate(
       userId,
       data,
     );
+
+    if (
+      data.defaultTranslationId !== undefined &&
+      data.defaultTranslationId !== previous.defaultTranslationId
+    ) {
+      await this.analyticsTracking.track({
+        userId,
+        eventName: 'TRANSLATION_CHANGE',
+        properties: {
+          translationId: data.defaultTranslationId,
+          previousTranslationId: previous.defaultTranslationId,
+          source: 'settings',
+        },
+      });
+    }
+
     return this.toResponse(settings);
   }
 

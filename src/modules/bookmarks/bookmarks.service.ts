@@ -12,6 +12,7 @@ import {
 import { assertAyahCoordinateOrThrow } from '../../common/quran/ayah-coordinate';
 import { toVerseKey } from '../../common/quran/quran-coordinates';
 import { UsersService } from '../users/users.service';
+import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import {
   CreateBookmarkDto,
   ListBookmarksQueryDto,
@@ -31,6 +32,7 @@ export class BookmarksService {
   constructor(
     private readonly bookmarksRepository: BookmarksRepository,
     private readonly usersService: UsersService,
+    private readonly analyticsTracking: AnalyticsTrackingService,
   ) {}
 
   async create(
@@ -53,6 +55,15 @@ export class BookmarksService {
         label: dto.label,
         note: dto.note,
         color: dto.color,
+      });
+      await this.analyticsTracking.track({
+        userId,
+        eventName: 'BOOKMARK_ADDED',
+        properties: {
+          chapterNumber: coordinate.chapterNumber,
+          verseNumber: coordinate.verseNumber,
+          verseKey: coordinate.verseKey,
+        },
       });
       return this.toResponse(bookmark);
     } catch (error) {
