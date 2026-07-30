@@ -20,6 +20,8 @@ erDiagram
   User ||--o{ Bookmark : saves
   User ||--o| ReadingProgress : tracks
   User ||--o{ ReadingHistory : records
+  User ||--o{ ReadingAyahHistory : opens
+  User ||--o{ ReadingVerseProgress : covers
   User ||--o{ ReadingDay : aggregates
   User ||--o{ DailyGoal : sets
   User ||--o{ AnalyticsEvent : emits
@@ -135,20 +137,40 @@ Bounded reading sessions (not every verse-open event).
 
 Stores start/end coordinates and timestamps, `versesRead`, `activeSeconds`, and optional `clientSessionKey` for idempotent client sync.
 
-**Relationship:** `User` 1 → N `ReadingHistory`  
-**FK:** `reading_histories.user_id → users.id`  
-**Cascade:** `ON DELETE CASCADE`  
+**Relationship:** `User` 1 → N `ReadingHistory`
+**FK:** `reading_histories.user_id → users.id`
+**Cascade:** `ON DELETE CASCADE`
 **Unique:** `(user_id, client_session_key)` (PostgreSQL allows multiple NULL keys)
+
+### `ReadingAyahHistory` (`reading_ayah_histories`)
+Append-only record of every successful single-ayah open.
+
+**Relationship:** `User` 1 → N `ReadingAyahHistory`
+**FK:** `reading_ayah_histories.user_id → users.id`
+**Cascade:** `ON DELETE CASCADE`
+**Indexes:** `(user_id, opened_at DESC, id DESC)`, `(user_id, chapter_number, verse_number, opened_at DESC)`
+
+### `ReadingVerseProgress` (`reading_verse_progress`)
+Unique per-ayah progress for completion percentage and recently-read lists.
+
+**Relationship:** `User` 1 → N `ReadingVerseProgress`
+**FK:** `reading_verse_progress.user_id → users.id`
+**Cascade:** `ON DELETE CASCADE`
+**Unique:** `(user_id, chapter_number, verse_number)`
+**Indexes:** `(user_id, last_read_at DESC, chapter_number, verse_number)`, `(user_id, chapter_number)`
+
+Stores `firstReadAt`, `lastReadAt`, and `readCount` only — never Quran text.
 
 ### `ReadingDay` (`reading_days`)
 Daily aggregate for streaks/dashboards.
 
-**Relationship:** `User` 1 → N `ReadingDay`  
-**FK:** `reading_days.user_id → users.id`  
-**Cascade:** `ON DELETE CASCADE`  
+**Relationship:** `User` 1 → N `ReadingDay`
+**FK:** `reading_days.user_id → users.id`
+**Cascade:** `ON DELETE CASCADE`
 **Unique:** `(user_id, local_date)`
+**Index:** `(user_id, local_date DESC)`
 
-`ReadingHistory` is the source of truth for sessions; `ReadingDay` is the query-optimized rollup.
+`ReadingAyahHistory` is the source of truth for every ayah open; `ReadingVerseProgress` and `ReadingDay` are query-optimized rollups. `ReadingHistory` remains available for future session-based sync.
 
 ---
 
@@ -210,6 +232,8 @@ Optional `idempotencyKey` is globally unique for safe retries.
 | `Bookmark` | `User` | Cascade |
 | `ReadingProgress` | `User` | Cascade |
 | `ReadingHistory` | `User` | Cascade |
+| `ReadingAyahHistory` | `User` | Cascade |
+| `ReadingVerseProgress` | `User` | Cascade |
 | `ReadingDay` | `User` | Cascade |
 | `DailyGoal` | `User` | Cascade |
 | `DailyGoalResult` | `DailyGoal` | Cascade |
@@ -245,6 +269,7 @@ All Quran content is retrieved from Quran.Foundation using external resource IDs
 
 1. `20260730120000_init_auth` — users + sessions
 2. `20260730130000_quran_domain_schema` — domain schema, checks, partial active-goal uniqueness
+3. `20260730140000_reading_ayah_tracking` — ayah open history, unique verse progress, daily DESC index
 
 Apply with:
 

@@ -15,6 +15,7 @@ import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { SessionsRepository } from '../src/modules/auth/sessions.repository';
 import { TelegramInitDataVerifier } from '../src/modules/auth/telegram/telegram-init-data.verifier';
 import { QuranFoundationClient } from '../src/modules/quran/client/quran-foundation.client';
+import { ReadingRepository } from '../src/modules/reading/reading.repository';
 import { SettingsRepository } from '../src/modules/settings/settings.repository';
 import { UsersRepository } from '../src/modules/users/users.repository';
 
@@ -198,6 +199,52 @@ describe('Auth & Users (e2e)', () => {
     findActiveReciterByExternalId: jest.fn().mockResolvedValue(null),
   };
 
+  const readingProgress = {
+    userId,
+    chapterNumber: 1,
+    verseNumber: 1,
+    wordNumber: null,
+    lastTranslationId: null,
+    lastTafsirId: null,
+    lastReciterId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const readingRepository = {
+    getTimezone: jest.fn().mockResolvedValue('Asia/Tashkent'),
+    recordAyahOpen: jest.fn().mockResolvedValue(undefined),
+    findProgress: jest.fn().mockResolvedValue(readingProgress),
+    findRecent: jest.fn().mockResolvedValue([
+      {
+        id: 'recent-1',
+        userId,
+        chapterNumber: 1,
+        verseNumber: 1,
+        firstReadAt: new Date('2026-07-01T00:00:00.000Z'),
+        lastReadAt: new Date('2026-07-30T00:00:00.000Z'),
+        readCount: 2,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]),
+    findHistory: jest.fn().mockResolvedValue([
+      {
+        id: 'hist-1',
+        userId,
+        chapterNumber: 1,
+        verseNumber: 1,
+        openedAt: new Date('2026-07-30T00:00:00.000Z'),
+        createdAt: new Date(),
+      },
+    ]),
+    countUniqueAyahs: jest.fn().mockResolvedValue(1),
+    sumReadCounts: jest.fn().mockResolvedValue(2),
+    findDaysInRange: jest.fn().mockResolvedValue([]),
+    findAllActiveDays: jest.fn().mockResolvedValue([]),
+    countActiveDays: jest.fn().mockResolvedValue(0),
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -216,6 +263,8 @@ describe('Auth & Users (e2e)', () => {
       .useValue(quranClient)
       .overrideProvider(SettingsRepository)
       .useValue(settingsRepository)
+      .overrideProvider(ReadingRepository)
+      .useValue(readingRepository)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -443,6 +492,86 @@ describe('Auth & Users (e2e)', () => {
       .patch('/api/v1/settings')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({ arabicFontSize: 3 })
+      .expect(400);
+  });
+
+  it('records reading when opening a single ayah by key', async () => {
+    quranClient.getContent.mockResolvedValueOnce({
+      verse: { verse_key: '1:1' },
+    });
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    await request(app.getHttpServer())
+      .get('/api/v1/quran/ayahs/by-key/1:1')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(readingRepository.recordAyahOpen).toHaveBeenCalledWith({
+      userId,
+      chapterNumber: 1,
+      verseNumber: 1,
+    });
+  });
+
+  it('returns continue reading for the authenticated user', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/reading/continue')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const body = response.body as {
+      success: boolean;
+      data: { verseKey: string };
+    };
+
+    expect(body.success).toBe(true);
+    expect(body.data.verseKey).toBe('1:1');
+  });
+
+  it('returns recent and history reading lists', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const recent = await request(app.getHttpServer())
+      .get('/api/v1/reading/recent')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const history = await request(app.getHttpServer())
+      .get('/api/v1/reading/history')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(recent.body).toMatchObject({
+      success: true,
+      data: { items: [{ verseKey: '1:1' }] },
+    });
+    expect(history.body).toMatchObject({
+      success: true,
+      data: { items: [{ verseKey: '1:1' }] },
+    });
+  });
+
+  it('rejects inverted daily reading ranges', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    await request(app.getHttpServer())
+      .get('/api/v1/reading/daily')
+      .query({ from: '2026-07-30', to: '2026-07-01' })
+      .set('Authorization', `Bearer ${accessToken}`)
       .expect(400);
   });
 });

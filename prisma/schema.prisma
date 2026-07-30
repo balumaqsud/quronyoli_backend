@@ -40,6 +40,8 @@ model User {
   bookmarks        Bookmark[]
   readingProgress  ReadingProgress?
   readingHistories ReadingHistory[]
+  readingAyahHistories ReadingAyahHistory[]
+  readingVerseProgress ReadingVerseProgress[]
   readingDays      ReadingDay[]
   dailyGoals       DailyGoal[]
   analyticsEvents  AnalyticsEvent[]
@@ -248,21 +250,55 @@ model ReadingHistory {
   @@map("reading_histories")
 }
 
+model ReadingAyahHistory {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  chapterNumber Int      @map("chapter_number")
+  verseNumber   Int      @map("verse_number")
+  openedAt      DateTime @default(now()) @map("opened_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, openedAt(sort: Desc), id(sort: Desc)])
+  @@index([userId, chapterNumber, verseNumber, openedAt(sort: Desc)])
+  @@map("reading_ayah_histories")
+}
+
+model ReadingVerseProgress {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  chapterNumber Int      @map("chapter_number")
+  verseNumber   Int      @map("verse_number")
+  firstReadAt   DateTime @map("first_read_at")
+  lastReadAt    DateTime @map("last_read_at")
+  readCount     Int      @default(1) @map("read_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterNumber, verseNumber])
+  @@index([userId, lastReadAt(sort: Desc), chapterNumber, verseNumber])
+  @@index([userId, chapterNumber])
+  @@map("reading_verse_progress")
+}
+
 model ReadingDay {
-  id           String   @id @default(uuid()) @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
-  localDate    DateTime @map("local_date") @db.Date
-  timezone     String   @db.VarChar(64)
-  versesRead   Int      @default(0) @map("verses_read")
-  activeSeconds Int     @default(0) @map("active_seconds")
-  sessionsCount Int     @default(0) @map("sessions_count")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  localDate     DateTime @map("local_date") @db.Date
+  timezone      String   @db.VarChar(64)
+  versesRead    Int      @default(0) @map("verses_read")
+  activeSeconds Int      @default(0) @map("active_seconds")
+  sessionsCount Int      @default(0) @map("sessions_count")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, localDate])
-  @@index([userId, localDate])
+  @@index([userId, localDate(sort: Desc)])
   @@map("reading_days")
 }
 

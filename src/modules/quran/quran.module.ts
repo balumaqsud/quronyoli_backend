@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { CONFIG_KEYS } from '../../common/constants';
 import { QuranFoundationConfig } from '../../config/configuration';
+import { ReadingModule } from '../reading/reading.module';
 import { QuranCacheService } from './cache/quran-cache.service';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { QuranFoundationTokenService } from './client/quran-foundation-token.service';
@@ -13,6 +14,7 @@ import { QuranService } from './quran.service';
 
 @Module({
   imports: [
+    ReadingModule,
     HttpModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

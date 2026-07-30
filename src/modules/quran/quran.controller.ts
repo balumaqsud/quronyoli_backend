@@ -15,6 +15,9 @@ import {
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../../infrastructure/auth/interfaces/jwt-payload.interface';
+import { ReadingService } from '../reading/reading.service';
 import {
   AudioTimestampQueryDto,
   LanguageQueryDto,
@@ -36,7 +39,10 @@ import { QuranService } from './quran.service';
   version: '1',
 })
 export class QuranController {
-  constructor(private readonly quranService: QuranService) {}
+  constructor(
+    private readonly quranService: QuranService,
+    private readonly readingService: ReadingService,
+  ) {}
 
   @Get('surahs')
   @ApiOperation({ summary: 'List surahs/chapters' })
@@ -74,12 +80,19 @@ export class QuranController {
   }
 
   @Get('ayahs/by-key/:verseKey')
-  @ApiOperation({ summary: 'Get an ayah by verse key (e.g. 1:1)' })
-  getAyahByKey(
+  @ApiOperation({
+    summary: 'Get an ayah by verse key (e.g. 1:1)',
+    description:
+      'Retrieves ayah content and automatically records reading progress/history for the authenticated user.',
+  })
+  async getAyahByKey(
+    @CurrentUser() currentUser: AuthenticatedUser,
     @Param('verseKey') verseKey: string,
     @Query() query: VersesQueryDto,
   ): Promise<unknown> {
-    return this.quranService.getAyahByKey(verseKey, query);
+    const content = await this.quranService.getAyahByKey(verseKey, query);
+    await this.readingService.recordAyahOpen(currentUser.sub, verseKey);
+    return content;
   }
 
   @Get('ayahs/by-juz/:juz')
