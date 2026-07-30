@@ -18,6 +18,17 @@ enum DailyGoalMetric {
   MINUTES
 }
 
+enum NotificationDeliveryType {
+  DAILY_REMINDER
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
 model User {
   id              String             @id @default(uuid()) @db.Uuid
   telegramId      String             @unique @map("telegram_id")
@@ -45,6 +56,8 @@ model User {
   readingDays      ReadingDay[]
   dailyGoals       DailyGoal[]
   analyticsEvents  AnalyticsEvent[]
+  reminderPreference TelegramReminderPreference?
+  notificationDeliveries NotificationDelivery[]
 
   @@index([isActive])
   @@index([deletedAt])
@@ -358,4 +371,37 @@ model AnalyticsEvent {
   @@index([userId, occurredAt])
   @@index([eventName, occurredAt])
   @@map("analytics_events")
+}
+
+model TelegramReminderPreference {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  enabled   Boolean  @default(true)
+  localTime String   @map("local_time") @db.VarChar(5)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, localTime])
+  @@map("telegram_reminder_preferences")
+}
+
+model NotificationDelivery {
+  id                String                     @id @default(uuid()) @db.Uuid
+  userId            String                     @map("user_id") @db.Uuid
+  type              NotificationDeliveryType
+  localDate         DateTime                   @map("local_date") @db.Date
+  status            NotificationDeliveryStatus @default(PENDING)
+  telegramMessageId String?                    @map("telegram_message_id") @db.VarChar(64)
+  errorMessage      String?                    @map("error_message") @db.VarChar(512)
+  sentAt            DateTime?                  @map("sent_at")
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, localDate])
+  @@index([status, localDate])
+  @@map("notification_deliveries")
 }

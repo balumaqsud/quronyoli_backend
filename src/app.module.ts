@@ -17,9 +17,11 @@ import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { GoalsModule } from './modules/goals/goals.module';
 import { HealthModule } from './modules/health/health.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { QuranModule } from './modules/quran/quran.module';
 import { ReadingModule } from './modules/reading/reading.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { TelegramModule } from './modules/telegram/telegram.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -97,6 +99,8 @@ import { UsersModule } from './modules/users/users.module';
     FavoritesModule,
     BookmarksModule,
     GoalsModule,
+    TelegramModule,
+    NotificationsModule,
   ],
   providers: [
     {

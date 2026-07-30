@@ -33,7 +33,23 @@ export interface JwtConfig {
 
 export interface TelegramConfig {
   botToken: string;
+  botUsername: string;
+  apiBaseUrl: string;
+  timeoutMs: number;
   initDataMaxAgeSeconds: number;
+  webhookUrl?: string;
+  webhookSecret: string;
+  webhookAutoRegister: boolean;
+  miniAppUrl: string;
+  miniAppShortName: string;
+}
+
+export interface NotificationsConfig {
+  queueName: string;
+  concurrency: number;
+  reminderScanCron: string;
+  maxAttempts: number;
+  backoffDelayMs: number;
 }
 
 export type CookieSameSite = 'lax' | 'strict' | 'none';
@@ -82,6 +98,7 @@ export interface AppConfiguration {
   redis: RedisConfig;
   jwt: JwtConfig;
   telegram: TelegramConfig;
+  notifications: NotificationsConfig;
   authCookie: AuthCookieConfig;
   quranFoundation: QuranFoundationConfig;
 }
@@ -219,8 +236,38 @@ export default (): AppConfiguration => {
     },
     telegram: {
       botToken: getRequiredEnv('TELEGRAM_BOT_TOKEN'),
+      botUsername: getRequiredEnv('TELEGRAM_BOT_USERNAME').replace(/^@/, ''),
+      apiBaseUrl:
+        process.env.TELEGRAM_API_BASE_URL ?? 'https://api.telegram.org',
+      timeoutMs: Number.parseInt(
+        process.env.TELEGRAM_TIMEOUT_MS ?? '15000',
+        10,
+      ),
       initDataMaxAgeSeconds: Number.parseInt(
         process.env.TELEGRAM_INIT_DATA_MAX_AGE_SECONDS ?? '86400',
+        10,
+      ),
+      webhookUrl: process.env.TELEGRAM_WEBHOOK_URL || undefined,
+      webhookSecret: getRequiredEnv('TELEGRAM_WEBHOOK_SECRET'),
+      webhookAutoRegister:
+        process.env.TELEGRAM_WEBHOOK_AUTO_REGISTER === 'true',
+      miniAppUrl: getRequiredEnv('TELEGRAM_MINI_APP_URL'),
+      miniAppShortName: process.env.TELEGRAM_MINI_APP_SHORT_NAME ?? 'app',
+    },
+    notifications: {
+      queueName: process.env.NOTIFICATIONS_QUEUE_NAME ?? 'daily-reminders',
+      concurrency: Number.parseInt(
+        process.env.NOTIFICATIONS_QUEUE_CONCURRENCY ?? '5',
+        10,
+      ),
+      reminderScanCron:
+        process.env.NOTIFICATIONS_REMINDER_SCAN_CRON ?? '* * * * *',
+      maxAttempts: Number.parseInt(
+        process.env.NOTIFICATIONS_MAX_ATTEMPTS ?? '5',
+        10,
+      ),
+      backoffDelayMs: Number.parseInt(
+        process.env.NOTIFICATIONS_BACKOFF_DELAY_MS ?? '5000',
         10,
       ),
     },

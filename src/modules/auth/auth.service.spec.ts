@@ -151,6 +151,7 @@ describe('AuthService', () => {
     ).resolves.toEqual({
       accessToken: 'access-token',
       user: userResponse,
+      startParam: null,
     });
 
     expect(sessionsRepository.create).toHaveBeenCalledWith(
@@ -218,6 +219,7 @@ describe('AuthService', () => {
     ).resolves.toEqual({
       accessToken: 'new-access',
       user: userResponse,
+      startParam: null,
     });
 
     expect(sessionsRepository.rotate).toHaveBeenCalled();

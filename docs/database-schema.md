@@ -218,6 +218,30 @@ Deleting a goal removes its result rows. Soft-deleting a goal keeps results unti
 
 ---
 
+## Telegram notifications
+
+### `TelegramReminderPreference` (`telegram_reminder_preferences`)
+One preference row per user for daily Telegram reminders.
+
+**Relationship:** `User` 1 → 0..1 `TelegramReminderPreference`  
+**FK:** `telegram_reminder_preferences.user_id → users.id`  
+**Cascade:** `ON DELETE CASCADE`  
+**Unique:** `user_id`  
+**Constraint:** `local_time` matches `HH:mm`
+
+Timezone is read from `UserSettings.timezone` at dispatch time (not duplicated on the preference row).
+
+### `NotificationDelivery` (`notification_deliveries`)
+Durable at-most-once delivery log for daily reminders.
+
+**Relationship:** `User` 1 → N `NotificationDelivery`  
+**FK:** `notification_deliveries.user_id → users.id`  
+**Cascade:** `ON DELETE CASCADE`  
+**Unique:** `(user_id, type, local_date)`  
+**Enums:** `NotificationDeliveryType` (`DAILY_REMINDER`), `NotificationDeliveryStatus` (`PENDING`, `SENT`, `FAILED`, `SKIPPED`)
+
+---
+
 ## Analytics
 
 ### `AnalyticsEvent` (`analytics_events`)
@@ -246,6 +270,8 @@ Optional `idempotencyKey` is globally unique for safe retries.
 | `ReadingDay` | `User` | Cascade |
 | `DailyGoal` | `User` | Cascade |
 | `DailyGoalResult` | `DailyGoal` | Cascade |
+| `TelegramReminderPreference` | `User` | Cascade |
+| `NotificationDelivery` | `User` | Cascade |
 | `AnalyticsEvent` | `User` | SetNull |
 | `UserSettings.default*` | Catalog tables | SetNull |
 | `ReadingProgress.last*` | Catalog tables | SetNull |

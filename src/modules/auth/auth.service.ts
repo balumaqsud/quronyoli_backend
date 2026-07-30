@@ -72,6 +72,7 @@ export class AuthService {
     return {
       accessToken: tokens.accessToken,
       user: this.usersService.toResponse(user),
+      startParam: verified.startParam ?? null,
     };
   }
 
@@ -138,6 +139,7 @@ export class AuthService {
     return {
       accessToken: tokens.accessToken,
       user: this.usersService.toResponse(user),
+      startParam: null,
     };
   }
 

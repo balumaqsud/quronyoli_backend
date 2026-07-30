@@ -27,10 +27,34 @@ export const envValidationSchema = Joi.object({
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
 
   TELEGRAM_BOT_TOKEN: Joi.string().min(30).required(),
+  TELEGRAM_BOT_USERNAME: Joi.string().min(3).required(),
+  TELEGRAM_API_BASE_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .default('https://api.telegram.org'),
+  TELEGRAM_TIMEOUT_MS: Joi.number().integer().min(1000).default(15000),
   TELEGRAM_INIT_DATA_MAX_AGE_SECONDS: Joi.number()
     .integer()
     .min(60)
     .default(86400),
+  TELEGRAM_WEBHOOK_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .optional()
+    .allow(''),
+  TELEGRAM_WEBHOOK_SECRET: Joi.string().min(16).required(),
+  TELEGRAM_WEBHOOK_AUTO_REGISTER: Joi.boolean()
+    .truthy('true')
+    .falsy('false')
+    .default(false),
+  TELEGRAM_MINI_APP_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .required(),
+  TELEGRAM_MINI_APP_SHORT_NAME: Joi.string().min(1).default('app'),
+
+  NOTIFICATIONS_QUEUE_NAME: Joi.string().default('daily-reminders'),
+  NOTIFICATIONS_QUEUE_CONCURRENCY: Joi.number().integer().min(1).default(5),
+  NOTIFICATIONS_REMINDER_SCAN_CRON: Joi.string().default('* * * * *'),
+  NOTIFICATIONS_MAX_ATTEMPTS: Joi.number().integer().min(1).max(20).default(5),
+  NOTIFICATIONS_BACKOFF_DELAY_MS: Joi.number().integer().min(100).default(5000),
 
   AUTH_COOKIE_NAME: Joi.string().default('refresh_token'),
   AUTH_COOKIE_PATH: Joi.string().default('/api/v1/auth'),

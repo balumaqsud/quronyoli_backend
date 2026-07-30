@@ -17,9 +17,11 @@ import { TelegramInitDataVerifier } from '../src/modules/auth/telegram/telegram-
 import { BookmarksRepository } from '../src/modules/bookmarks/bookmarks.repository';
 import { FavoritesRepository } from '../src/modules/favorites/favorites.repository';
 import { GoalsRepository } from '../src/modules/goals/goals.repository';
+import { NotificationsRepository } from '../src/modules/notifications/notifications.repository';
 import { QuranFoundationClient } from '../src/modules/quran/client/quran-foundation.client';
 import { ReadingRepository } from '../src/modules/reading/reading.repository';
 import { SettingsRepository } from '../src/modules/settings/settings.repository';
+import { TELEGRAM_API } from '../src/common/constants';
 import { UsersRepository } from '../src/modules/users/users.repository';
 import { DailyGoalMetric } from '../src/generated/prisma';
 
@@ -542,6 +544,57 @@ describe('Auth & Users (e2e)', () => {
       ),
   };
 
+  let reminderStore: {
+    id: string;
+    userId: string;
+    enabled: boolean;
+    localTime: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null = null;
+
+  const notificationsRepository = {
+    getTimezone: jest.fn().mockResolvedValue('Asia/Tashkent'),
+    findReminderPreference: jest
+      .fn()
+      .mockImplementation(() => Promise.resolve(reminderStore)),
+    upsertReminderPreference: jest
+      .fn()
+      .mockImplementation(
+        (input: { userId: string; enabled: boolean; localTime: string }) => {
+          reminderStore = {
+            id: randomUUID(),
+            userId: input.userId,
+            enabled: input.enabled,
+            localTime: input.localTime,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          return Promise.resolve(reminderStore);
+        },
+      ),
+    deleteReminderPreference: jest.fn().mockImplementation(() => {
+      const existed = reminderStore !== null;
+      reminderStore = null;
+      return Promise.resolve(existed);
+    }),
+  };
+
+  const telegramApi = {
+    sendMessage: jest.fn().mockResolvedValue({
+      message_id: 1,
+      chat: { id: 42, type: 'private' },
+      date: 1,
+    }),
+    setWebhook: jest.fn().mockResolvedValue(true),
+    deleteWebhook: jest.fn().mockResolvedValue(true),
+    getWebhookInfo: jest.fn().mockResolvedValue({
+      url: '',
+      has_custom_certificate: false,
+      pending_update_count: 0,
+    }),
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -568,6 +621,10 @@ describe('Auth & Users (e2e)', () => {
       .useValue(bookmarksRepository)
       .overrideProvider(GoalsRepository)
       .useValue(goalsRepository)
+      .overrideProvider(NotificationsRepository)
+      .useValue(notificationsRepository)
+      .overrideProvider(TELEGRAM_API)
+      .useValue(telegramApi)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -1123,6 +1180,103 @@ describe('Auth & Users (e2e)', () => {
         sessionsCount: 0,
       },
     });
+  });
+
+  it('accepts Telegram webhook updates with a valid secret', async () => {
+    telegramApi.sendMessage.mockClear();
+
+    await request(app.getHttpServer())
+      .post('/api/v1/telegram/webhook')
+      .set('x-telegram-bot-api-secret-token', 'dev-webhook-secret-min16')
+      .send({
+        update_id: 1,
+        message: {
+          message_id: 10,
+          date: 1,
+          chat: { id: 42, type: 'private' },
+          text: '/start',
+        },
+      })
+      .expect(200);
+
+    expect(telegramApi.sendMessage).toHaveBeenCalled();
+  });
+
+  it('rejects Telegram webhooks with an invalid secret', async () => {
+    await request(app.getHttpServer())
+      .post('/api/v1/telegram/webhook')
+      .set('x-telegram-bot-api-secret-token', 'wrong-secret')
+      .send({ update_id: 2 })
+      .expect(401);
+  });
+
+  it('returns mini-app and ayah share links for authenticated users', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const miniApp = await request(app.getHttpServer())
+      .get('/api/v1/telegram/links/mini-app')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(miniApp.body).toMatchObject({
+      success: true,
+      data: {
+        botDeepLink: expect.stringContaining('t.me/') as string,
+        miniAppDeepLink: expect.any(String) as string,
+        shareUrl: expect.stringContaining('share/url') as string,
+      },
+    });
+
+    const share = await request(app.getHttpServer())
+      .get('/api/v1/telegram/share/ayah/2:255')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(share.body).toMatchObject({
+      success: true,
+      data: {
+        verseKey: '2:255',
+        botDeepLink: expect.stringContaining('ayah_2_255') as string,
+      },
+    });
+  });
+
+  it('manages daily reminder preferences', async () => {
+    reminderStore = null;
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const upserted = await request(app.getHttpServer())
+      .put('/api/v1/notifications/reminders/daily')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ enabled: true, localTime: '07:30' })
+      .expect(200);
+
+    expect(upserted.body).toMatchObject({
+      success: true,
+      data: { enabled: true, localTime: '07:30', timezone: 'Asia/Tashkent' },
+    });
+
+    await request(app.getHttpServer())
+      .get('/api/v1/notifications/reminders/daily')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .put('/api/v1/notifications/reminders/daily')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ enabled: true, localTime: '25:00' })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .delete('/api/v1/notifications/reminders/daily')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
   });
 });
 
