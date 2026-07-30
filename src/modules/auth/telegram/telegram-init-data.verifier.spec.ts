@@ -27,7 +27,7 @@ const buildInitData = (
 
   if (!options?.omitHash) {
     const dataCheckString = [...params.entries()]
-      .filter(([key]) => key !== 'hash' && key !== 'signature')
+      .filter(([key]) => key !== 'hash')
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, value]) => `${key}=${value}`)
       .join('\n');
@@ -74,6 +74,37 @@ describe('TelegramInitDataVerifier', () => {
         first_name: 'Ali',
         username: 'ali',
       }),
+    );
+  });
+
+  it('verifies initData that includes query_id and signature', () => {
+    const initData = buildInitData({
+      query_id: 'AAHdF6IQAAAAAN0XohDhrOrc',
+      signature: 'FAKE_ED25519_SIGNATURE_FOR_TEST',
+    });
+
+    expect([...new URLSearchParams(initData).keys()].sort()).toEqual([
+      'auth_date',
+      'hash',
+      'query_id',
+      'signature',
+      'user',
+    ]);
+
+    const result = verifier.verify(initData);
+
+    expect(result.user.id).toBe(42);
+    expect(result.queryId).toBe('AAHdF6IQAAAAAN0XohDhrOrc');
+  });
+
+  it('rejects initData when signature is tampered with after hashing', () => {
+    const params = new URLSearchParams(
+      buildInitData({ signature: 'ORIGINAL_SIGNATURE' }),
+    );
+    params.set('signature', 'TAMPERED_SIGNATURE');
+
+    expect(() => verifier.verify(params.toString())).toThrow(
+      UnauthorizedException,
     );
   });
 

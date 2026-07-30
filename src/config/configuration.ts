@@ -96,6 +96,7 @@ export interface AuthCookieConfig {
   domain?: string;
   secure: boolean;
   sameSite: CookieSameSite;
+  partitioned: boolean;
   maxAgeMs: number;
 }
 
@@ -205,6 +206,14 @@ const resolveCookieSameSite = (): CookieSameSite => {
   }
 
   throw new Error(`Invalid AUTH_COOKIE_SAME_SITE value: ${value}`);
+};
+
+const resolveCookiePartitioned = (sameSite: CookieSameSite): boolean => {
+  if (process.env.AUTH_COOKIE_PARTITIONED !== undefined) {
+    return process.env.AUTH_COOKIE_PARTITIONED === 'true';
+  }
+
+  return sameSite === 'none';
 };
 
 const resolveQuranFoundationEnvironment = (): QuranFoundationEnvironment => {
@@ -395,14 +404,18 @@ export default (): AppConfiguration => {
       limit: Number.parseInt(process.env.THROTTLE_LIMIT ?? '120', 10),
       authLimit: Number.parseInt(process.env.THROTTLE_AUTH_LIMIT ?? '20', 10),
     },
-    authCookie: {
-      name: process.env.AUTH_COOKIE_NAME ?? 'refresh_token',
-      path: process.env.AUTH_COOKIE_PATH ?? '/api/v1/auth',
-      domain: process.env.AUTH_COOKIE_DOMAIN || undefined,
-      secure: resolveCookieSecure(nodeEnv),
-      sameSite: resolveCookieSameSite(),
-      maxAgeMs: parseDurationToMs(refreshExpiresIn),
-    },
+    authCookie: (() => {
+      const sameSite = resolveCookieSameSite();
+      return {
+        name: process.env.AUTH_COOKIE_NAME ?? 'refresh_token',
+        path: process.env.AUTH_COOKIE_PATH ?? '/',
+        domain: process.env.AUTH_COOKIE_DOMAIN || undefined,
+        secure: resolveCookieSecure(nodeEnv),
+        sameSite,
+        partitioned: resolveCookiePartitioned(sameSite),
+        maxAgeMs: parseDurationToMs(refreshExpiresIn),
+      };
+    })(),
     quranFoundation: {
       clientId: getRequiredEnv('QF_CLIENT_ID'),
       clientSecret: getRequiredEnv('QF_CLIENT_SECRET'),

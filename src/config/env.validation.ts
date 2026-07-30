@@ -99,12 +99,16 @@ export const envValidationSchema = Joi.object({
   THROTTLE_AUTH_LIMIT: Joi.number().integer().min(1).default(20),
 
   AUTH_COOKIE_NAME: Joi.string().default('refresh_token'),
-  AUTH_COOKIE_PATH: Joi.string().default('/api/v1/auth'),
+  AUTH_COOKIE_PATH: Joi.string().default('/'),
   AUTH_COOKIE_DOMAIN: Joi.string().allow('').optional(),
   AUTH_COOKIE_SECURE: Joi.boolean().truthy('true').falsy('false').optional(),
   AUTH_COOKIE_SAME_SITE: Joi.string()
     .valid('lax', 'strict', 'none')
     .default('lax'),
+  AUTH_COOKIE_PARTITIONED: Joi.boolean()
+    .truthy('true')
+    .falsy('false')
+    .optional(),
 
   QF_CLIENT_ID: Joi.string().min(8).required(),
   QF_CLIENT_SECRET: Joi.string().min(8).required(),

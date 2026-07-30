@@ -30,8 +30,9 @@ export class TelegramInitDataVerifier {
       throw new UnauthorizedException('Telegram initData hash is missing');
     }
 
+    // Telegram covers every field except `hash` itself, including `signature`.
     const dataCheckString = [...params.entries()]
-      .filter(([key]) => key !== 'hash' && key !== 'signature')
+      .filter(([key]) => key !== 'hash')
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, value]) => `${key}=${value}`)
       .join('\n');

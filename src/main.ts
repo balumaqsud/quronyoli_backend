@@ -53,7 +53,8 @@ async function bootstrap(): Promise<void> {
     allowedHeaders: [
       'Content-Type',
       'Authorization',
-      'x-request-id',
+      'X-Request-Id',
+      'X-Telegram-Init-Data',
       'ngrok-skip-browser-warning',
     ],
   });

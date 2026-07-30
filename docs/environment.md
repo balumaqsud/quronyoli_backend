@@ -130,10 +130,11 @@ Compose builds `DATABASE_URL` for the `api` service as `postgresql://…@postgre
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `AUTH_COOKIE_NAME` | `refresh_token` | |
-| `AUTH_COOKIE_PATH` | `/api/v1/auth` | |
-| `AUTH_COOKIE_DOMAIN` | optional / empty | |
+| `AUTH_COOKIE_PATH` | `/` | Prefer `/` for cross-site Mini App refresh |
+| `AUTH_COOKIE_DOMAIN` | optional / empty | Leave empty (do not set `localhost`) |
 | `AUTH_COOKIE_SECURE` | optional | Loader defaults secure in production when unset |
-| `AUTH_COOKIE_SAME_SITE` | `lax` | `lax` \| `strict` \| `none` |
+| `AUTH_COOKIE_SAME_SITE` | `lax` | `lax` \| `strict` \| `none`; use `none` with `secure=true` for Vercel ↔ ngrok |
+| `AUTH_COOKIE_PARTITIONED` | optional | Defaults to `true` when `sameSite` is `none` (CHIPS) |
 
 ## Quran.Foundation
 

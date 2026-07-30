@@ -33,6 +33,7 @@ export class AuthCookieService {
       sameSite: this.cookieConfig.sameSite,
       path: this.cookieConfig.path,
       domain: this.cookieConfig.domain,
+      partitioned: this.cookieConfig.partitioned,
       maxAge: this.cookieConfig.maxAgeMs,
     };
   }
