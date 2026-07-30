@@ -15,6 +15,7 @@ import { RedisModule } from './infrastructure/cache/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
 import { QuranModule } from './modules/quran/quran.module';
+import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -87,6 +88,7 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
     AuthModule,
     QuranModule,
+    SettingsModule,
   ],
   providers: [
     {

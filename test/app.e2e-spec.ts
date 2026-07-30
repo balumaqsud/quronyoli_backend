@@ -15,6 +15,7 @@ import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { SessionsRepository } from '../src/modules/auth/sessions.repository';
 import { TelegramInitDataVerifier } from '../src/modules/auth/telegram/telegram-init-data.verifier';
 import { QuranFoundationClient } from '../src/modules/quran/client/quran-foundation.client';
+import { SettingsRepository } from '../src/modules/settings/settings.repository';
 import { UsersRepository } from '../src/modules/users/users.repository';
 
 describe('Auth & Users (e2e)', () => {
@@ -153,6 +154,50 @@ describe('Auth & Users (e2e)', () => {
     getSearch: jest.fn().mockResolvedValue({ result: { verses: [] } }),
   };
 
+  const defaultSettings = {
+    userId,
+    locale: 'uz',
+    timezone: 'Asia/Tashkent',
+    theme: 'SYSTEM',
+    arabicFontSize: 24,
+    translationFontSize: 16,
+    playbackRate: 1,
+    autoPlayNext: false,
+    repeatVerse: false,
+    defaultTranslationId: null,
+    defaultTafsirId: null,
+    defaultReciterId: null,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    defaultTranslation: null,
+    defaultTafsir: null,
+    defaultReciter: null,
+  };
+
+  let storedSettings = { ...defaultSettings };
+
+  const settingsRepository = {
+    findByUserId: jest
+      .fn()
+      .mockImplementation(() => Promise.resolve(storedSettings)),
+    upsertDefaults: jest
+      .fn()
+      .mockImplementation(() => Promise.resolve(storedSettings)),
+    upsertWithUpdate: jest
+      .fn()
+      .mockImplementation((_userId: string, data: Record<string, unknown>) => {
+        storedSettings = {
+          ...storedSettings,
+          ...data,
+          updatedAt: new Date(),
+        };
+        return Promise.resolve(storedSettings);
+      }),
+    findActiveTranslationByExternalId: jest.fn().mockResolvedValue(null),
+    findActiveTafsirByExternalId: jest.fn().mockResolvedValue(null),
+    findActiveReciterByExternalId: jest.fn().mockResolvedValue(null),
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -169,6 +214,8 @@ describe('Auth & Users (e2e)', () => {
       .useValue(telegramVerifier)
       .overrideProvider(QuranFoundationClient)
       .useValue(quranClient)
+      .overrideProvider(SettingsRepository)
+      .useValue(settingsRepository)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -323,6 +370,80 @@ describe('Auth & Users (e2e)', () => {
     expect(body.success).toBe(true);
     expect(body.data.chapters[0]?.id).toBe(1);
     expect(quranClient.getContent).toHaveBeenCalled();
+  });
+
+  it('returns default settings for the authenticated user', async () => {
+    storedSettings = { ...defaultSettings };
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/settings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const body = response.body as {
+      success: boolean;
+      data: { locale: string; theme: string; arabicFontSize: number };
+    };
+
+    expect(body.success).toBe(true);
+    expect(body.data).toMatchObject({
+      locale: 'uz',
+      theme: 'SYSTEM',
+      arabicFontSize: 24,
+    });
+  });
+
+  it('partially updates settings for the authenticated user', async () => {
+    storedSettings = { ...defaultSettings };
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const response = await request(app.getHttpServer())
+      .patch('/api/v1/settings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        theme: 'DARK',
+        arabicFontSize: 28,
+        autoPlayNext: true,
+      })
+      .expect(200);
+
+    const body = response.body as {
+      success: boolean;
+      data: {
+        theme: string;
+        arabicFontSize: number;
+        autoPlayNext: boolean;
+        locale: string;
+      };
+    };
+
+    expect(body.success).toBe(true);
+    expect(body.data).toMatchObject({
+      theme: 'DARK',
+      arabicFontSize: 28,
+      autoPlayNext: true,
+      locale: 'uz',
+    });
+  });
+
+  it('rejects invalid settings payloads', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    await request(app.getHttpServer())
+      .patch('/api/v1/settings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ arabicFontSize: 3 })
+      .expect(400);
   });
 });
 
