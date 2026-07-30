@@ -16,11 +16,13 @@ import {
 } from './dto/reading-query.dto';
 import {
   ContinueReadingResponseDto,
+  DailyReadingItemDto,
   DailyReadingResponseDto,
   PaginatedHistoryResponseDto,
   PaginatedRecentResponseDto,
   ReadingProgressResponseDto,
   ReadingStatisticsResponseDto,
+  ReadingStreakResponseDto,
 } from './dto/reading-response.dto';
 import { ReadingService } from './reading.service';
 
@@ -98,8 +100,9 @@ export class ReadingController {
 
   @Get('daily')
   @ApiOperation({
-    summary: 'Daily reading aggregates',
-    description: 'Timezone-aware daily rollups for a bounded date range.',
+    summary: 'Reading days (range)',
+    description:
+      'Timezone-aware daily ReadingDay rollups for a bounded date range.',
   })
   @ApiOkResponse({ type: DailyReadingResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid date range' })
@@ -108,6 +111,30 @@ export class ReadingController {
     @Query() query: ReadingDailyQueryDto,
   ): Promise<DailyReadingResponseDto> {
     return this.readingService.getDaily(currentUser.sub, query.from, query.to);
+  }
+
+  @Get('days/today')
+  @ApiOperation({
+    summary: 'Today reading day',
+    description: 'Returns today’s ReadingDay rollup, or zeros if none.',
+  })
+  @ApiOkResponse({ type: DailyReadingItemDto })
+  getTodayDay(
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<DailyReadingItemDto> {
+    return this.readingService.getTodayDay(currentUser.sub);
+  }
+
+  @Get('streak')
+  @ApiOperation({
+    summary: 'Reading streak',
+    description: 'Current and longest streaks based on active ReadingDay rows.',
+  })
+  @ApiOkResponse({ type: ReadingStreakResponseDto })
+  getStreak(
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ): Promise<ReadingStreakResponseDto> {
+    return this.readingService.getStreak(currentUser.sub);
   }
 
   @Get('statistics')

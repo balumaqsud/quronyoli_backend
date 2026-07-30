@@ -141,3 +141,20 @@ export class ReadingStatisticsResponseDto {
   @ApiPropertyOptional({ type: ContinueReadingResponseDto, nullable: true })
   continue!: ContinueReadingResponseDto | null;
 }
+
+export class ReadingStreakResponseDto {
+  @ApiProperty({ example: 5 })
+  currentStreakDays!: number;
+
+  @ApiProperty({ example: 12 })
+  longestStreakDays!: number;
+
+  @ApiProperty({ example: true })
+  todayActive!: boolean;
+
+  @ApiProperty({ example: '2026-07-30' })
+  localDate!: string;
+
+  @ApiProperty({ example: 'Asia/Tashkent' })
+  timezone!: string;
+}

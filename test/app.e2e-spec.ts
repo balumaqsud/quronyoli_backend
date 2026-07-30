@@ -16,10 +16,12 @@ import { SessionsRepository } from '../src/modules/auth/sessions.repository';
 import { TelegramInitDataVerifier } from '../src/modules/auth/telegram/telegram-init-data.verifier';
 import { BookmarksRepository } from '../src/modules/bookmarks/bookmarks.repository';
 import { FavoritesRepository } from '../src/modules/favorites/favorites.repository';
+import { GoalsRepository } from '../src/modules/goals/goals.repository';
 import { QuranFoundationClient } from '../src/modules/quran/client/quran-foundation.client';
 import { ReadingRepository } from '../src/modules/reading/reading.repository';
 import { SettingsRepository } from '../src/modules/settings/settings.repository';
 import { UsersRepository } from '../src/modules/users/users.repository';
+import { DailyGoalMetric } from '../src/generated/prisma';
 
 describe('Auth & Users (e2e)', () => {
   let app: INestApplication<App>;
@@ -245,6 +247,7 @@ describe('Auth & Users (e2e)', () => {
     findDaysInRange: jest.fn().mockResolvedValue([]),
     findAllActiveDays: jest.fn().mockResolvedValue([]),
     countActiveDays: jest.fn().mockResolvedValue(0),
+    findDay: jest.fn().mockResolvedValue(null),
   };
 
   const favoriteId = randomUUID();
@@ -395,6 +398,150 @@ describe('Auth & Users (e2e)', () => {
       ),
   };
 
+  const goalId = randomUUID();
+  let goalStore: {
+    id: string;
+    userId: string;
+    metric: DailyGoalMetric;
+    targetValue: number;
+    effectiveFrom: Date;
+    effectiveTo: Date | null;
+    isEnabled: boolean;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  } = {
+    id: goalId,
+    userId,
+    metric: DailyGoalMetric.VERSES,
+    targetValue: 10,
+    effectiveFrom: new Date('2026-07-01T00:00:00.000Z'),
+    effectiveTo: null,
+    isEnabled: true,
+    deletedAt: null,
+    createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+  };
+
+  const goalsRepository = {
+    getTimezone: jest.fn().mockResolvedValue('Asia/Tashkent'),
+    list: jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(goalStore.deletedAt === null ? [goalStore] : []),
+      ),
+    findOwnedActive: jest
+      .fn()
+      .mockImplementation((id: string, ownerId: string) => {
+        if (
+          id === goalStore.id &&
+          ownerId === goalStore.userId &&
+          goalStore.deletedAt === null
+        ) {
+          return Promise.resolve(goalStore);
+        }
+        return Promise.resolve(null);
+      }),
+    createClosingOpenEnded: jest
+      .fn()
+      .mockImplementation(
+        (input: {
+          userId: string;
+          metric: DailyGoalMetric;
+          targetValue: number;
+          effectiveFrom: Date;
+        }) => {
+          goalStore = {
+            ...goalStore,
+            ...input,
+            id: goalId,
+            effectiveTo: null,
+            isEnabled: true,
+            deletedAt: null,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          return Promise.resolve(goalStore);
+        },
+      ),
+    updateOwned: jest
+      .fn()
+      .mockImplementation(
+        (id: string, ownerId: string, data: Record<string, unknown>) => {
+          if (
+            id !== goalStore.id ||
+            ownerId !== goalStore.userId ||
+            goalStore.deletedAt !== null
+          ) {
+            return Promise.resolve(null);
+          }
+          goalStore = {
+            ...goalStore,
+            ...data,
+            updatedAt: new Date(),
+          };
+          return Promise.resolve(goalStore);
+        },
+      ),
+    softDeleteOwned: jest
+      .fn()
+      .mockImplementation((id: string, ownerId: string) => {
+        if (
+          id !== goalStore.id ||
+          ownerId !== goalStore.userId ||
+          goalStore.deletedAt !== null
+        ) {
+          return Promise.resolve(false);
+        }
+        goalStore = {
+          ...goalStore,
+          deletedAt: new Date(),
+          isEnabled: false,
+          updatedAt: new Date(),
+        };
+        return Promise.resolve(true);
+      }),
+    findActiveGoalsForDate: jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(
+          goalStore.deletedAt === null && goalStore.isEnabled
+            ? [goalStore]
+            : [],
+        ),
+      ),
+    findReadingDay: jest.fn().mockResolvedValue({
+      userId,
+      localDate: new Date('2026-07-30T00:00:00.000Z'),
+      timezone: 'Asia/Tashkent',
+      versesRead: 4,
+      activeSeconds: 0,
+      sessionsCount: 0,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }),
+    findGoalResult: jest.fn().mockResolvedValue(null),
+    upsertGoalResult: jest
+      .fn()
+      .mockImplementation(
+        (input: {
+          dailyGoalId: string;
+          localDate: Date;
+          actualValue: number;
+          completedAt: Date | null;
+        }) =>
+          Promise.resolve({
+            id: 'result-1',
+            dailyGoalId: input.dailyGoalId,
+            localDate: input.localDate,
+            actualValue: input.actualValue,
+            completedAt: input.completedAt,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }),
+      ),
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -419,6 +566,8 @@ describe('Auth & Users (e2e)', () => {
       .useValue(favoritesRepository)
       .overrideProvider(BookmarksRepository)
       .useValue(bookmarksRepository)
+      .overrideProvider(GoalsRepository)
+      .useValue(goalsRepository)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -835,6 +984,144 @@ describe('Auth & Users (e2e)', () => {
     expect(afterDelete.body).toMatchObject({
       success: true,
       data: { items: [] },
+    });
+  });
+
+  it('returns daily ayah without recording a reading open', async () => {
+    quranClient.getContent.mockResolvedValueOnce({
+      verse: { verse_key: '1:1' },
+    });
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    readingRepository.recordAyahOpen.mockClear();
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/quran/ayahs/daily')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(response.body).toMatchObject({
+      success: true,
+      data: {
+        timezone: 'Asia/Tashkent',
+        verseKey: expect.stringMatching(/^\d{1,3}:\d{1,3}$/) as string,
+        content: { verse: { verse_key: '1:1' } },
+      },
+    });
+    expect(readingRepository.recordAyahOpen).not.toHaveBeenCalled();
+  });
+
+  it('creates, lists, updates progress, and soft-deletes goals', async () => {
+    goalStore.deletedAt = null;
+    goalStore.isEnabled = true;
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/goals')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ metric: 'VERSES', targetValue: 10 })
+      .expect(201);
+
+    expect(created.body).toMatchObject({
+      success: true,
+      data: { metric: 'VERSES', targetValue: 10 },
+    });
+
+    const listed = await request(app.getHttpServer())
+      .get('/api/v1/goals')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(listed.body).toMatchObject({
+      success: true,
+      data: { items: [{ id: goalId }] },
+    });
+
+    const progress = await request(app.getHttpServer())
+      .get('/api/v1/goals/progress')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(progress.body).toMatchObject({
+      success: true,
+      data: {
+        versesRead: 4,
+        goals: [{ goalId, actualValue: 4, percent: 40, completed: false }],
+      },
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/goals/${goalId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ targetValue: 5 })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/goals/${goalId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+  });
+
+  it('rejects invalid goal payloads', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/v1/goals')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ metric: 'VERSES', targetValue: 0 })
+      .expect(400);
+  });
+
+  it('requires JWT for streak and today reading-day endpoints', async () => {
+    await request(app.getHttpServer())
+      .get('/api/v1/reading/streak')
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .get('/api/v1/reading/days/today')
+      .expect(401);
+
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const streak = await request(app.getHttpServer())
+      .get('/api/v1/reading/streak')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(streak.body).toMatchObject({
+      success: true,
+      data: {
+        currentStreakDays: expect.any(Number) as number,
+        longestStreakDays: expect.any(Number) as number,
+        todayActive: expect.any(Boolean) as boolean,
+        timezone: 'Asia/Tashkent',
+      },
+    });
+
+    const today = await request(app.getHttpServer())
+      .get('/api/v1/reading/days/today')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(today.body).toMatchObject({
+      success: true,
+      data: {
+        versesRead: 0,
+        activeSeconds: 0,
+        sessionsCount: 0,
+      },
     });
   });
 });

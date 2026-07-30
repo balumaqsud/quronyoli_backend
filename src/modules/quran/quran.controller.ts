@@ -18,6 +18,7 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../../infrastructure/auth/interfaces/jwt-payload.interface';
 import { ReadingService } from '../reading/reading.service';
+import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
 import {
   AudioTimestampQueryDto,
   LanguageQueryDto,
@@ -77,6 +78,21 @@ export class QuranController {
     @Query() query: VersesQueryDto,
   ): Promise<unknown> {
     return this.quranService.getAyahsBySurah(chapter, query);
+  }
+
+  @Get('ayahs/daily')
+  @ApiOperation({
+    summary: 'Get the Daily Ayah for the user local calendar date',
+    description:
+      'Deterministic verse for today in the user timezone. Does not record a reading open.',
+  })
+  @ApiOkResponse({ type: DailyAyahResponseDto })
+  async getDailyAyah(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Query() query: VersesQueryDto,
+  ): Promise<DailyAyahResponseDto> {
+    const timezone = await this.readingService.getTimezone(currentUser.sub);
+    return this.quranService.getDailyAyah(timezone, query);
   }
 
   @Get('ayahs/by-key/:verseKey')

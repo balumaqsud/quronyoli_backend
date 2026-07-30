@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CONFIG_KEYS } from '../../common/constants';
+import { resolveDailyAyahForDate } from '../../common/quran/daily-ayah';
 import { QuranFoundationConfig } from '../../config/configuration';
+import { formatLocalDate } from '../reading/utils/reading-date.utils';
 import { QuranCacheService } from './cache/quran-cache.service';
 import { QuranFoundationClient } from './client/quran-foundation.client';
+import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
 import {
   AudioTimestampQueryDto,
   LanguageQueryDto,
@@ -74,6 +77,25 @@ export class QuranService {
       this.verseQuery(query),
       this.config.cacheTtl.versesSeconds,
     );
+  }
+
+  async getDailyAyah(
+    timezone: string,
+    query: VersesQueryDto,
+    now: Date = new Date(),
+  ): Promise<DailyAyahResponseDto> {
+    const localDate = formatLocalDate(now, timezone);
+    const coordinate = resolveDailyAyahForDate(localDate);
+    const content = await this.getAyahByKey(coordinate.verseKey, query);
+
+    return {
+      localDate,
+      timezone,
+      verseKey: coordinate.verseKey,
+      chapterNumber: coordinate.chapterNumber,
+      verseNumber: coordinate.verseNumber,
+      content,
+    };
   }
 
   getAyahsByJuz(juz: number, query: VersesQueryDto): Promise<unknown> {

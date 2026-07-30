@@ -15,6 +15,7 @@ import { RedisModule } from './infrastructure/cache/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
+import { GoalsModule } from './modules/goals/goals.module';
 import { HealthModule } from './modules/health/health.module';
 import { QuranModule } from './modules/quran/quran.module';
 import { ReadingModule } from './modules/reading/reading.module';
@@ -95,6 +96,7 @@ import { UsersModule } from './modules/users/users.module';
     SettingsModule,
     FavoritesModule,
     BookmarksModule,
+    GoalsModule,
   ],
   providers: [
     {

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
+  DailyGoalMetric,
   Prisma,
   ReadingAyahHistory,
   ReadingDay,
@@ -97,7 +98,7 @@ export class ReadingRepository {
         },
       });
 
-      await tx.readingDay.upsert({
+      const day = await tx.readingDay.upsert({
         where: {
           userId_localDate: {
             userId: input.userId,
@@ -117,6 +118,62 @@ export class ReadingRepository {
           versesRead: { increment: 1 },
         },
       });
+
+      const verseGoals = await tx.dailyGoal.findMany({
+        where: {
+          userId: input.userId,
+          metric: DailyGoalMetric.VERSES,
+          isEnabled: true,
+          deletedAt: null,
+          effectiveFrom: { lte: localDate },
+          OR: [{ effectiveTo: null }, { effectiveTo: { gte: localDate } }],
+        },
+      });
+
+      for (const goal of verseGoals) {
+        const existing = await tx.dailyGoalResult.findUnique({
+          where: {
+            dailyGoalId_localDate: {
+              dailyGoalId: goal.id,
+              localDate,
+            },
+          },
+        });
+        const completed = day.versesRead >= goal.targetValue;
+        const completedAt = completed
+          ? (existing?.completedAt ?? openedAt)
+          : null;
+
+        await tx.dailyGoalResult.upsert({
+          where: {
+            dailyGoalId_localDate: {
+              dailyGoalId: goal.id,
+              localDate,
+            },
+          },
+          create: {
+            dailyGoalId: goal.id,
+            localDate,
+            actualValue: day.versesRead,
+            completedAt,
+          },
+          update: {
+            actualValue: day.versesRead,
+            completedAt,
+          },
+        });
+      }
+    });
+  }
+
+  async findDay(userId: string, localDate: Date): Promise<ReadingDay | null> {
+    return await this.prisma.readingDay.findUnique({
+      where: {
+        userId_localDate: {
+          userId,
+          localDate,
+        },
+      },
     });
   }
 

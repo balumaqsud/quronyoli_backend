@@ -14,11 +14,13 @@ import { UsersService } from '../users/users.service';
 import { TOTAL_QURAN_AYAHS } from './constants/quran-coordinates';
 import {
   ContinueReadingResponseDto,
+  DailyReadingItemDto,
   DailyReadingResponseDto,
   PaginatedHistoryResponseDto,
   PaginatedRecentResponseDto,
   ReadingProgressResponseDto,
   ReadingStatisticsResponseDto,
+  ReadingStreakResponseDto,
 } from './dto/reading-response.dto';
 import { ReadingRepository } from './reading.repository';
 import {
@@ -26,6 +28,7 @@ import {
   shiftIsoDate,
   toDateOnly,
 } from './utils/reading-date.utils';
+import { computeStreaks } from './utils/reading-streak.utils';
 
 @Injectable()
 export class ReadingService {
@@ -41,6 +44,11 @@ export class ReadingService {
       chapterNumber: coordinate.chapterNumber,
       verseNumber: coordinate.verseNumber,
     });
+  }
+
+  async getTimezone(userId: string): Promise<string> {
+    await this.usersService.getActiveByIdOrThrow(userId);
+    return this.readingRepository.getTimezone(userId);
   }
 
   async getContinue(
@@ -189,7 +197,7 @@ export class ReadingService {
       days30.map((day) => [this.toIsoDate(day.localDate), day]),
     );
 
-    const { currentStreakDays, longestStreakDays } = this.computeStreaks(
+    const { currentStreakDays, longestStreakDays } = computeStreaks(
       allActiveDays.map((day) => this.toIsoDate(day.localDate)),
       today,
     );
@@ -206,6 +214,48 @@ export class ReadingService {
       last30Days: this.periodFromMap(dayMap, from30, today),
       continue: continueReading ? this.mapContinue(continueReading) : null,
     };
+  }
+
+  async getStreak(userId: string): Promise<ReadingStreakResponseDto> {
+    await this.usersService.getActiveByIdOrThrow(userId);
+    const timezone = await this.readingRepository.getTimezone(userId);
+    const today = formatLocalDate(new Date(), timezone);
+    const allActiveDays =
+      await this.readingRepository.findAllActiveDays(userId);
+    const activeDates = allActiveDays.map((day) =>
+      this.toIsoDate(day.localDate),
+    );
+    const { currentStreakDays, longestStreakDays } = computeStreaks(
+      activeDates,
+      today,
+    );
+
+    return {
+      currentStreakDays,
+      longestStreakDays,
+      todayActive: activeDates.includes(today),
+      localDate: today,
+      timezone,
+    };
+  }
+
+  async getTodayDay(userId: string): Promise<DailyReadingItemDto> {
+    await this.usersService.getActiveByIdOrThrow(userId);
+    const timezone = await this.readingRepository.getTimezone(userId);
+    const today = formatLocalDate(new Date(), timezone);
+    const day = await this.readingRepository.findDay(userId, toDateOnly(today));
+
+    if (!day) {
+      return {
+        localDate: today,
+        timezone,
+        versesRead: 0,
+        activeSeconds: 0,
+        sessionsCount: 0,
+      };
+    }
+
+    return this.mapDaily(day);
   }
 
   private mapContinue(progress: ReadingProgress): ContinueReadingResponseDto {
@@ -293,42 +343,5 @@ export class ReadingService {
     }
 
     return { versesRead, activeSeconds, activeDays };
-  }
-
-  private computeStreaks(
-    activeDatesDesc: string[],
-    today: string,
-  ): { currentStreakDays: number; longestStreakDays: number } {
-    const unique = [...new Set(activeDatesDesc)].sort((a, b) =>
-      a < b ? 1 : a > b ? -1 : 0,
-    );
-
-    let longestStreakDays = 0;
-    let run = 0;
-    let previous: string | null = null;
-
-    for (const date of [...unique].sort()) {
-      if (previous && shiftIsoDate(previous, 1) === date) {
-        run += 1;
-      } else {
-        run = 1;
-      }
-      longestStreakDays = Math.max(longestStreakDays, run);
-      previous = date;
-    }
-
-    let currentStreakDays = 0;
-    if (unique[0] === today || unique[0] === shiftIsoDate(today, -1)) {
-      let expected = unique[0];
-      for (const date of unique) {
-        if (date !== expected) {
-          break;
-        }
-        currentStreakDays += 1;
-        expected = shiftIsoDate(expected, -1);
-      }
-    }
-
-    return { currentStreakDays, longestStreakDays };
   }
 }

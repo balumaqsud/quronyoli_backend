@@ -21,6 +21,7 @@ describe('ReadingService', () => {
       | 'findAllActiveDays'
       | 'countActiveDays'
       | 'getTimezone'
+      | 'findDay'
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
@@ -37,6 +38,7 @@ describe('ReadingService', () => {
       findAllActiveDays: jest.fn(),
       countActiveDays: jest.fn(),
       getTimezone: jest.fn().mockResolvedValue('Asia/Tashkent'),
+      findDay: jest.fn(),
     };
     usersService = {
       getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
@@ -236,5 +238,55 @@ describe('ReadingService', () => {
     await expect(
       service.getDaily('user-1', '2026-07-30', '2026-07-01'),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('returns streak summary for the authenticated user', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-30T12:00:00.000Z'));
+    repository.findAllActiveDays.mockResolvedValue([
+      {
+        id: 'd1',
+        userId: 'user-1',
+        localDate: new Date('2026-07-30T00:00:00.000Z'),
+        timezone: 'UTC',
+        versesRead: 1,
+        activeSeconds: 0,
+        sessionsCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        id: 'd2',
+        userId: 'user-1',
+        localDate: new Date('2026-07-29T00:00:00.000Z'),
+        timezone: 'UTC',
+        versesRead: 1,
+        activeSeconds: 0,
+        sessionsCount: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+
+    const streak = await service.getStreak('user-1');
+    expect(streak).toMatchObject({
+      currentStreakDays: 2,
+      todayActive: true,
+      timezone: 'Asia/Tashkent',
+    });
+    jest.useRealTimers();
+  });
+
+  it('returns zeroed today reading day when none exists', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-30T12:00:00.000Z'));
+    repository.findDay.mockResolvedValue(null);
+
+    const day = await service.getTodayDay('user-1');
+    expect(day).toMatchObject({
+      versesRead: 0,
+      activeSeconds: 0,
+      sessionsCount: 0,
+      timezone: 'Asia/Tashkent',
+    });
+    jest.useRealTimers();
   });
 });
