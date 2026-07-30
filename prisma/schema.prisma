@@ -7,23 +7,45 @@ datasource db {
   provider = "postgresql"
 }
 
+enum ThemePreference {
+  SYSTEM
+  LIGHT
+  DARK
+}
+
+enum DailyGoalMetric {
+  VERSES
+  MINUTES
+}
+
 model User {
-  id             String        @id @default(uuid()) @db.Uuid
-  telegramId     String        @unique @map("telegram_id")
-  username       String?
-  firstName      String        @map("first_name")
-  lastName       String?       @map("last_name")
-  languageCode   String?       @map("language_code")
-  photoUrl       String?       @map("photo_url")
-  isPremium      Boolean       @default(false) @map("is_premium")
-  allowsWriteToPm Boolean      @default(false) @map("allows_write_to_pm")
-  isActive       Boolean       @default(true) @map("is_active")
-  lastLoginAt    DateTime?     @map("last_login_at")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  sessions       UserSession[]
+  id              String             @id @default(uuid()) @db.Uuid
+  telegramId      String             @unique @map("telegram_id")
+  username        String?
+  firstName       String             @map("first_name")
+  lastName        String?            @map("last_name")
+  languageCode    String?            @map("language_code")
+  photoUrl        String?            @map("photo_url")
+  isPremium       Boolean            @default(false) @map("is_premium")
+  allowsWriteToPm Boolean            @default(false) @map("allows_write_to_pm")
+  isActive        Boolean            @default(true) @map("is_active")
+  lastLoginAt     DateTime?          @map("last_login_at")
+  deletedAt       DateTime?          @map("deleted_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  sessions         UserSession[]
+  settings         UserSettings?
+  favorites        Favorite[]
+  bookmarks        Bookmark[]
+  readingProgress  ReadingProgress?
+  readingHistories ReadingHistory[]
+  readingDays      ReadingDay[]
+  dailyGoals       DailyGoal[]
+  analyticsEvents  AnalyticsEvent[]
 
   @@index([isActive])
+  @@index([deletedAt])
   @@map("users")
 }
 
@@ -38,10 +60,265 @@ model UserSession {
   lastUsedAt       DateTime? @map("last_used_at")
   createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt        DateTime  @updatedAt @map("updated_at")
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
   @@index([revokedAt])
   @@map("user_sessions")
+}
+
+model UserSettings {
+  userId                   String          @id @map("user_id") @db.Uuid
+  locale                   String          @default("uz") @db.VarChar(16)
+  timezone                 String          @default("Asia/Tashkent") @db.VarChar(64)
+  theme                    ThemePreference @default(SYSTEM)
+  arabicFontSize           Int             @default(24) @map("arabic_font_size")
+  translationFontSize      Int             @default(16) @map("translation_font_size")
+  playbackRate             Float           @default(1.0) @map("playback_rate")
+  autoPlayNext             Boolean         @default(false) @map("auto_play_next")
+  repeatVerse              Boolean         @default(false) @map("repeat_verse")
+  defaultTranslationId     String?         @map("default_translation_id") @db.Uuid
+  defaultTafsirId          String?         @map("default_tafsir_id") @db.Uuid
+  defaultReciterId         String?         @map("default_reciter_id") @db.Uuid
+  createdAt                DateTime        @default(now()) @map("created_at")
+  updatedAt                DateTime        @updatedAt @map("updated_at")
+
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultTranslation QuranTranslation? @relation("UserSettingsDefaultTranslation", fields: [defaultTranslationId], references: [id], onDelete: SetNull)
+  defaultTafsir      QuranTafsir?      @relation("UserSettingsDefaultTafsir", fields: [defaultTafsirId], references: [id], onDelete: SetNull)
+  defaultReciter     QuranReciter?     @relation("UserSettingsDefaultReciter", fields: [defaultReciterId], references: [id], onDelete: SetNull)
+
+  @@index([defaultTranslationId])
+  @@index([defaultTafsirId])
+  @@index([defaultReciterId])
+  @@map("user_settings")
+}
+
+model QuranTranslation {
+  id           String   @id @default(uuid()) @db.Uuid
+  provider     String   @default("quran.foundation") @db.VarChar(64)
+  externalId   String   @map("external_id") @db.VarChar(128)
+  languageCode String   @map("language_code") @db.VarChar(16)
+  name         String   @db.VarChar(255)
+  authorName   String?  @map("author_name") @db.VarChar(255)
+  slug         String?  @db.VarChar(128)
+  isActive     Boolean  @default(true) @map("is_active")
+  metadata     Json?
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  userSettingsDefaults UserSettings[]    @relation("UserSettingsDefaultTranslation")
+  readingProgressUses  ReadingProgress[] @relation("ReadingProgressTranslation")
+
+  @@unique([provider, externalId])
+  @@index([languageCode])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("quran_translations")
+}
+
+model QuranTafsir {
+  id           String    @id @default(uuid()) @db.Uuid
+  provider     String    @default("quran.foundation") @db.VarChar(64)
+  externalId   String    @map("external_id") @db.VarChar(128)
+  languageCode String    @map("language_code") @db.VarChar(16)
+  name         String    @db.VarChar(255)
+  authorName   String?   @map("author_name") @db.VarChar(255)
+  slug         String?   @db.VarChar(128)
+  isActive     Boolean   @default(true) @map("is_active")
+  metadata     Json?
+  deletedAt    DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  userSettingsDefaults UserSettings[]    @relation("UserSettingsDefaultTafsir")
+  readingProgressUses  ReadingProgress[] @relation("ReadingProgressTafsir")
+
+  @@unique([provider, externalId])
+  @@index([languageCode])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("quran_tafsirs")
+}
+
+model QuranReciter {
+  id          String    @id @default(uuid()) @db.Uuid
+  provider    String    @default("quran.foundation") @db.VarChar(64)
+  externalId  String    @map("external_id") @db.VarChar(128)
+  name        String    @db.VarChar(255)
+  arabicName  String?   @map("arabic_name") @db.VarChar(255)
+  style       String?   @db.VarChar(128)
+  slug        String?   @db.VarChar(128)
+  isActive    Boolean   @default(true) @map("is_active")
+  metadata    Json?
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  userSettingsDefaults UserSettings[]    @relation("UserSettingsDefaultReciter")
+  readingProgressUses  ReadingProgress[] @relation("ReadingProgressReciter")
+
+  @@unique([provider, externalId])
+  @@index([isActive])
+  @@index([deletedAt])
+  @@map("quran_reciters")
+}
+
+model Favorite {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  chapterNumber Int      @map("chapter_number")
+  verseNumber   Int      @map("verse_number")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chapterNumber, verseNumber])
+  @@index([userId, createdAt])
+  @@map("favorites")
+}
+
+model Bookmark {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  chapterNumber Int       @map("chapter_number")
+  verseNumber   Int       @map("verse_number")
+  wordNumber    Int?      @map("word_number")
+  audioOffsetMs Int?      @map("audio_offset_ms")
+  label         String?   @db.VarChar(120)
+  note          String?   @db.VarChar(2000)
+  color         String?   @db.VarChar(32)
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, chapterNumber, verseNumber])
+  @@index([deletedAt])
+  @@map("bookmarks")
+}
+
+model ReadingProgress {
+  userId               String   @id @map("user_id") @db.Uuid
+  chapterNumber        Int      @map("chapter_number")
+  verseNumber          Int      @map("verse_number")
+  wordNumber           Int?     @map("word_number")
+  lastTranslationId    String?  @map("last_translation_id") @db.Uuid
+  lastTafsirId         String?  @map("last_tafsir_id") @db.Uuid
+  lastReciterId        String?  @map("last_reciter_id") @db.Uuid
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastTranslation QuranTranslation? @relation("ReadingProgressTranslation", fields: [lastTranslationId], references: [id], onDelete: SetNull)
+  lastTafsir      QuranTafsir?      @relation("ReadingProgressTafsir", fields: [lastTafsirId], references: [id], onDelete: SetNull)
+  lastReciter     QuranReciter?     @relation("ReadingProgressReciter", fields: [lastReciterId], references: [id], onDelete: SetNull)
+
+  @@index([lastTranslationId])
+  @@index([lastTafsirId])
+  @@index([lastReciterId])
+  @@map("reading_progress")
+}
+
+model ReadingHistory {
+  id                 String    @id @default(uuid()) @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  startedAt          DateTime  @map("started_at")
+  endedAt            DateTime? @map("ended_at")
+  startChapterNumber Int       @map("start_chapter_number")
+  startVerseNumber   Int       @map("start_verse_number")
+  endChapterNumber   Int?      @map("end_chapter_number")
+  endVerseNumber     Int?      @map("end_verse_number")
+  versesRead         Int       @default(0) @map("verses_read")
+  activeSeconds      Int       @default(0) @map("active_seconds")
+  clientSessionKey   String?   @map("client_session_key") @db.VarChar(128)
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientSessionKey])
+  @@index([userId, startedAt])
+  @@map("reading_histories")
+}
+
+model ReadingDay {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  localDate    DateTime @map("local_date") @db.Date
+  timezone     String   @db.VarChar(64)
+  versesRead   Int      @default(0) @map("verses_read")
+  activeSeconds Int     @default(0) @map("active_seconds")
+  sessionsCount Int     @default(0) @map("sessions_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, localDate])
+  @@index([userId, localDate])
+  @@map("reading_days")
+}
+
+model DailyGoal {
+  id          String          @id @default(uuid()) @db.Uuid
+  userId      String          @map("user_id") @db.Uuid
+  metric      DailyGoalMetric
+  targetValue Int             @map("target_value")
+  effectiveFrom DateTime      @map("effective_from") @db.Date
+  effectiveTo DateTime?       @map("effective_to") @db.Date
+  isEnabled   Boolean         @default(true) @map("is_enabled")
+  deletedAt   DateTime?       @map("deleted_at")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  results DailyGoalResult[]
+
+  @@index([userId, isEnabled, deletedAt])
+  @@index([userId, metric, effectiveFrom])
+  @@map("daily_goals")
+}
+
+model DailyGoalResult {
+  id              String    @id @default(uuid()) @db.Uuid
+  dailyGoalId     String    @map("daily_goal_id") @db.Uuid
+  localDate       DateTime  @map("local_date") @db.Date
+  actualValue     Int       @default(0) @map("actual_value")
+  completedAt     DateTime? @map("completed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  dailyGoal DailyGoal @relation(fields: [dailyGoalId], references: [id], onDelete: Cascade)
+
+  @@unique([dailyGoalId, localDate])
+  @@index([localDate])
+  @@map("daily_goal_results")
+}
+
+model AnalyticsEvent {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String?   @map("user_id") @db.Uuid
+  eventName        String    @map("event_name") @db.VarChar(128)
+  occurredAt       DateTime  @default(now()) @map("occurred_at")
+  anonymousId      String?   @map("anonymous_id") @db.VarChar(128)
+  deviceId         String?   @map("device_id") @db.VarChar(128)
+  sessionId        String?   @map("session_id") @db.VarChar(128)
+  schemaVersion    Int       @default(1) @map("schema_version")
+  properties       Json?
+  idempotencyKey   String?   @unique @map("idempotency_key") @db.VarChar(128)
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, occurredAt])
+  @@index([eventName, occurredAt])
+  @@map("analytics_events")
 }

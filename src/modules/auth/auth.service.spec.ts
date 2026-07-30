@@ -43,6 +43,7 @@ describe('AuthService', () => {
     allowsWriteToPm: false,
     isActive: true,
     lastLoginAt: new Date(),
+    deletedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

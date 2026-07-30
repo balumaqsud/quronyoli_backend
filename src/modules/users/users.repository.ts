@@ -18,6 +18,7 @@ export class UsersRepository {
       where: {
         id,
         isActive: true,
+        deletedAt: null,
       },
     });
   }
@@ -52,6 +53,7 @@ export class UsersRepository {
         allowsWriteToPm: input.allowsWriteToPm,
         lastLoginAt: new Date(),
         isActive: true,
+        deletedAt: null,
       },
     });
   }

@@ -36,6 +36,7 @@ describe('Auth & Users (e2e)', () => {
     allowsWriteToPm: false,
     isActive: true,
     lastLoginAt: new Date(),
+    deletedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

@@ -87,6 +87,8 @@ src/
   app.module.ts
 ```
 
+Database design (relationships, cascades, soft-delete policy) is documented in [`docs/database-schema.md`](docs/database-schema.md).
+
 ## Docker
 
 ```bash
