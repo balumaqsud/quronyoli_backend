@@ -25,7 +25,7 @@ Do **not** copy real secrets from a local `.env` into docs or commits. Placehold
 | `APP_NAME` | `quron-yoli-backend` | Log / identity |
 | `API_PREFIX` | `api` | Global prefix |
 | `API_VERSION` | `1` | Default URI version |
-| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated; include `https://web.telegram.org` for Mini App |
+| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated; include `https://web.telegram.org` and the deployed Mini App origin (e.g. `https://quronyoli-front.vercel.app`) |
 | `HTTP_REQUEST_TIMEOUT_MS` | `30000` | Nest timeout + Node `requestTimeout` |
 | `HTTP_BODY_LIMIT` | `1mb` | JSON / urlencoded limit |
 | `TRUST_PROXY` | `false` | Set `true` behind reverse proxy |

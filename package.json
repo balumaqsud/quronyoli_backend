@@ -15,7 +15,7 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/src/main.js",
+    "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -28,6 +28,8 @@
     "prisma:studio": "prisma studio",
     "prisma:validate": "prisma validate",
     "qf:discover": "ts-node --transpile-only scripts/qf-discovery-sample.ts",
+    "qf:sync-catalog": "ts-node --transpile-only src/commands/qf-sync-catalog.ts",
+    "qf:sync-catalog:prod": "node dist/commands/qf-sync-catalog.js",
     "check": "npm run lint && npm run test && npm run prisma:validate && npm run build"
   },
   "dependencies": {

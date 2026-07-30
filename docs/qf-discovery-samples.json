@@ -1,13 +1,6 @@
 {
-  "fetchedAt": "2026-07-30T14:45:48.605Z",
-  "source": "api.quran.com/api/v4 (public Content catalog; QF OAuth client_credentials returned 401 in this environment)",
-  "gaps": [
-    "Authenticated fetches against apis.quran.foundation / oauth2.quran.foundation failed with 401 for configured QF_CLIENT_* credentials",
-    "Clear Quran translation id 131 appears in QF OpenAPI examples but was absent from the public api.quran.com translations catalog at fetch time",
-    "No Arabic-language translation resources (Arabic is delivered via verse text_* fields)",
-    "chapter_reciters endpoint returned 503 from public API during sampling",
-    "Search v1 requires authenticated search scope; no live search sample captured"
-  ],
+  "fetchedAt": "2026-07-30T18:06:45.437Z",
+  "env": "prelive",
   "samples": {
     "chaptersFirst": [
       {
@@ -57,371 +50,157 @@
         "ruku_number": 1,
         "manzil_number": 1,
         "sajdah_number": null,
-        "text_uthmani": "بِسْمِ ٱللَّهِ ٱلرَّحْمَـٰنِ ٱلرَّحِيمِ",
         "page_number": 1,
-        "juz_number": 1,
-        "translations": [
-          {
-            "id": 96343,
-            "resource_id": 20,
-            "text": "In the name of Allāh,<sup foot_note=195932>1</sup> the Entirely Merciful, the Especially Merciful.<sup foot_note=195931>2</sup>"
-          }
-        ]
+        "juz_number": 1
       }
     },
-    "translationCatalogShape": {
-      "id": 85,
-      "name": "M.A.S. Abdel Haleem",
-      "author_name": "Abdul Haleem",
-      "slug": "en-haleem",
-      "language_name": "english",
-      "translated_name": {
-        "name": "M.A.S. Abdel Haleem",
-        "language_name": "english"
-      }
-    },
-    "tafsirCatalogShape": {
-      "id": 169,
-      "name": "Ibn Kathir (Abridged)",
-      "author_name": "Hafiz Ibn Kathir",
-      "slug": "en-tafisr-ibn-kathir",
-      "language_name": "english",
-      "translated_name": {
-        "name": "Ibn Kathir (Abridged)",
-        "language_name": "english"
-      }
-    },
-    "recitationCatalogShape": {
-      "id": 2,
-      "reciter_name": "AbdulBaset AbdulSamad",
-      "style": "Murattal",
-      "translated_name": {
-        "name": "AbdulBaset AbdulSamad",
-        "language_name": "english"
-      }
-    },
-    "docsErrorShape": {
-      "message": "The request requires user authentication",
-      "type": "unauthorized",
-      "success": false
-    },
-    "docsVerseWithExtras": {
-      "verses": [
-        {
-          "id": 1,
-          "chapter_id": 1,
-          "verse_number": 1,
-          "verse_key": "1:1",
-          "juz_number": 1,
-          "page_number": 1,
-          "audio": {
-            "verse_key": "1:1",
-            "url": "https://verses.quran.foundation/Alafasy/mp3/001001.mp3"
-          },
-          "translations": [
-            {
-              "resource_id": 131,
-              "resource_name": "Dr. Mustafa Khattab, the Clear Quran",
-              "text": "In the Name of Allah—the Most Compassionate, Most Merciful."
-            }
-          ],
-          "tafsirs": [
-            {
-              "id": 82641,
-              "resource_id": 169,
-              "language_name": "english",
-              "name": "Tafsir Ibn Kathir",
-              "text": "<h2 class=\"title\">The Meaning of Al-Fatihah and its Various Names</h2>"
-            }
-          ]
-        }
-      ],
-      "pagination": {
-        "per_page": 1,
-        "current_page": 1,
-        "next_page": 2,
-        "total_pages": 7,
-        "total_records": 7
+    "searchFatiha": {
+      "error": true,
+      "status": 403,
+      "body": {
+        "message": "The access token does not have the required scopes",
+        "type": "insufficient_scope",
+        "success": false
       }
     }
   },
   "curatedResources": {
-    "translations": {
-      "uzbek": [
-        {
-          "id": 55,
-          "name": "Muhammad Sodiq Muhammad Yusuf (Latin) ",
-          "author_name": "Muhammad Sodiq Muhammad Yusuf",
-          "language_name": "uzbek",
-          "slug": "quran.uz.sodik"
-        },
-        {
-          "id": 101,
-          "name": "Alauddin Mansour",
-          "author_name": "Alauddin Mansour",
-          "language_name": "uzbek",
-          "slug": null
-        },
-        {
-          "id": 127,
-          "name": "Muhammad Sodik Muhammad Yusuf",
-          "author_name": "Muhammad Sodik Muhammad Yusuf",
-          "language_name": "uzbek",
-          "slug": ""
-        }
-      ],
-      "english": [
-        {
-          "id": 85,
-          "name": "M.A.S. Abdel Haleem",
-          "author_name": "Abdul Haleem",
-          "language_name": "english",
-          "slug": "en-haleem"
-        },
-        {
-          "id": 149,
-          "name": "Fadel Soliman, Bridges’ translation",
-          "author_name": "Fadel Soliman",
-          "language_name": "english",
-          "slug": "bridges-translation"
-        },
-        {
-          "id": 84,
-          "name": "T. Usmani",
-          "author_name": "Mufti Taqi Usmani",
-          "language_name": "english",
-          "slug": "en-taqi-usmani"
-        },
-        {
-          "id": 95,
-          "name": "A. Maududi (Tafhim commentary)",
-          "author_name": "Sayyid Abul Ala Maududi",
-          "language_name": "english",
-          "slug": "en-al-maududi"
-        },
-        {
-          "id": 19,
-          "name": "M. Pickthall",
-          "author_name": "Mohammed Marmaduke William Pickthall",
-          "language_name": "english",
-          "slug": "quran.en.pickthall"
-        },
-        {
-          "id": 22,
-          "name": "A. Yusuf Ali",
-          "author_name": "Abdullah Yusuf Ali",
-          "language_name": "english",
-          "slug": "quran.en.yusufali"
-        },
-        {
-          "id": 20,
-          "name": "Saheeh International",
-          "author_name": "Saheeh International",
-          "language_name": "english",
-          "slug": "en-sahih-international"
-        },
-        {
-          "id": 203,
-          "name": "Al-Hilali & Khan",
-          "author_name": "Muhammad Taqi-ud-Din al-Hilali & Muhammad Muhsin Khan",
-          "language_name": "english",
-          "slug": ""
-        },
-        {
-          "id": 57,
-          "name": "Transliteration",
-          "author_name": "Transliteration",
-          "language_name": "english",
-          "slug": "transliteration"
-        }
-      ],
-      "russian": [
-        {
-          "id": 78,
-          "name": "Ministry of Awqaf, Egypt",
-          "author_name": "Ministry of Awqaf, Egypt",
-          "language_name": "russian",
-          "slug": "ru-ministry-of-awqaf"
-        },
-        {
-          "id": 79,
-          "name": "Abu Adel",
-          "author_name": "Abu Adel",
-          "language_name": "russian",
-          "slug": "ru-abu-adel"
-        },
-        {
-          "id": 45,
-          "name": "Russian Translation ( Elmir Kuliev )",
-          "author_name": "Elmir Kuliev",
-          "language_name": "russian",
-          "slug": "quran.ru.kuliev"
-        }
-      ],
-      "arabic": [],
-      "docsMentioned": [
-        {
-          "id": 131,
-          "name": "Dr. Mustafa Khattab, the Clear Quran",
-          "author_name": "Dr. Mustafa Khattab",
-          "language_name": "english",
-          "slug": "clearquran-with-tafsir",
-          "note": "From QF OpenAPI examples; verify via GET /resources/translations on authenticated QF"
-        }
-      ]
-    },
-    "tafsirs": {
-      "english": [
-        {
-          "id": 169,
-          "name": "Ibn Kathir (Abridged)",
-          "author_name": "Hafiz Ibn Kathir",
-          "language_name": "english",
-          "slug": "en-tafisr-ibn-kathir"
-        },
-        {
-          "id": 168,
-          "name": "Ma'arif al-Qur'an",
-          "author_name": "Mufti Muhammad Shafi",
-          "language_name": "english",
-          "slug": "en-tafsir-maarif-ul-quran"
-        },
-        {
-          "id": 817,
-          "name": "Tazkirul Quran(Maulana Wahiduddin Khan)",
-          "author_name": "Maulana Wahid Uddin Khan",
-          "language_name": "english",
-          "slug": "tazkirul-quran-en"
-        }
-      ],
-      "arabic": [
-        {
-          "id": 16,
-          "name": "Tafsir Muyassar",
-          "author_name": "المیسر",
-          "language_name": "arabic",
-          "slug": "ar-tafsir-muyassar"
-        },
-        {
-          "id": 93,
-          "name": "Al-Tafsir al-Wasit (Tantawi)",
-          "author_name": "Waseet",
-          "language_name": "arabic",
-          "slug": "ar-tafsir-al-wasit"
-        },
-        {
-          "id": 14,
-          "name": "Tafsir Ibn Kathir",
-          "author_name": "Hafiz Ibn Kathir",
-          "language_name": "arabic",
-          "slug": "ar-tafsir-ibn-kathir"
-        },
-        {
-          "id": 15,
-          "name": "Tafsir al-Tabari",
-          "author_name": "Tabari",
-          "language_name": "arabic",
-          "slug": "ar-tafsir-al-tabari"
-        },
-        {
-          "id": 90,
-          "name": "Al-Qurtubi",
-          "author_name": "Qurtubi",
-          "language_name": "arabic",
-          "slug": "ar-tafseer-al-qurtubi"
-        },
-        {
-          "id": 91,
-          "name": "السعدي Al-Sa'di",
-          "author_name": "Saddi",
-          "language_name": "arabic",
-          "slug": "ar-tafseer-al-saddi"
-        },
-        {
-          "id": 94,
-          "name": "Tafseer Al-Baghawi",
-          "author_name": "Baghawy",
-          "language_name": "arabic",
-          "slug": "ar-tafsir-al-baghawi"
-        }
-      ],
-      "russian": [
-        {
-          "id": 170,
-          "name": "Al-Sa'di",
-          "author_name": "Saddi",
-          "language_name": "russian",
-          "slug": "ru-tafseer-al-saddi"
-        }
-      ],
-      "uzbek": []
-    },
+    "translations": [
+      {
+        "id": 85,
+        "name": "M.A.S. Abdel Haleem",
+        "author_name": "Abdul Haleem",
+        "language_name": "english",
+        "slug": "en-haleem"
+      },
+      {
+        "id": 78,
+        "name": "Ministry of Awqaf, Egypt",
+        "author_name": "Ministry of Awqaf, Egypt",
+        "language_name": "russian",
+        "slug": "ru-ministry-of-awqaf"
+      },
+      {
+        "id": 57,
+        "name": "Transliteration",
+        "author_name": "Transliteration",
+        "language_name": "english",
+        "slug": "transliteration"
+      },
+      {
+        "id": 136,
+        "name": "Montada Islamic Foundation",
+        "author_name": "Montada Islamic Foundation",
+        "language_name": "french",
+        "slug": null
+      },
+      {
+        "id": 161,
+        "name": "Taisirul Quran",
+        "author_name": "Tawheed Publication",
+        "language_name": "bengali",
+        "slug": "bn-taisirul-quran"
+      }
+    ],
+    "tafsirs": [
+      {
+        "id": 926,
+        "name": "Arabic Jalalayn Tafseer",
+        "author_name": null,
+        "language_name": "arabic",
+        "slug": "ar-tafsir-jalalayn"
+      },
+      {
+        "id": 381,
+        "name": "Tafsir Fathul Majid",
+        "author_name": "AbdulRahman Bin Hasan Al-Alshaikh",
+        "language_name": "bengali",
+        "slug": "tafisr-fathul-majid-bn"
+      },
+      {
+        "id": 169,
+        "name": "Ibn Kathir (Abridged)",
+        "author_name": "Hafiz Ibn Kathir",
+        "language_name": "english",
+        "slug": "en-tafisr-ibn-kathir"
+      },
+      {
+        "id": 170,
+        "name": "Al-Sa'di",
+        "author_name": "Saddi",
+        "language_name": "russian",
+        "slug": "ru-tafseer-al-saddi"
+      }
+    ],
     "recitations": [
       {
-        "id": 2,
-        "reciter_name": "AbdulBaset AbdulSamad",
-        "style": "Murattal"
-      },
-      {
-        "id": 1,
-        "reciter_name": "AbdulBaset AbdulSamad",
-        "style": "Mujawwad"
-      },
-      {
-        "id": 3,
-        "reciter_name": "Abdur-Rahman as-Sudais",
-        "style": null
-      },
-      {
-        "id": 4,
-        "reciter_name": "Abu Bakr al-Shatri",
-        "style": null
-      },
-      {
-        "id": 5,
-        "reciter_name": "Hani ar-Rifai",
-        "style": null
-      },
-      {
-        "id": 12,
-        "reciter_name": "Mahmoud Khalil Al-Husary",
-        "style": "Muallim"
-      },
-      {
         "id": 6,
-        "reciter_name": "Mahmoud Khalil Al-Husary",
+        "name": {
+          "name": "Mahmoud Khalil Al-Husary",
+          "language_name": "english"
+        },
         "style": null
       },
       {
         "id": 7,
-        "reciter_name": "Mishari Rashid al-`Afasy",
+        "name": {
+          "name": "Mishari Rashid al-`Afasy",
+          "language_name": "english"
+        },
         "style": null
+      }
+    ],
+    "chapterReciters": [
+      {
+        "id": 6,
+        "name": "Mahmoud Khaleel Al-Husary",
+        "style": {
+          "name": "Murattal",
+          "translated_name": {
+            "name": "Murattal",
+            "language_name": "english"
+          }
+        }
       },
       {
-        "id": 9,
-        "reciter_name": "Mohamed Siddiq al-Minshawi",
-        "style": "Murattal"
+        "id": 7,
+        "name": "Mishari Rashid al-`Afasy",
+        "style": {
+          "name": "Murattal",
+          "translated_name": {
+            "name": "Murattal",
+            "language_name": "english"
+          }
+        }
       },
       {
-        "id": 8,
-        "reciter_name": "Mohamed Siddiq al-Minshawi",
-        "style": "Mujawwad"
+        "id": 12,
+        "name": "Mahmoud Khalil Al-Husary",
+        "style": {
+          "name": "Muallim",
+          "translated_name": {
+            "name": "Muallim",
+            "language_name": "english"
+          }
+        }
       },
       {
-        "id": 10,
-        "reciter_name": "Sa`ud ash-Shuraym",
-        "style": null
-      },
-      {
-        "id": 11,
-        "reciter_name": "Mohamed al-Tablawi",
-        "style": null
+        "id": 173,
+        "name": "Mishari Rashid al-`Afasy Streaming",
+        "style": {
+          "name": "Murattal",
+          "translated_name": {
+            "name": "Murattal",
+            "language_name": "english"
+          }
+        }
       }
     ]
   },
   "catalogCounts": {
-    "translations": 126,
-    "tafsirs": 20,
-    "recitations": 12
+    "translations": 14,
+    "tafsirs": 6,
+    "recitations": 2,
+    "chapterReciters": 4
   }
 }

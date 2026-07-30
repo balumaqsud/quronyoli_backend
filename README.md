@@ -51,7 +51,7 @@ docker compose up --build
 
 **Docker caveats**
 
-- Container `CMD` runs `npx prisma migrate deploy && node dist/src/main.js` — migrations apply on every start, then the Nest entrypoint is `dist/src/main.js` (not `dist/main.js`).
+- Container `CMD` runs `npx prisma migrate deploy && node dist/main.js` — migrations apply on every start, then the Nest entrypoint is `dist/main.js`.
 - Compose overrides `DATABASE_URL` / `REDIS_HOST` to service DNS (`postgres`, `redis`). Local `npm run start:dev` should point at `localhost`.
 - `POSTGRES_*` variables seed the Compose Postgres image only; the app always uses `DATABASE_URL`.
 
@@ -62,7 +62,7 @@ docker compose up --build
 | `npm run start:dev` | Nest watch mode |
 | `npm run start:debug` | Watch + debugger |
 | `npm run build` | Compile to `dist/` |
-| `npm run start:prod` | `node dist/src/main.js` |
+| `npm run start:prod` | `node dist/main.js` |
 | `npm run lint` | ESLint with `--fix` |
 | `npm run test` | Unit tests (Jest) |
 | `npm run test:e2e` | E2E tests |
@@ -73,6 +73,8 @@ docker compose up --build
 | `npm run prisma:studio` | Prisma Studio |
 | `npm run prisma:validate` | Validate schema |
 | `npm run qf:discover` | Sample Quran.Foundation discovery (`scripts/qf-discovery-sample.ts`) |
+| `npm run qf:sync-catalog` | Upsert QF translation/tafsir/recitation catalogs into Postgres |
+| `npm run qf:sync-catalog:prod` | Same sync against compiled `dist/commands/qf-sync-catalog.js` |
 | `npm run check` | `lint` + `test` + `prisma:validate` + `build` |
 
 CI (`.github/workflows/ci.yml`) mirrors `check` after `npm ci` and `prisma generate`.

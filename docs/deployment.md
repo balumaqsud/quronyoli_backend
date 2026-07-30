@@ -12,7 +12,7 @@ npm ci
 npx prisma generate
 npm run build
 npx prisma migrate deploy
-npm run start:prod     # node dist/src/main.js
+npm run start:prod     # node dist/main.js
 ```
 
 ### Docker image
@@ -26,7 +26,7 @@ docker run --env-file .env -p 3000:3000 quron-yoli-api
 Image `CMD` is:
 
 ```sh
-npx prisma migrate deploy && node dist/src/main.js
+npx prisma migrate deploy && node dist/main.js
 ```
 
 Migrations therefore run on **every container start** before the Nest process binds the port. Ensure the DB is reachable and the migrate role can apply DDL.
@@ -83,14 +83,54 @@ Telegram webhooks require a public **HTTPS** URL (`TELEGRAM_WEBHOOK_URL`).
 
 Never expose the bot token or webhook secret in logs (Pino redacts common auth headers; still avoid logging bodies that contain tokens).
 
+### Local HTTPS with ngrok
+
+Use ngrok when you need Telegram to reach a laptop API:
+
+```bash
+# 1) API on PORT (example 3001)
+npm run build && npm run start:prod
+
+# 2) Public HTTPS edge
+ngrok http 3001
+
+# 3) Point env at the ngrok origin (ephemeral on free plans)
+TELEGRAM_WEBHOOK_URL=https://<ngrok-host>/api/v1/telegram/webhook
+TELEGRAM_WEBHOOK_AUTO_REGISTER=true
+TRUST_PROXY=true
+AUTH_COOKIE_SECURE=true
+AUTH_COOKIE_SAME_SITE=none
+
+# 4) Restart Nest so bootstrap re-registers setWebhook
+#    or call Telegram setWebhook manually with the same secret_token
+```
+
+Notes:
+
+- Free ngrok URLs change when the tunnel restarts. Update `.env` and re-register the webhook every time.
+- Verify with Telegram `getWebhookInfo` (`pending_update_count` should settle at 0 with no `last_error_message`).
+- Local health remains on `http://127.0.0.1:3001/api/v1/health`; public checks go through the ngrok HTTPS URL (send `ngrok-skip-browser-warning: true` for curl).
+
+### Quran catalog sync after migrate
+
+`PATCH /settings` validates translation/tafsir/reciter IDs against local Postgres catalogs. Populate them after migrate (not on Nest boot):
+
+```bash
+npx prisma migrate deploy
+npm run qf:sync-catalog          # or npm run qf:sync-catalog:prod after build
+```
+
+The sync upserts QF `/resources/translations`, `/resources/tafsirs`, and `/resources/recitations` (ayah audio → `quran_reciters`), then marks missing upstream IDs `is_active=false` without deleting rows.
+
 ## Rollout checklist
 
 1. Apply config secrets in the secret store / env.
 2. Deploy new image or artifact.
 3. Confirm migrate succeeds (container logs or explicit `prisma migrate deploy`).
-4. Wait for readiness (`/health/ready`).
-5. Smoke: auth telegram (staging), health, one Quran GET, reminder preference if used.
-6. Watch error rate and slow-request logs.
+4. Run `npm run qf:sync-catalog` (or the prod dist script) so settings catalogs are populated.
+5. Wait for readiness (`/health/ready`).
+6. Smoke: auth telegram (staging), health, one Quran GET, reminder preference if used.
+7. Watch error rate and slow-request logs.
 
 ## Rollback
 

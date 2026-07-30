@@ -107,14 +107,7 @@ export class TelegramBotService {
 
   private openMiniAppKeyboard(url: string): TelegramInlineKeyboardMarkup {
     return {
-      inline_keyboard: [
-        [
-          {
-            text: 'Open Mini App',
-            web_app: { url },
-          },
-        ],
-      ],
+      inline_keyboard: [[{ text: 'Open Mini App', url }]],
     };
   }
 

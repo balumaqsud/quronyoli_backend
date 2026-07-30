@@ -33,12 +33,12 @@ Interval 30s, timeout 5s, start period 40s, 3 retries.
 ### CMD
 
 ```sh
-npx prisma migrate deploy && node dist/src/main.js
+npx prisma migrate deploy && node dist/main.js
 ```
 
 Important:
 
-- Nest emits `dist/src/main.js` (not `dist/main.js`) — `package.json` `start:prod` matches this.
+- Nest emits `dist/main.js` — `package.json` `start:prod` matches this. The generated Prisma client is copied to `dist/generated/prisma`, which is where the compiled `dist/infrastructure/database/prisma.service.js` resolves `../../generated/prisma`.
 - Migrations run on every container start. Failed migrate prevents the API from starting (fail closed).
 
 ## Compose services
@@ -114,7 +114,7 @@ docker compose up --build -d api
 | Auth / throttle IPs wrong | Set `TRUST_PROXY=true` behind proxy |
 | Redis auth errors | `REDIS_PASSWORD` must match Compose redis `requirepass` |
 | Prisma client missing | Image must include `dist/generated`; rebuild after schema changes |
-| Wrong entrypoint | Use `node dist/src/main.js` |
+| Wrong entrypoint | Use `node dist/main.js` |
 | Host app cannot reach DB | Use `localhost` + published ports; do not use hostname `postgres` outside Compose network |
 | Quran/Telegram timeouts | Verify egress; check `QF_*` / `TELEGRAM_*` timeouts and credentials |
 

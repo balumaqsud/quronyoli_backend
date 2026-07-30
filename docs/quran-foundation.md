@@ -49,6 +49,26 @@ QF_RATE_LIMIT_WINDOW_SECONDS=60
 
 Credentials are requested from https://api-docs.quran.foundation/request-access/
 
+Leave `QF_AUTH_BASE_URL` / `QF_API_BASE_URL` unset so defaults follow `QF_ENV` (`production` → `https://oauth2.quran.foundation` + `https://apis.quran.foundation`).
+
+## Local catalog sync
+
+Settings defaults store QF resource IDs that must exist in Postgres. Sync them with:
+
+```bash
+npm run qf:sync-catalog
+# production artifact:
+npm run qf:sync-catalog:prod
+```
+
+Behavior:
+
+- Fetches full Content catalogs first (fail closed on OAuth/network/parse errors).
+- Upserts `quran_translations`, `quran_tafsirs`, and `quran_reciters` on `(provider, external_id)`.
+- Maps **recitations** (ayah audio) into `quran_reciters` — not chapter reciters.
+- Reactivates resources that return upstream; sets `is_active=false` for missing IDs (never deletes).
+- Requires working `content` scope. If `search` scope is denied for the client, Search routes fail until Quran.Foundation grants the entitlement — content/catalog sync still works.
+
 ## Auth model
 
 - App routes require the existing JWT access token.

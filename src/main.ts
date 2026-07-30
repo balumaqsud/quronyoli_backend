@@ -50,7 +50,12 @@ async function bootstrap(): Promise<void> {
     origin: appConfig.corsOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-request-id'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-request-id',
+      'ngrok-skip-browser-warning',
+    ],
   });
 
   app.setGlobalPrefix(appConfig.apiPrefix);

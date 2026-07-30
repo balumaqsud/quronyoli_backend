@@ -95,14 +95,17 @@ Catalog cleanup never deletes user settings; defaults become null.
 These tables store **metadata only** (provider resource IDs, names, languages).
 They do **not** store ayah text or audio blobs.
 
+Populate via the idempotent CLI (after migrate): `npm run qf:sync-catalog`.
+Missing upstream IDs are soft-deactivated with `is_active=false` (rows are kept for FK stability).
+
 ### `QuranTranslation` (`quran_translations`)
-Unique on `(provider, external_id)`. Soft-deletable via `deletedAt`.
+Unique on `(provider, external_id)`. Soft-deletable via `deletedAt`. Source: QF `/resources/translations`.
 
 ### `QuranTafsir` (`quran_tafsirs`)
-Same identity pattern as translations.
+Same identity pattern as translations. Source: QF `/resources/tafsirs`.
 
 ### `QuranReciter` (`quran_reciters`)
-Same identity pattern; optional style/arabic name.
+Same identity pattern; optional style/arabic name. Source: QF `/resources/recitations` (ayah audio IDs used by settings / verse audio). Chapter reciters are not stored here.
 
 Used by:
 
