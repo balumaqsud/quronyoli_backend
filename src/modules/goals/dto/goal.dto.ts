@@ -12,7 +12,12 @@ import {
 import { DailyGoalMetric } from '../../../generated/prisma';
 
 export class CreateGoalDto {
-  @ApiProperty({ enum: DailyGoalMetric, example: DailyGoalMetric.VERSES })
+  @ApiProperty({
+    enum: DailyGoalMetric,
+    example: DailyGoalMetric.VERSES,
+    description:
+      'VERSES uses daily ayah-open counts. MINUTES uses ReadingDay.activeSeconds (currently not incremented by ayah opens — progress stays 0 until a session/heartbeat writer exists).',
+  })
   @IsEnum(DailyGoalMetric)
   metric!: DailyGoalMetric;
 

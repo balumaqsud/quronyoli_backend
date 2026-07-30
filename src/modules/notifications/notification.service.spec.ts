@@ -155,4 +155,50 @@ describe('NotificationService', () => {
     ).resolves.toEqual({ status: 'already_sent' });
     expect(botService.sendDailyReminder).not.toHaveBeenCalled();
   });
+
+  it('treats fresh PENDING conflict as already_sent (in-flight claim)', async () => {
+    repository.findUserForDelivery.mockResolvedValue({
+      id: 'user-1',
+      telegramId: '42',
+      allowsWriteToPm: true,
+      settings: { timezone: 'Asia/Tashkent' },
+    });
+    repository.claimDelivery.mockResolvedValue({
+      claimed: false,
+      delivery: {
+        id: 'delivery-1',
+        status: NotificationDeliveryStatus.PENDING,
+      } as never,
+    });
+
+    await expect(
+      service.deliverDailyReminder({
+        userId: 'user-1',
+        localDate: '2026-07-30',
+      }),
+    ).resolves.toEqual({ status: 'already_sent' });
+  });
+
+  it('skips terminal FAILED rows that were not reclaimed', async () => {
+    repository.findUserForDelivery.mockResolvedValue({
+      id: 'user-1',
+      telegramId: '42',
+      allowsWriteToPm: true,
+      settings: { timezone: 'Asia/Tashkent' },
+    });
+    repository.claimDelivery.mockResolvedValue({
+      claimed: false,
+      delivery: {
+        id: 'delivery-1',
+        status: NotificationDeliveryStatus.FAILED,
+      } as never,
+    });
+
+    await expect(
+      service.deliverDailyReminder({
+        userId: 'user-1',
+        localDate: '2026-07-30',
+      }),
+    ).resolves.toEqual({ status: 'skipped', reason: 'existing_failed' });
+  });
 });
