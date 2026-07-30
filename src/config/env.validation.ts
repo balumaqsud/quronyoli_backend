@@ -40,6 +40,31 @@ export const envValidationSchema = Joi.object({
     .valid('lax', 'strict', 'none')
     .default('lax'),
 
+  QF_CLIENT_ID: Joi.string().min(8).required(),
+  QF_CLIENT_SECRET: Joi.string().min(8).required(),
+  QF_ENV: Joi.string().valid('prelive', 'production').default('production'),
+  QF_AUTH_BASE_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .optional(),
+  QF_API_BASE_URL: Joi.string()
+    .uri({ scheme: ['https'] })
+    .optional(),
+  QF_CONTENT_PATH_PREFIX: Joi.string().default('/content/api/v4'),
+  QF_SEARCH_PATH_PREFIX: Joi.string().default('/search/v1'),
+  QF_CONTENT_SCOPE: Joi.string().default('content'),
+  QF_SEARCH_SCOPE: Joi.string().default('search'),
+  QF_TIMEOUT_MS: Joi.number().integer().min(1000).default(30000),
+  QF_MAX_RETRIES: Joi.number().integer().min(0).max(5).default(3),
+  QF_RETRY_BASE_DELAY_MS: Joi.number().integer().min(50).default(250),
+  QF_TOKEN_SKEW_SECONDS: Joi.number().integer().min(5).default(30),
+  QF_RATE_LIMIT_MAX: Joi.number().integer().min(1).default(60),
+  QF_RATE_LIMIT_WINDOW_SECONDS: Joi.number().integer().min(1).default(60),
+  QF_CACHE_TTL_CHAPTERS_SECONDS: Joi.number().integer().min(1).default(86400),
+  QF_CACHE_TTL_VERSES_SECONDS: Joi.number().integer().min(1).default(3600),
+  QF_CACHE_TTL_RESOURCES_SECONDS: Joi.number().integer().min(1).default(86400),
+  QF_CACHE_TTL_SEARCH_SECONDS: Joi.number().integer().min(1).default(300),
+  QF_CACHE_TTL_AUDIO_SECONDS: Joi.number().integer().min(1).default(3600),
+
   LOG_LEVEL: Joi.string()
     .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent')
     .default('info'),

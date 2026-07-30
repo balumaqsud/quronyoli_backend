@@ -14,6 +14,7 @@ import { RedisService } from '../src/infrastructure/cache/redis.service';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { SessionsRepository } from '../src/modules/auth/sessions.repository';
 import { TelegramInitDataVerifier } from '../src/modules/auth/telegram/telegram-init-data.verifier';
+import { QuranFoundationClient } from '../src/modules/quran/client/quran-foundation.client';
 import { UsersRepository } from '../src/modules/users/users.repository';
 
 describe('Auth & Users (e2e)', () => {
@@ -53,7 +54,13 @@ describe('Auth & Users (e2e)', () => {
     onModuleInit: jest.fn().mockResolvedValue(undefined),
     onModuleDestroy: jest.fn().mockResolvedValue(undefined),
     isHealthy: jest.fn().mockResolvedValue(true),
-    getClient: jest.fn(),
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
+    buildKey: jest.fn((key: string) => key),
+    getClient: jest.fn().mockReturnValue({
+      eval: jest.fn().mockResolvedValue([1, 60]),
+    }),
   };
 
   const usersRepository = {
@@ -141,6 +148,11 @@ describe('Auth & Users (e2e)', () => {
     }),
   };
 
+  const quranClient = {
+    getContent: jest.fn().mockResolvedValue({ chapters: [{ id: 1 }] }),
+    getSearch: jest.fn().mockResolvedValue({ result: { verses: [] } }),
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -155,6 +167,8 @@ describe('Auth & Users (e2e)', () => {
       .useValue(sessionsRepository)
       .overrideProvider(TelegramInitDataVerifier)
       .useValue(telegramVerifier)
+      .overrideProvider(QuranFoundationClient)
+      .useValue(quranClient)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -289,6 +303,27 @@ describe('Auth & Users (e2e)', () => {
     });
     expect(sessionsRepository.revoke).toHaveBeenCalledWith(sessionId);
   });
+
+  it('proxies protected Quran surah list through Quran.Foundation client', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/quran/surahs')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const body = response.body as {
+      success: boolean;
+      data: { chapters: Array<{ id: number }> };
+    };
+
+    expect(body.success).toBe(true);
+    expect(body.data.chapters[0]?.id).toBe(1);
+    expect(quranClient.getContent).toHaveBeenCalled();
+  });
 });
 
 describe('HealthController (e2e)', () => {
@@ -306,7 +341,13 @@ describe('HealthController (e2e)', () => {
     onModuleInit: jest.fn().mockResolvedValue(undefined),
     onModuleDestroy: jest.fn().mockResolvedValue(undefined),
     isHealthy: jest.fn().mockResolvedValue(true),
-    getClient: jest.fn(),
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue(undefined),
+    del: jest.fn().mockResolvedValue(undefined),
+    buildKey: jest.fn((key: string) => key),
+    getClient: jest.fn().mockReturnValue({
+      eval: jest.fn().mockResolvedValue([1, 60]),
+    }),
   };
 
   beforeAll(async () => {

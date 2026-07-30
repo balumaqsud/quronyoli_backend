@@ -47,6 +47,35 @@ export interface AuthCookieConfig {
   maxAgeMs: number;
 }
 
+export type QuranFoundationEnvironment = 'prelive' | 'production';
+
+export interface QuranFoundationCacheTtlConfig {
+  chaptersSeconds: number;
+  versesSeconds: number;
+  resourcesSeconds: number;
+  searchSeconds: number;
+  audioSeconds: number;
+}
+
+export interface QuranFoundationConfig {
+  clientId: string;
+  clientSecret: string;
+  environment: QuranFoundationEnvironment;
+  authBaseUrl: string;
+  apiBaseUrl: string;
+  contentPathPrefix: string;
+  searchPathPrefix: string;
+  contentScope: string;
+  searchScope: string;
+  timeoutMs: number;
+  maxRetries: number;
+  retryBaseDelayMs: number;
+  tokenSkewSeconds: number;
+  rateLimitMax: number;
+  rateLimitWindowSeconds: number;
+  cacheTtl: QuranFoundationCacheTtlConfig;
+}
+
 export interface AppConfiguration {
   app: AppConfig;
   database: DatabaseConfig;
@@ -54,6 +83,7 @@ export interface AppConfiguration {
   jwt: JwtConfig;
   telegram: TelegramConfig;
   authCookie: AuthCookieConfig;
+  quranFoundation: QuranFoundationConfig;
 }
 
 const parseCorsOrigins = (value: string | undefined): string[] => {
@@ -119,9 +149,45 @@ const resolveCookieSameSite = (): CookieSameSite => {
   throw new Error(`Invalid AUTH_COOKIE_SAME_SITE value: ${value}`);
 };
 
+const resolveQuranFoundationEnvironment = (): QuranFoundationEnvironment => {
+  const value = (
+    process.env.QF_ENV ??
+    process.env.QURAN_FOUNDATION_ENV ??
+    'production'
+  ).toLowerCase();
+
+  if (value === 'prelive' || value === 'production') {
+    return value;
+  }
+
+  throw new Error(`Invalid QF_ENV value: ${value}`);
+};
+
+const resolveQuranFoundationUrls = (
+  environment: QuranFoundationEnvironment,
+): Pick<QuranFoundationConfig, 'authBaseUrl' | 'apiBaseUrl'> => {
+  if (environment === 'prelive') {
+    return {
+      authBaseUrl:
+        process.env.QF_AUTH_BASE_URL ??
+        'https://prelive-oauth2.quran.foundation',
+      apiBaseUrl:
+        process.env.QF_API_BASE_URL ?? 'https://apis-prelive.quran.foundation',
+    };
+  }
+
+  return {
+    authBaseUrl:
+      process.env.QF_AUTH_BASE_URL ?? 'https://oauth2.quran.foundation',
+    apiBaseUrl: process.env.QF_API_BASE_URL ?? 'https://apis.quran.foundation',
+  };
+};
+
 export default (): AppConfiguration => {
   const nodeEnv = (process.env.NODE_ENV as Environment) || 'development';
   const refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN ?? '7d';
+  const quranEnvironment = resolveQuranFoundationEnvironment();
+  const quranUrls = resolveQuranFoundationUrls(quranEnvironment);
 
   return {
     app: {
@@ -165,6 +231,55 @@ export default (): AppConfiguration => {
       secure: resolveCookieSecure(nodeEnv),
       sameSite: resolveCookieSameSite(),
       maxAgeMs: parseDurationToMs(refreshExpiresIn),
+    },
+    quranFoundation: {
+      clientId: getRequiredEnv('QF_CLIENT_ID'),
+      clientSecret: getRequiredEnv('QF_CLIENT_SECRET'),
+      environment: quranEnvironment,
+      authBaseUrl: quranUrls.authBaseUrl,
+      apiBaseUrl: quranUrls.apiBaseUrl,
+      contentPathPrefix:
+        process.env.QF_CONTENT_PATH_PREFIX ?? '/content/api/v4',
+      searchPathPrefix: process.env.QF_SEARCH_PATH_PREFIX ?? '/search/v1',
+      contentScope: process.env.QF_CONTENT_SCOPE ?? 'content',
+      searchScope: process.env.QF_SEARCH_SCOPE ?? 'search',
+      timeoutMs: Number.parseInt(process.env.QF_TIMEOUT_MS ?? '30000', 10),
+      maxRetries: Number.parseInt(process.env.QF_MAX_RETRIES ?? '3', 10),
+      retryBaseDelayMs: Number.parseInt(
+        process.env.QF_RETRY_BASE_DELAY_MS ?? '250',
+        10,
+      ),
+      tokenSkewSeconds: Number.parseInt(
+        process.env.QF_TOKEN_SKEW_SECONDS ?? '30',
+        10,
+      ),
+      rateLimitMax: Number.parseInt(process.env.QF_RATE_LIMIT_MAX ?? '60', 10),
+      rateLimitWindowSeconds: Number.parseInt(
+        process.env.QF_RATE_LIMIT_WINDOW_SECONDS ?? '60',
+        10,
+      ),
+      cacheTtl: {
+        chaptersSeconds: Number.parseInt(
+          process.env.QF_CACHE_TTL_CHAPTERS_SECONDS ?? '86400',
+          10,
+        ),
+        versesSeconds: Number.parseInt(
+          process.env.QF_CACHE_TTL_VERSES_SECONDS ?? '3600',
+          10,
+        ),
+        resourcesSeconds: Number.parseInt(
+          process.env.QF_CACHE_TTL_RESOURCES_SECONDS ?? '86400',
+          10,
+        ),
+        searchSeconds: Number.parseInt(
+          process.env.QF_CACHE_TTL_SEARCH_SECONDS ?? '300',
+          10,
+        ),
+        audioSeconds: Number.parseInt(
+          process.env.QF_CACHE_TTL_AUDIO_SECONDS ?? '3600',
+          10,
+        ),
+      },
     },
   };
 };

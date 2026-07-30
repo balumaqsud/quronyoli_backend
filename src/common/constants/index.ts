@@ -5,6 +5,7 @@ export const CONFIG_KEYS = {
   JWT: 'jwt',
   TELEGRAM: 'telegram',
   AUTH_COOKIE: 'authCookie',
+  QURAN_FOUNDATION: 'quranFoundation',
 } as const;
 
 export const IS_PUBLIC_KEY = 'isPublic';

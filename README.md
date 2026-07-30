@@ -82,12 +82,14 @@ src/
   modules/
     auth/                 # Telegram login, refresh, logout, sessions
     users/                # User profile endpoints
+    quran/                # Quran.Foundation proxy + cache
     health/               # Public health feature
   main.ts
   app.module.ts
 ```
 
 Database design (relationships, cascades, soft-delete policy) is documented in [`docs/database-schema.md`](docs/database-schema.md).
+Quran.Foundation proxy behavior is documented in [`docs/quran-foundation.md`](docs/quran-foundation.md).
 
 ## Docker
 

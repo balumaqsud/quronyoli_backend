@@ -14,6 +14,7 @@ import { DatabaseModule } from './infrastructure/database/database.module';
 import { RedisModule } from './infrastructure/cache/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { QuranModule } from './modules/quran/quran.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -85,6 +86,7 @@ import { UsersModule } from './modules/users/users.module';
     HealthModule,
     UsersModule,
     AuthModule,
+    QuranModule,
   ],
   providers: [
     {
