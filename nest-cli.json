@@ -7,7 +7,7 @@
     "assets": [
       {
         "include": "generated/prisma/**/*",
-        "watchAssets": true
+        "watchAssets": false
       }
     ]
   }

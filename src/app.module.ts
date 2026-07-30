@@ -12,7 +12,9 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { AuthInfrastructureModule } from './infrastructure/auth/auth.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { RedisModule } from './infrastructure/cache/redis.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { HealthModule } from './modules/health/health.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [
@@ -81,6 +83,8 @@ import { HealthModule } from './modules/health/health.module';
     RedisModule,
     AuthInfrastructureModule,
     HealthModule,
+    UsersModule,
+    AuthModule,
   ],
   providers: [
     {

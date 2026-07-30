@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { Logger as PinoNestLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -22,6 +23,7 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
   app.use(compression());
+  app.use(cookieParser());
 
   app.enableCors({
     origin: appConfig.corsOrigins,
@@ -61,6 +63,11 @@ async function bootstrap(): Promise<void> {
         },
         'access-token',
       )
+      .addCookieAuth('refresh_token', {
+        type: 'apiKey',
+        in: 'cookie',
+        name: 'refresh_token',
+      })
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);

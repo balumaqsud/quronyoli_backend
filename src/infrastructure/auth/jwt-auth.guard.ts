@@ -7,7 +7,7 @@ import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
 import { IS_PUBLIC_KEY } from '../../common/constants';
-import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { AuthenticatedUser } from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
@@ -30,7 +30,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest<TUser = JwtPayload>(
+  handleRequest<TUser = AuthenticatedUser>(
     err: Error | null,
     user: TUser | false,
   ): TUser {

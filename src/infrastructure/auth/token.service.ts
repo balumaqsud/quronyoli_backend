@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { JwtConfig } from '../../config/configuration';
@@ -16,9 +16,13 @@ export class TokenService {
     this.jwtConfig = this.configService.getOrThrow<JwtConfig>(CONFIG_KEYS.JWT);
   }
 
-  async generateAccessToken(subject: string): Promise<string> {
+  async generateAccessToken(
+    userId: string,
+    sessionId: string,
+  ): Promise<string> {
     const payload: JwtPayload = {
-      sub: subject,
+      sub: userId,
+      sid: sessionId,
       typ: 'access',
     };
 
@@ -29,9 +33,13 @@ export class TokenService {
     });
   }
 
-  async generateRefreshToken(subject: string): Promise<string> {
+  async generateRefreshToken(
+    userId: string,
+    sessionId: string,
+  ): Promise<string> {
     const payload: JwtPayload = {
-      sub: subject,
+      sub: userId,
+      sid: sessionId,
       typ: 'refresh',
     };
 
@@ -42,24 +50,39 @@ export class TokenService {
     });
   }
 
-  async generateTokenPair(subject: string): Promise<TokenPair> {
+  async generateTokenPair(
+    userId: string,
+    sessionId: string,
+  ): Promise<TokenPair> {
     const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken(subject),
-      this.generateRefreshToken(subject),
+      this.generateAccessToken(userId, sessionId),
+      this.generateRefreshToken(userId, sessionId),
     ]);
 
     return { accessToken, refreshToken };
   }
 
   async verifyAccessToken(token: string): Promise<JwtPayload> {
-    return this.jwtService.verifyAsync<JwtPayload>(token, {
+    const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
       secret: this.jwtConfig.accessSecret,
     });
+
+    if (payload.typ !== 'access' || !payload.sub || !payload.sid) {
+      throw new UnauthorizedException('Invalid access token');
+    }
+
+    return payload;
   }
 
   async verifyRefreshToken(token: string): Promise<JwtPayload> {
-    return this.jwtService.verifyAsync<JwtPayload>(token, {
+    const payload = await this.jwtService.verifyAsync<JwtPayload>(token, {
       secret: this.jwtConfig.refreshSecret,
     });
+
+    if (payload.typ !== 'refresh' || !payload.sub || !payload.sid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return payload;
   }
 }

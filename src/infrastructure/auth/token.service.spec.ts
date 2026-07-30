@@ -1,8 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { TokenService } from './token.service';
+import { Test, TestingModule } from '@nestjs/testing';
 import { CONFIG_KEYS } from '../../common/constants';
+import { TokenService } from './token.service';
 
 describe('TokenService', () => {
   let service: TokenService;
@@ -41,28 +42,57 @@ describe('TokenService', () => {
     service = module.get(TokenService);
   });
 
-  it('generates an access and refresh token pair', async () => {
+  it('generates an access and refresh token pair with session id', async () => {
     jwtService.signAsync
       .mockResolvedValueOnce('access-token')
       .mockResolvedValueOnce('refresh-token');
 
-    await expect(service.generateTokenPair('user-1')).resolves.toEqual({
+    await expect(
+      service.generateTokenPair('user-1', 'session-1'),
+    ).resolves.toEqual({
       accessToken: 'access-token',
       refreshToken: 'refresh-token',
     });
 
-    expect(jwtService.signAsync).toHaveBeenCalledTimes(2);
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      1,
+      { sub: 'user-1', sid: 'session-1', typ: 'access' },
+      expect.objectContaining({
+        secret: 'access-secret-at-least-32-characters',
+      }),
+    );
+    expect(jwtService.signAsync).toHaveBeenNthCalledWith(
+      2,
+      { sub: 'user-1', sid: 'session-1', typ: 'refresh' },
+      expect.objectContaining({
+        secret: 'refresh-secret-at-least-32-characters',
+      }),
+    );
   });
 
-  it('verifies an access token', async () => {
+  it('rejects access tokens with the wrong type', async () => {
     jwtService.verifyAsync.mockResolvedValue({
       sub: 'user-1',
-      typ: 'access',
+      sid: 'session-1',
+      typ: 'refresh',
     });
 
-    await expect(service.verifyAccessToken('token')).resolves.toEqual({
+    await expect(service.verifyAccessToken('token')).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('verifies a refresh token', async () => {
+    jwtService.verifyAsync.mockResolvedValue({
       sub: 'user-1',
-      typ: 'access',
+      sid: 'session-1',
+      typ: 'refresh',
+    });
+
+    await expect(service.verifyRefreshToken('token')).resolves.toEqual({
+      sub: 'user-1',
+      sid: 'session-1',
+      typ: 'refresh',
     });
   });
 });

@@ -6,3 +6,42 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id             String        @id @default(uuid()) @db.Uuid
+  telegramId     String        @unique @map("telegram_id")
+  username       String?
+  firstName      String        @map("first_name")
+  lastName       String?       @map("last_name")
+  languageCode   String?       @map("language_code")
+  photoUrl       String?       @map("photo_url")
+  isPremium      Boolean       @default(false) @map("is_premium")
+  allowsWriteToPm Boolean      @default(false) @map("allows_write_to_pm")
+  isActive       Boolean       @default(true) @map("is_active")
+  lastLoginAt    DateTime?     @map("last_login_at")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  sessions       UserSession[]
+
+  @@index([isActive])
+  @@map("users")
+}
+
+model UserSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  refreshTokenHash String    @map("refresh_token_hash")
+  expiresAt        DateTime  @map("expires_at")
+  revokedAt        DateTime? @map("revoked_at")
+  ipAddress        String?   @map("ip_address")
+  userAgent        String?   @map("user_agent") @db.VarChar(512)
+  lastUsedAt       DateTime? @map("last_used_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+  @@map("user_sessions")
+}

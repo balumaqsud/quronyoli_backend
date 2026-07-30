@@ -26,6 +26,20 @@ export const envValidationSchema = Joi.object({
   JWT_REFRESH_SECRET: Joi.string().min(32).required(),
   JWT_REFRESH_EXPIRES_IN: Joi.string().default('7d'),
 
+  TELEGRAM_BOT_TOKEN: Joi.string().min(30).required(),
+  TELEGRAM_INIT_DATA_MAX_AGE_SECONDS: Joi.number()
+    .integer()
+    .min(60)
+    .default(86400),
+
+  AUTH_COOKIE_NAME: Joi.string().default('refresh_token'),
+  AUTH_COOKIE_PATH: Joi.string().default('/api/v1/auth'),
+  AUTH_COOKIE_DOMAIN: Joi.string().allow('').optional(),
+  AUTH_COOKIE_SECURE: Joi.boolean().truthy('true').falsy('false').optional(),
+  AUTH_COOKIE_SAME_SITE: Joi.string()
+    .valid('lax', 'strict', 'none')
+    .default('lax'),
+
   LOG_LEVEL: Joi.string()
     .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent')
     .default('info'),
