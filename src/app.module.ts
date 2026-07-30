@@ -13,6 +13,8 @@ import { AuthInfrastructureModule } from './infrastructure/auth/auth.module';
 import { DatabaseModule } from './infrastructure/database/database.module';
 import { RedisModule } from './infrastructure/cache/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
 import { HealthModule } from './modules/health/health.module';
 import { QuranModule } from './modules/quran/quran.module';
 import { ReadingModule } from './modules/reading/reading.module';
@@ -91,6 +93,8 @@ import { UsersModule } from './modules/users/users.module';
     ReadingModule,
     QuranModule,
     SettingsModule,
+    FavoritesModule,
+    BookmarksModule,
   ],
   providers: [
     {

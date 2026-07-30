@@ -4,7 +4,7 @@ import { UsersService } from '../users/users.service';
 import { TOTAL_QURAN_AYAHS } from './constants/quran-coordinates';
 import { ReadingRepository } from './reading.repository';
 import { ReadingService } from './reading.service';
-import { encodeKeysetCursor } from './utils/reading.utils';
+import { encodeKeysetCursor } from '../../common/pagination/keyset-cursor';
 
 describe('ReadingService', () => {
   let service: ReadingService;

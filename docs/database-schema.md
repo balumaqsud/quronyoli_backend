@@ -103,21 +103,30 @@ Used by:
 ### `Favorite` (`favorites`)
 Exactly one favorite marker per user/chapter/verse.
 
-**Relationship:** `User` 1 → N `Favorite`  
-**FK:** `favorites.user_id → users.id`  
-**Cascade:** `ON DELETE CASCADE`  
+**Relationship:** `User` 1 → N `Favorite`
+**FK:** `favorites.user_id → users.id`
+**Cascade:** `ON DELETE CASCADE`
 **Unique:** `(user_id, chapter_number, verse_number)`
+**Index:** `(user_id, created_at DESC, id DESC)` for newest-first keyset pagination
 
 Location is stored as coordinates (`chapterNumber`, `verseNumber`), not a Quran text FK.
+Hard delete only (recreate to re-favorite).
 
 ### `Bookmark` (`bookmarks`)
-Named/noted positions. Multiple bookmarks may exist for the same verse.
+Named/noted positions. Soft-deletable via `deletedAt`.
 Supports optional `wordNumber`, `audioOffsetMs`, `label`, `note`, `color`.
-Soft-deletable via `deletedAt`.
 
-**Relationship:** `User` 1 → N `Bookmark`  
-**FK:** `bookmarks.user_id → users.id`  
+**Relationship:** `User` 1 → N `Bookmark`
+**FK:** `bookmarks.user_id → users.id`
 **Cascade:** `ON DELETE CASCADE`
+**Partial unique (migration):** `(user_id, chapter_number, verse_number) WHERE deleted_at IS NULL`
+**Indexes:**
+- `(user_id, created_at DESC, id DESC)` active list keyset
+- `(user_id, chapter_number, verse_number)` location lookup
+- `(user_id, color)` exact color filter
+- `(user_id, deleted_at DESC, id DESC)` soft-delete / trash
+
+Only one **active** bookmark per user/ayah is allowed. Soft-deleted rows may be replaced by a new active bookmark on the same ayah.
 
 ---
 
@@ -251,6 +260,7 @@ Optional `idempotencyKey` is globally unique for safe retries.
 | `QuranTranslation` / `QuranTafsir` / `QuranReciter` | `deletedAt` | Hide retired provider resources without breaking historical FKs |
 
 Favorites use hard uniqueness and hard delete (toggle by delete/recreate).
+Bookmarks allow one active row per user/ayah via a partial unique index; soft-deleted bookmarks can be recreated.
 Sessions use `revokedAt` rather than soft delete.
 
 ## Intentionally absent tables
@@ -270,6 +280,7 @@ All Quran content is retrieved from Quran.Foundation using external resource IDs
 1. `20260730120000_init_auth` — users + sessions
 2. `20260730130000_quran_domain_schema` — domain schema, checks, partial active-goal uniqueness
 3. `20260730140000_reading_ayah_tracking` — ayah open history, unique verse progress, daily DESC index
+4. `20260730150000_favorites_bookmarks_indexes` — favorites/bookmarks keyset indexes + active bookmark uniqueness
 
 Apply with:
 

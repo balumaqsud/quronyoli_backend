@@ -180,7 +180,7 @@ model Favorite {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, chapterNumber, verseNumber])
-  @@index([userId, createdAt])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("favorites")
 }
 
@@ -200,9 +200,10 @@ model Bookmark {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
   @@index([userId, chapterNumber, verseNumber])
-  @@index([deletedAt])
+  @@index([userId, color])
+  @@index([userId, deletedAt(sort: Desc), id(sort: Desc)])
   @@map("bookmarks")
 }
 

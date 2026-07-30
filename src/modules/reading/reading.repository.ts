@@ -8,7 +8,7 @@ import {
 } from '../../generated/prisma';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { DEFAULT_READING_TIMEZONE } from './constants/quran-coordinates';
-import { formatLocalDate, toDateOnly } from './utils/reading.utils';
+import { formatLocalDate, toDateOnly } from './utils/reading-date.utils';
 
 export interface RecordAyahOpenInput {
   userId: string;

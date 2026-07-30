@@ -14,6 +14,8 @@ import { RedisService } from '../src/infrastructure/cache/redis.service';
 import { PrismaService } from '../src/infrastructure/database/prisma.service';
 import { SessionsRepository } from '../src/modules/auth/sessions.repository';
 import { TelegramInitDataVerifier } from '../src/modules/auth/telegram/telegram-init-data.verifier';
+import { BookmarksRepository } from '../src/modules/bookmarks/bookmarks.repository';
+import { FavoritesRepository } from '../src/modules/favorites/favorites.repository';
 import { QuranFoundationClient } from '../src/modules/quran/client/quran-foundation.client';
 import { ReadingRepository } from '../src/modules/reading/reading.repository';
 import { SettingsRepository } from '../src/modules/settings/settings.repository';
@@ -245,6 +247,154 @@ describe('Auth & Users (e2e)', () => {
     countActiveDays: jest.fn().mockResolvedValue(0),
   };
 
+  const favoriteId = randomUUID();
+  let favoriteStore = {
+    id: favoriteId,
+    userId,
+    chapterNumber: 2,
+    verseNumber: 255,
+    createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+  };
+
+  const favoritesRepository = {
+    create: jest.fn().mockImplementation((data: typeof favoriteStore) => {
+      favoriteStore = {
+        ...favoriteStore,
+        ...data,
+        id: favoriteId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      return Promise.resolve(favoriteStore);
+    }),
+    findOwned: jest.fn().mockImplementation((id: string, ownerId: string) => {
+      if (id === favoriteStore.id && ownerId === favoriteStore.userId) {
+        return Promise.resolve(favoriteStore);
+      }
+      return Promise.resolve(null);
+    }),
+    updateOwned: jest
+      .fn()
+      .mockImplementation(
+        (
+          id: string,
+          ownerId: string,
+          data: { chapterNumber: number; verseNumber: number },
+        ) => {
+          if (id !== favoriteStore.id || ownerId !== favoriteStore.userId) {
+            return Promise.resolve(null);
+          }
+          favoriteStore = {
+            ...favoriteStore,
+            ...data,
+            updatedAt: new Date(),
+          };
+          return Promise.resolve(favoriteStore);
+        },
+      ),
+    deleteOwned: jest.fn().mockResolvedValue(true),
+    list: jest.fn().mockImplementation(() => Promise.resolve([favoriteStore])),
+  };
+
+  const bookmarkId = randomUUID();
+  let bookmarkStore: {
+    id: string;
+    userId: string;
+    chapterNumber: number;
+    verseNumber: number;
+    wordNumber: number | null;
+    audioOffsetMs: number | null;
+    label: string | null;
+    note: string | null;
+    color: string | null;
+    deletedAt: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  } = {
+    id: bookmarkId,
+    userId,
+    chapterNumber: 2,
+    verseNumber: 255,
+    wordNumber: null,
+    audioOffsetMs: null,
+    label: 'Kursi',
+    note: 'Remember',
+    color: '#2F6B4F',
+    deletedAt: null,
+    createdAt: new Date('2026-07-01T00:00:00.000Z'),
+    updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+  };
+
+  const bookmarksRepository = {
+    create: jest.fn().mockImplementation((data: typeof bookmarkStore) => {
+      bookmarkStore = {
+        ...bookmarkStore,
+        ...data,
+        id: bookmarkId,
+        deletedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      return Promise.resolve(bookmarkStore);
+    }),
+    findOwnedActive: jest
+      .fn()
+      .mockImplementation((id: string, ownerId: string) => {
+        if (
+          id === bookmarkStore.id &&
+          ownerId === bookmarkStore.userId &&
+          bookmarkStore.deletedAt === null
+        ) {
+          return Promise.resolve(bookmarkStore);
+        }
+        return Promise.resolve(null);
+      }),
+    updateOwnedActive: jest
+      .fn()
+      .mockImplementation(
+        (id: string, ownerId: string, data: Record<string, unknown>) => {
+          if (
+            id !== bookmarkStore.id ||
+            ownerId !== bookmarkStore.userId ||
+            bookmarkStore.deletedAt !== null
+          ) {
+            return Promise.resolve(null);
+          }
+          bookmarkStore = {
+            ...bookmarkStore,
+            ...data,
+            updatedAt: new Date(),
+          };
+          return Promise.resolve(bookmarkStore);
+        },
+      ),
+    softDeleteOwned: jest
+      .fn()
+      .mockImplementation((id: string, ownerId: string) => {
+        if (
+          id !== bookmarkStore.id ||
+          ownerId !== bookmarkStore.userId ||
+          bookmarkStore.deletedAt !== null
+        ) {
+          return Promise.resolve(false);
+        }
+        bookmarkStore = {
+          ...bookmarkStore,
+          deletedAt: new Date(),
+          updatedAt: new Date(),
+        };
+        return Promise.resolve(true);
+      }),
+    listActive: jest
+      .fn()
+      .mockImplementation(() =>
+        Promise.resolve(
+          bookmarkStore.deletedAt === null ? [bookmarkStore] : [],
+        ),
+      ),
+  };
+
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -265,6 +415,10 @@ describe('Auth & Users (e2e)', () => {
       .useValue(settingsRepository)
       .overrideProvider(ReadingRepository)
       .useValue(readingRepository)
+      .overrideProvider(FavoritesRepository)
+      .useValue(favoritesRepository)
+      .overrideProvider(BookmarksRepository)
+      .useValue(bookmarksRepository)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -573,6 +727,115 @@ describe('Auth & Users (e2e)', () => {
       .query({ from: '2026-07-30', to: '2026-07-01' })
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(400);
+  });
+
+  it('creates, lists, updates, and deletes favorites', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/favorites')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ chapterNumber: 2, verseNumber: 255 })
+      .expect(201);
+
+    expect(created.body).toMatchObject({
+      success: true,
+      data: { verseKey: '2:255' },
+    });
+
+    const listed = await request(app.getHttpServer())
+      .get('/api/v1/favorites')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(listed.body).toMatchObject({
+      success: true,
+      data: { items: [{ verseKey: '2:255' }] },
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/favorites/${favoriteId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ chapterNumber: 1, verseNumber: 1 })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/favorites/${favoriteId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+  });
+
+  it('rejects invalid favorite coordinates', async () => {
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    await request(app.getHttpServer())
+      .post('/api/v1/favorites')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ chapterNumber: 1, verseNumber: 8 })
+      .expect(400);
+  });
+
+  it('creates, updates, lists, and soft-deletes bookmarks', async () => {
+    bookmarkStore.deletedAt = null;
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const created = await request(app.getHttpServer())
+      .post('/api/v1/bookmarks')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        chapterNumber: 2,
+        verseNumber: 255,
+        note: 'Remember',
+        label: 'Kursi',
+        color: '#2F6B4F',
+      })
+      .expect(201);
+
+    expect(created.body).toMatchObject({
+      success: true,
+      data: { verseKey: '2:255', note: 'Remember' },
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/api/v1/bookmarks/${bookmarkId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ note: null, label: 'Updated' })
+      .expect(200);
+
+    const listed = await request(app.getHttpServer())
+      .get('/api/v1/bookmarks')
+      .query({ chapterNumber: 2 })
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(listed.body).toMatchObject({
+      success: true,
+      data: { items: [{ verseKey: '2:255' }] },
+    });
+
+    await request(app.getHttpServer())
+      .delete(`/api/v1/bookmarks/${bookmarkId}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    const afterDelete = await request(app.getHttpServer())
+      .get('/api/v1/bookmarks')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(afterDelete.body).toMatchObject({
+      success: true,
+      data: { items: [] },
+    });
   });
 });
 
