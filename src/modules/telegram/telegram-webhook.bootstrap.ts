@@ -4,6 +4,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { CONFIG_KEYS, TELEGRAM_API } from '../../common/constants';
 import { TelegramConfig } from '../../config/configuration';
 import { TelegramApi } from './interfaces/telegram-api.interface';
+import { TELEGRAM_BOT_COMMANDS } from './telegram-bot.commands';
 
 @Injectable()
 export class TelegramWebhookBootstrapService implements OnModuleInit {
@@ -18,6 +19,19 @@ export class TelegramWebhookBootstrapService implements OnModuleInit {
     const config = this.configService.getOrThrow<TelegramConfig>(
       CONFIG_KEYS.TELEGRAM,
     );
+
+    try {
+      await this.telegramApi.setMyCommands(TELEGRAM_BOT_COMMANDS);
+      this.logger.info(
+        { count: TELEGRAM_BOT_COMMANDS.length },
+        'Telegram bot commands registered',
+      );
+    } catch (error) {
+      this.logger.error(
+        { err: error instanceof Error ? error.message : 'unknown' },
+        'Failed to register Telegram bot commands',
+      );
+    }
 
     if (!config.webhookAutoRegister || !config.webhookUrl) {
       return;

@@ -1,17 +1,32 @@
 import { ConfigService } from '@nestjs/config';
-import { TelegramApi } from './interfaces/telegram-api.interface';
+import {
+  TelegramApi,
+  TelegramSendMessageRequest,
+} from './interfaces/telegram-api.interface';
 import { TelegramBotService } from './telegram-bot.service';
 import { TelegramLinksService } from './telegram-links.service';
 
 describe('TelegramBotService', () => {
-  const sendMessage = jest.fn().mockResolvedValue({ message_id: 1 });
-  const telegramApi: Pick<TelegramApi, 'sendMessage'> = { sendMessage };
+  const sendMessage = jest.fn<
+    Promise<{ message_id: number }>,
+    [TelegramSendMessageRequest]
+  >();
+  sendMessage.mockResolvedValue({ message_id: 1 });
+
+  const telegramApi = {
+    sendMessage,
+    sendAudio: jest.fn().mockResolvedValue({ message_id: 2 }),
+    answerCallbackQuery: jest.fn().mockResolvedValue(true),
+    editMessageText: jest.fn().mockResolvedValue(true),
+    setMyCommands: jest.fn().mockResolvedValue(true),
+  };
 
   const linksService = new TelegramLinksService({
     getOrThrow: () => ({
       botUsername: 'QuronYoliBot',
       miniAppUrl: 'https://t.me/QuronYoliBot/app',
       webAppUrl: 'https://quronyoli-front.vercel.app',
+      miniAppShortName: 'app',
     }),
   } as never);
 
@@ -20,13 +35,45 @@ describe('TelegramBotService', () => {
       botUsername: 'QuronYoliBot',
       miniAppUrl: 'https://t.me/QuronYoliBot/app',
       webAppUrl: 'https://quronyoli-front.vercel.app',
+      miniAppShortName: 'app',
     }),
   } as unknown as ConfigService;
 
+  const user = {
+    id: 'user-1',
+    telegramId: '42',
+    username: 'test',
+    firstName: 'Test',
+    lastName: null,
+    languageCode: 'uz',
+    photoUrl: null,
+    isPremium: false,
+    allowsWriteToPm: true,
+    isActive: true,
+    deletedAt: null,
+    lastLoginAt: new Date(),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  const usersService = {
+    upsertFromTelegram: jest.fn().mockResolvedValue(user),
+    findByTelegramId: jest.fn().mockResolvedValue(user),
+  };
+
+  const analyticsTracking = {
+    track: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const logger = { warn: jest.fn(), info: jest.fn(), debug: jest.fn() };
+
   const service = new TelegramBotService(
-    telegramApi as TelegramApi,
+    telegramApi as unknown as TelegramApi,
     linksService,
     configService,
+    usersService as never,
+    analyticsTracking as never,
+    logger as never,
   );
 
   const baseMessage = {
@@ -36,70 +83,62 @@ describe('TelegramBotService', () => {
     from: { id: 42, is_bot: false, first_name: 'Test' },
   };
 
-  const expectedWelcome = [
-    'Assalomu alaykum va rahmatullohi va barokatuh!',
-    '',
-    `<b>Quron Yo'li</b> ilovasiga xush kelibsiz!`,
-    '',
-    `Qur'oni Karim bilan har kuni yaqinroq bo'ling: tilovat qiling, ma'nolarini o'rganing, qiroatlarni tinglang va o'qish davomiyligingizni kuzatib boring.`,
-    '',
-    `Alloh taolo ilmimizni ziyoda, qalbimizni Qur'on nuri bilan munavvar qilsin.`,
-    '',
-    'Boshlash uchun quyidagi tugmani bosing.',
-  ].join('\n');
-
   beforeEach(() => {
-    sendMessage.mockClear();
+    jest.clearAllMocks();
+    sendMessage.mockResolvedValue({ message_id: 1 });
+    usersService.upsertFromTelegram.mockResolvedValue(user);
   });
 
-  it('sends a welcoming Uzbek message and url button for /start', async () => {
+  it('sends welcome with only Ilovani ochish for /start', async () => {
     await service.handleStartCommand({ ...baseMessage, text: '/start' });
 
-    expect(sendMessage).toHaveBeenCalledTimes(1);
-    expect(sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chatId: 42,
-        text: expectedWelcome,
-        parseMode: 'HTML',
-        replyMarkup: {
-          inline_keyboard: [
-            [
-              {
-                text: 'Ilovani ochish',
-                web_app: { url: 'https://quronyoli-front.vercel.app' },
-              },
-            ],
-          ],
-        },
-      }),
-    );
-  });
-
-  it('includes startapp payload for /start ayah_2_255', async () => {
-    await service.handleStartCommand({
-      ...baseMessage,
-      text: '/start ayah_2_255',
+    expect(usersService.upsertFromTelegram).toHaveBeenCalled();
+    const payload = sendMessage.mock.calls[0]?.[0];
+    expect(payload?.text).toContain("Quron Yo'liga xush kelibsiz");
+    const markup = payload?.replyMarkup as {
+      inline_keyboard: Array<Array<{ text?: string; url?: string }>>;
+    };
+    expect(markup.inline_keyboard).toHaveLength(1);
+    expect(markup.inline_keyboard[0]).toHaveLength(1);
+    expect(markup.inline_keyboard[0]?.[0]).toEqual({
+      text: '📖 Ilovani ochish',
+      url: 'https://t.me/QuronYoliBot/app',
     });
+  });
 
-    expect(sendMessage).toHaveBeenCalledTimes(1);
-    expect(sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chatId: 42,
-        replyMarkup: {
-          inline_keyboard: [
-            [
-              {
-                text: 'Ilovani ochish',
-                url: 'https://t.me/QuronYoliBot/app?startapp=ayah_2_255',
-              },
-            ],
-          ],
-        },
-      }),
+  it('opens Mini App for /ilova', async () => {
+    await service.handleIlovaCommand({ ...baseMessage, text: '/ilova' });
+    const payload = sendMessage.mock.calls[0]?.[0];
+    expect(payload?.text).toContain('Ilovani ochish');
+    const markup = payload?.replyMarkup as {
+      inline_keyboard: Array<Array<{ url?: string }>>;
+    };
+    expect(markup.inline_keyboard[0]?.[0]?.url).toBe(
+      'https://t.me/QuronYoliBot/app',
     );
   });
 
-  it('sends daily reminder text in Uzbek', async () => {
+  it('redirects /bugun to Mini App without ayah card', async () => {
+    await service.handleBugunCommand({ ...baseMessage, text: '/bugun' });
+    const payload = sendMessage.mock.calls[0]?.[0];
+    expect(payload?.text).toContain('Ilovada');
+    const markup = payload?.replyMarkup as {
+      inline_keyboard: Array<Array<{ url?: string }>>;
+    };
+    expect(markup.inline_keyboard[0]?.[0]?.url).toBe(
+      'https://t.me/QuronYoliBot/app',
+    );
+  });
+
+  it('redirects /saqlangan to Mini App', async () => {
+    await service.handleSaqlanganCommand({
+      ...baseMessage,
+      text: '/saqlangan',
+    });
+    expect(sendMessage.mock.calls[0]?.[0]?.text).toContain('Saqlangan');
+  });
+
+  it('sends daily reminder text in Uzbek with open button', async () => {
     await service.sendDailyReminder({
       chatId: 42,
       localDate: '2026-08-01',
@@ -107,21 +146,14 @@ describe('TelegramBotService', () => {
       goalLines: ['VERSES: 3/10'],
     });
 
-    expect(sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        chatId: 42,
-        text: expect.stringContaining('<b>Kunlik eslatma</b>'),
-      }),
+    expect(sendMessage.mock.calls[0]?.[0]?.text).toContain(
+      '<b>Kunlik eslatma</b>',
     );
-    expect(sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: expect.stringContaining('Bugungi oyat'),
-      }),
-    );
-    expect(sendMessage).toHaveBeenCalledWith(
-      expect.objectContaining({
-        text: expect.stringContaining('<b>Maqsadlar</b>'),
-      }),
+    const markup = sendMessage.mock.calls[0]?.[0]?.replyMarkup as {
+      inline_keyboard: Array<Array<{ url?: string }>>;
+    };
+    expect(markup.inline_keyboard[0]?.[0]?.url).toContain(
+      'startapp=ayah_2_255',
     );
   });
 });

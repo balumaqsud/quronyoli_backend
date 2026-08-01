@@ -47,7 +47,7 @@ describe('NotificationService', () => {
       markDeliverySent: jest.fn(),
       markDeliveryFailed: jest.fn(),
       findActiveGoalsProgress: jest.fn(),
-      upsertUserNotification: jest.fn().mockResolvedValue({} as never),
+      upsertUserNotification: jest.fn().mockResolvedValue({}),
     };
     botService = {
       sendDailyReminder: jest.fn(),

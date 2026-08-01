@@ -23,7 +23,7 @@ export class TelegramLinksService {
   }
 
   getMiniAppLinks(startParam?: string): TelegramLinkBundle {
-    const miniAppDeepLink = this.buildMiniAppUrl(startParam);
+    const miniAppDeepLink = this.buildMiniAppDirectLink(startParam);
     const botDeepLink = startParam
       ? `https://t.me/${this.config.botUsername}?start=${encodeURIComponent(startParam)}`
       : `https://t.me/${this.config.botUsername}?start=app`;
@@ -43,7 +43,7 @@ export class TelegramLinksService {
   ): TelegramLinkBundle {
     const verseKey = `${chapterNumber}:${verseNumber}`;
     const startParam = buildAyahStartPayload(chapterNumber, verseNumber);
-    const miniAppDeepLink = this.buildMiniAppUrl(startParam);
+    const miniAppDeepLink = this.buildMiniAppDirectLink(startParam);
     const botDeepLink = `https://t.me/${this.config.botUsername}?start=${encodeURIComponent(startParam)}`;
     const shareText = `Read Quran ${verseKey} in Quron Yo'li`;
 
@@ -56,14 +56,27 @@ export class TelegramLinksService {
     };
   }
 
-  buildMiniAppUrl(startParam?: string): string {
-    const base = this.config.miniAppUrl.replace(/\/$/, '');
+  /**
+   * Telegram Direct Link that always opens the Mini App inside Telegram.
+   * Prefer this for inline keyboard `url` buttons (Ilovani ochish + ayah opens).
+   */
+  buildMiniAppDirectLink(startParam?: string): string {
+    const shortName = this.config.miniAppShortName || 'app';
+    const base = `https://t.me/${this.config.botUsername}/${shortName}`;
     if (!startParam) {
       return base;
     }
+    return `${base}?startapp=${encodeURIComponent(startParam)}`;
+  }
 
-    const separator = base.includes('?') ? '&' : '?';
-    return `${base}${separator}startapp=${encodeURIComponent(startParam)}`;
+  /** @deprecated Prefer buildMiniAppDirectLink — kept for call-site compatibility. */
+  buildMiniAppUrl(startParam?: string): string {
+    return this.buildMiniAppDirectLink(startParam);
+  }
+
+  /** HTTPS Web App URL for native `web_app` keyboard buttons. */
+  getWebAppUrl(): string {
+    return this.config.webAppUrl.replace(/\/$/, '');
   }
 
   private buildShareUrl(url: string, text: string): string {

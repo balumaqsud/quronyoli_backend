@@ -4,28 +4,45 @@
 
 The backend integrates with Telegram for:
 
-1. Mini App auth (`POST /api/v1/auth/telegram`) — existing initData HMAC verifier
-2. Bot webhook (`POST /api/v1/telegram/webhook`) — `/start`, `/app`, ayah deep links
+1. Mini App auth (`POST /api/v1/auth/telegram`) — initData HMAC verifier
+2. Bot webhook (`POST /api/v1/telegram/webhook`) — **Mini App–first** entry
 3. Share / deep links (`GET /api/v1/telegram/links/mini-app`, `GET /api/v1/telegram/share/ayah/:verseKey`)
 4. Daily reminders (`/api/v1/notifications/reminders/daily`) via BullMQ
-5. In-app inbox (`GET/POST /api/v1/notifications…`) for the Mini App bell
+
+## Mini App–first UX
+
+The chat is an **entry door** only. Product features (daily ayah, random ayah, search, tafsir, audio, bookmarks, settings) live in the Mini App.
+
+Registered via `setMyCommands` on bootstrap:
+
+| Command | Behavior |
+| --- | --- |
+| `/start` | Upsert user; short welcome + **single** Ilovani ochish button. Supports `ayah_c_v` deep link. |
+| `/ilova` (`/app`) | Short line + Ilovani ochish |
+
+Legacy commands (`/bugun`, `/tasodifiy`, `/suralar`, `/juz`, `/davom`, `/saqlangan`, `/yordam`, `/haqimizda`) still respond with a short “Ilovada oching” message and the same single button (not listed in BotFather menu).
+
+**Ilovani ochish** uses Telegram Direct Link: `https://t.me/<bot>/<shortName>` (optional `?startapp=`).
+
+Telegram Bot API **cannot** wipe a user’s full chat history; there is no `/tozalash` clear-chat feature.
+
+Webhook `allowed_updates`: `message`, `callback_query` (legacy callbacks soft-redirect to Mini App).
 
 ## Architecture
 
 - `TelegramApi` interface + `TelegramHttpApi` Axios client (`TELEGRAM_API` token)
 - Controllers stay thin: validation + delegation only
+- `TelegramUpdateDispatcher` routes commands and `callback_query`
+- `TelegramAyahCardService` kept for possible reminder / future formatting (commands no longer send in-chat ayah cards)
 - `NotificationService` owns delivery orchestration; BullMQ handles scan + retries
-- Unique `(userId, type, localDate)` on `notification_deliveries` provides durable Telegram idempotency
-- Unique `(userId, type, dedupeKey)` on `user_notifications` provides inbox idempotency (daily reminder uses local date)
-- Inbox + Telegram reminder copy is Uzbek (`Kunlik eslatma`, `Bugungi oyat: …`)
-- Preference responses expose `allowsWriteToPm` so the client can prompt Start when PM writes are blocked
 
 ## Environment
 
 See `.env.example` for:
 
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`
-- `TELEGRAM_MINI_APP_URL`, `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_AUTO_REGISTER`
+- `TELEGRAM_MINI_APP_URL`, `TELEGRAM_WEB_APP_URL`, `TELEGRAM_MINI_APP_SHORT_NAME`
+- `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_AUTO_REGISTER`
 - BullMQ / reminder scan settings under `NOTIFICATIONS_*`
 
 Never log the bot token or webhook secret.
@@ -37,7 +54,5 @@ Telegram must send header `X-Telegram-Bot-Api-Secret-Token` matching `TELEGRAM_W
 ## Deep links
 
 - Bot: `https://t.me/<bot>?start=ayah_<chapter>_<verse>`
-- Mini App: configured Mini App URL with `startapp=ayah_<chapter>_<verse>`
+- Mini App: `https://t.me/<bot>/<shortName>?startapp=ayah_<chapter>_<verse>`
 - Share: `https://t.me/share/url?...`
-
-Login responses include `startParam` when present in initData so the client can navigate after auth.

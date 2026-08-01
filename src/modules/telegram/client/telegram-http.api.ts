@@ -10,7 +10,11 @@ import { TelegramErrorMapper } from '../errors/telegram-error.mapper';
 import {
   TelegramApi,
   TelegramApiResponse,
+  TelegramAnswerCallbackQueryRequest,
+  TelegramBotCommand,
+  TelegramEditMessageRequest,
   TelegramMessage,
+  TelegramSendAudioRequest,
   TelegramSendMessageRequest,
   TelegramWebhookInfo,
 } from '../interfaces/telegram-api.interface';
@@ -43,12 +47,51 @@ export class TelegramHttpApi implements TelegramApi {
     });
   }
 
+  async sendAudio(request: TelegramSendAudioRequest): Promise<TelegramMessage> {
+    return this.call<TelegramMessage>('sendAudio', {
+      chat_id: request.chatId,
+      audio: request.audioUrl,
+      caption: request.caption,
+      parse_mode: request.parseMode,
+      title: request.title,
+      performer: request.performer,
+    });
+  }
+
+  async answerCallbackQuery(
+    request: TelegramAnswerCallbackQueryRequest,
+  ): Promise<boolean> {
+    return this.call<boolean>('answerCallbackQuery', {
+      callback_query_id: request.callbackQueryId,
+      text: request.text,
+      show_alert: request.showAlert,
+      url: request.url,
+    });
+  }
+
+  async editMessageText(
+    request: TelegramEditMessageRequest,
+  ): Promise<TelegramMessage | boolean> {
+    return this.call<TelegramMessage | boolean>('editMessageText', {
+      chat_id: request.chatId,
+      message_id: request.messageId,
+      text: request.text,
+      parse_mode: request.parseMode,
+      disable_web_page_preview: request.disableWebPagePreview,
+      reply_markup: request.replyMarkup,
+    });
+  }
+
+  async setMyCommands(commands: TelegramBotCommand[]): Promise<boolean> {
+    return this.call<boolean>('setMyCommands', { commands });
+  }
+
   async setWebhook(url: string, secretToken: string): Promise<boolean> {
     return this.call<boolean>('setWebhook', {
       url,
       secret_token: secretToken,
       drop_pending_updates: false,
-      allowed_updates: ['message'],
+      allowed_updates: ['message', 'callback_query'],
     });
   }
 

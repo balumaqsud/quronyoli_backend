@@ -14,6 +14,10 @@ export class UsersService {
     return this.usersRepository.upsertFromTelegram(input);
   }
 
+  async findByTelegramId(telegramId: string): Promise<User | null> {
+    return this.usersRepository.findByTelegramId(telegramId);
+  }
+
   async getActiveByIdOrThrow(id: string): Promise<User> {
     const user = await this.usersRepository.findActiveById(id);
 

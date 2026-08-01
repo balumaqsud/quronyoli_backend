@@ -150,4 +150,32 @@ export class SettingsRepository {
       },
     });
   }
+
+  async findFirstActiveTranslationByLanguage(
+    languageCode: string,
+  ): Promise<QuranTranslation | null> {
+    return await this.prisma.quranTranslation.findFirst({
+      where: {
+        provider: QURAN_FOUNDATION_PROVIDER,
+        languageCode,
+        isActive: true,
+        deletedAt: null,
+      },
+      orderBy: { externalId: 'asc' },
+    });
+  }
+
+  async findFirstActiveTafsirByLanguage(
+    languageCode: string,
+  ): Promise<QuranTafsir | null> {
+    return await this.prisma.quranTafsir.findFirst({
+      where: {
+        provider: QURAN_FOUNDATION_PROVIDER,
+        languageCode,
+        isActive: true,
+        deletedAt: null,
+      },
+      orderBy: { externalId: 'asc' },
+    });
+  }
 }

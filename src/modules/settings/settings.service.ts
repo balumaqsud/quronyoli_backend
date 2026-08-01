@@ -235,6 +235,38 @@ export class SettingsService {
     };
   }
 
+  /**
+   * Resolve QF resource external IDs for Telegram bot cards.
+   * Prefer user defaults; else first active uz translation/tafsir; else en; else null.
+   */
+  async getBotContentPrefs(userId: string): Promise<{
+    timezone: string;
+    translationExternalId: string | null;
+    tafsirExternalId: string | null;
+    reciterExternalId: string | null;
+  }> {
+    const settings = await this.settingsRepository.upsertDefaults(userId);
+    const translation =
+      settings.defaultTranslation ??
+      (await this.settingsRepository.findFirstActiveTranslationByLanguage(
+        'uz',
+      )) ??
+      (await this.settingsRepository.findFirstActiveTranslationByLanguage(
+        'en',
+      ));
+    const tafsir =
+      settings.defaultTafsir ??
+      (await this.settingsRepository.findFirstActiveTafsirByLanguage('uz')) ??
+      (await this.settingsRepository.findFirstActiveTafsirByLanguage('en'));
+
+    return {
+      timezone: settings.timezone || 'Asia/Tashkent',
+      translationExternalId: translation?.externalId ?? null,
+      tafsirExternalId: tafsir?.externalId ?? null,
+      reciterExternalId: settings.defaultReciter?.externalId ?? null,
+    };
+  }
+
   private mapReciter(
     resource: Omit<QuranReciter, 'metadata'> | null,
   ): CatalogResourceDto | null {

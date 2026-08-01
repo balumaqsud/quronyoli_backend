@@ -57,11 +57,10 @@ export class NotificationService {
     }
 
     const ayah = resolveDailyAyahForDate(input.localDate);
-    const progress =
-      await this.notificationsRepository.findActiveGoalsProgress(
-        input.userId,
-        toDateOnly(input.localDate),
-      );
+    const progress = await this.notificationsRepository.findActiveGoalsProgress(
+      input.userId,
+      toDateOnly(input.localDate),
+    );
 
     const goalLines = progress.goals
       .map((goal) => {

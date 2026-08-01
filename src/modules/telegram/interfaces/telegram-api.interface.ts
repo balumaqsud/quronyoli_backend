@@ -15,6 +15,37 @@ export interface TelegramSendMessageRequest {
   parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
   disableWebPagePreview?: boolean;
   replyMarkup?: TelegramInlineKeyboardMarkup;
+  messageId?: number;
+}
+
+export interface TelegramSendAudioRequest {
+  chatId: number | string;
+  audioUrl: string;
+  caption?: string;
+  parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
+  title?: string;
+  performer?: string;
+}
+
+export interface TelegramAnswerCallbackQueryRequest {
+  callbackQueryId: string;
+  text?: string;
+  showAlert?: boolean;
+  url?: string;
+}
+
+export interface TelegramEditMessageRequest {
+  chatId: number | string;
+  messageId: number;
+  text: string;
+  parseMode?: 'HTML' | 'Markdown' | 'MarkdownV2';
+  disableWebPagePreview?: boolean;
+  replyMarkup?: TelegramInlineKeyboardMarkup;
+}
+
+export interface TelegramBotCommand {
+  command: string;
+  description: string;
 }
 
 export interface TelegramMessage {
@@ -22,6 +53,7 @@ export interface TelegramMessage {
   chat: { id: number; type: string };
   text?: string;
   date: number;
+  reply_markup?: TelegramInlineKeyboardMarkup;
 }
 
 export interface TelegramUser {
@@ -31,6 +63,7 @@ export interface TelegramUser {
   last_name?: string;
   username?: string;
   language_code?: string;
+  is_premium?: boolean;
 }
 
 export interface TelegramChat {
@@ -48,11 +81,21 @@ export interface TelegramIncomingMessage {
   chat: TelegramChat;
   date: number;
   text?: string;
+  reply_markup?: TelegramInlineKeyboardMarkup;
+}
+
+export interface TelegramCallbackQuery {
+  id: string;
+  from: TelegramUser;
+  message?: TelegramIncomingMessage;
+  data?: string;
+  chat_instance: string;
 }
 
 export interface TelegramUpdate {
   update_id: number;
   message?: TelegramIncomingMessage;
+  callback_query?: TelegramCallbackQuery;
 }
 
 export interface TelegramWebhookInfo {
@@ -74,6 +117,14 @@ export interface TelegramApiResponse<T> {
 
 export interface TelegramApi {
   sendMessage(request: TelegramSendMessageRequest): Promise<TelegramMessage>;
+  sendAudio(request: TelegramSendAudioRequest): Promise<TelegramMessage>;
+  answerCallbackQuery(
+    request: TelegramAnswerCallbackQueryRequest,
+  ): Promise<boolean>;
+  editMessageText(
+    request: TelegramEditMessageRequest,
+  ): Promise<TelegramMessage | boolean>;
+  setMyCommands(commands: TelegramBotCommand[]): Promise<boolean>;
   setWebhook(url: string, secretToken: string): Promise<boolean>;
   deleteWebhook(dropPendingUpdates?: boolean): Promise<boolean>;
   getWebhookInfo(): Promise<TelegramWebhookInfo>;
