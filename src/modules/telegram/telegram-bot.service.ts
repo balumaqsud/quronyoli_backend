@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { CONFIG_KEYS, TELEGRAM_API } from '../../common/constants';
 import { TelegramConfig } from '../../config/configuration';
 import { isValidAyahCoordinate } from '../../common/quran/quran-coordinates';
+import { buildDailyReminderTelegramText } from '../notifications/notification-copy';
 import {
   TelegramApi,
   TelegramIncomingMessage,
@@ -60,15 +61,12 @@ export class TelegramBotService {
   }): Promise<{ messageId: number }> {
     const startParam = `ayah_${input.verseKey.replace(':', '_')}`;
     const links = this.linksService.getMiniAppLinks(startParam);
-    const goalsBlock =
-      input.goalLines.length > 0
-        ? `\n\n<b>Goals</b>\n${input.goalLines.map((line) => `• ${escapeHtml(line)}`).join('\n')}`
-        : '\n\nNo incomplete goals for today.';
-
-    const text =
-      `<b>Daily reminder</b> (${escapeHtml(input.localDate)})\n` +
-      `Today's ayah: <b>${escapeHtml(input.verseKey)}</b>` +
-      goalsBlock;
+    const text = buildDailyReminderTelegramText({
+      localDate: input.localDate,
+      verseKey: input.verseKey,
+      goalLines: input.goalLines,
+      escapeHtml,
+    });
 
     const message = await this.telegramApi.sendMessage({
       chatId: input.chatId,

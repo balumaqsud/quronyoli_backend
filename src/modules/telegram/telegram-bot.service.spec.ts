@@ -98,4 +98,30 @@ describe('TelegramBotService', () => {
       }),
     );
   });
+
+  it('sends daily reminder text in Uzbek', async () => {
+    await service.sendDailyReminder({
+      chatId: 42,
+      localDate: '2026-08-01',
+      verseKey: '2:255',
+      goalLines: ['VERSES: 3/10'],
+    });
+
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chatId: 42,
+        text: expect.stringContaining('<b>Kunlik eslatma</b>'),
+      }),
+    );
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining('Bugungi oyat'),
+      }),
+    );
+    expect(sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        text: expect.stringContaining('<b>Maqsadlar</b>'),
+      }),
+    );
+  });
 });

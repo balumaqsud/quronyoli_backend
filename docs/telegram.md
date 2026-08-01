@@ -8,13 +8,17 @@ The backend integrates with Telegram for:
 2. Bot webhook (`POST /api/v1/telegram/webhook`) — `/start`, `/app`, ayah deep links
 3. Share / deep links (`GET /api/v1/telegram/links/mini-app`, `GET /api/v1/telegram/share/ayah/:verseKey`)
 4. Daily reminders (`/api/v1/notifications/reminders/daily`) via BullMQ
+5. In-app inbox (`GET/POST /api/v1/notifications…`) for the Mini App bell
 
 ## Architecture
 
 - `TelegramApi` interface + `TelegramHttpApi` Axios client (`TELEGRAM_API` token)
 - Controllers stay thin: validation + delegation only
 - `NotificationService` owns delivery orchestration; BullMQ handles scan + retries
-- Unique `(userId, type, localDate)` on `notification_deliveries` provides durable idempotency
+- Unique `(userId, type, localDate)` on `notification_deliveries` provides durable Telegram idempotency
+- Unique `(userId, type, dedupeKey)` on `user_notifications` provides inbox idempotency (daily reminder uses local date)
+- Inbox + Telegram reminder copy is Uzbek (`Kunlik eslatma`, `Bugungi oyat: …`)
+- Preference responses expose `allowsWriteToPm` so the client can prompt Start when PM writes are blocked
 
 ## Environment
 

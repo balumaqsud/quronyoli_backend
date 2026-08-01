@@ -26,6 +26,12 @@ export class DailyReminderResponseDto {
   @ApiProperty({ example: 'Asia/Tashkent' })
   timezone!: string;
 
+  @ApiProperty({
+    description:
+      'Whether Telegram allows the bot to write to the user PM (from initData)',
+  })
+  allowsWriteToPm!: boolean;
+
   @ApiProperty({ nullable: true })
   updatedAt!: Date | null;
 }

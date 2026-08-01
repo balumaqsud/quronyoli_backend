@@ -24,7 +24,10 @@ describe('RemindersService', () => {
       deleteReminderPreference: jest.fn(),
     };
     usersService = {
-      getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
+      getActiveByIdOrThrow: jest.fn().mockResolvedValue({
+        id: 'user-1',
+        allowsWriteToPm: true,
+      }),
     };
     service = new RemindersService(
       repository as unknown as NotificationsRepository,
@@ -51,6 +54,7 @@ describe('RemindersService', () => {
       enabled: true,
       localTime: '07:30',
       timezone: 'Asia/Tashkent',
+      allowsWriteToPm: true,
     });
   });
 

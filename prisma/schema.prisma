@@ -29,6 +29,10 @@ enum NotificationDeliveryStatus {
   SKIPPED
 }
 
+enum UserNotificationType {
+  DAILY_REMINDER
+}
+
 model User {
   id              String             @id @default(uuid()) @db.Uuid
   telegramId      String             @unique @map("telegram_id")
@@ -58,6 +62,7 @@ model User {
   analyticsEvents  AnalyticsEvent[]
   reminderPreference TelegramReminderPreference?
   notificationDeliveries NotificationDelivery[]
+  userNotifications  UserNotification[]
 
   @@index([isActive])
   @@index([deletedAt])
@@ -448,4 +453,24 @@ model NotificationDelivery {
   @@unique([userId, type, localDate])
   @@index([status, localDate])
   @@map("notification_deliveries")
+}
+
+model UserNotification {
+  id        String               @id @default(uuid()) @db.Uuid
+  userId    String               @map("user_id") @db.Uuid
+  type      UserNotificationType
+  title     String               @db.VarChar(200)
+  body      String               @db.VarChar(1000)
+  payload   Json?
+  dedupeKey String               @map("dedupe_key") @db.VarChar(64)
+  readAt    DateTime?            @map("read_at")
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, dedupeKey])
+  @@index([userId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([userId, readAt])
+  @@map("user_notifications")
 }

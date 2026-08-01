@@ -28,6 +28,7 @@ erDiagram
   User ||--o{ AnalyticsEvent : emits
   User ||--o| TelegramReminderPreference : prefers
   User ||--o{ NotificationDelivery : delivers
+  User ||--o{ UserNotification : inbox
   DailyGoal ||--o{ DailyGoalResult : snapshots
   QuranTranslation ||--o{ UserSettings : "default optional"
   QuranTafsir ||--o{ UserSettings : "default optional"
@@ -279,6 +280,18 @@ Durable at-most-once delivery log for daily reminders.
 **Unique:** `(user_id, type, local_date)`  
 **Enums:** `NotificationDeliveryType` (`DAILY_REMINDER`), `NotificationDeliveryStatus` (`PENDING`, `SENT`, `FAILED`, `SKIPPED`)
 
+### `UserNotification` (`user_notifications`)
+In-app inbox rows for the Mini App notification bell.
+
+**Relationship:** `User` 1 → N `UserNotification`  
+**FK:** `user_notifications.user_id → users.id`  
+**Cascade:** `ON DELETE CASCADE`  
+**Unique:** `(user_id, type, dedupe_key)` — for daily reminders `dedupe_key` is the local `YYYY-MM-DD`  
+**Enum:** `UserNotificationType` (`DAILY_REMINDER`)  
+**Indexes:** `(user_id, created_at DESC, id DESC)` for keyset lists; `(user_id, read_at)` for unread counts
+
+Daily reminder delivery upserts an inbox row (Uzbek title/body) even when Telegram PM send is skipped, so the in-app bell still receives the event.
+
 ---
 
 ## Analytics
@@ -318,6 +331,7 @@ See [analytics.md](./analytics.md) for ingestion, buffering, and statistics APIs
 | `DailyGoalResult` | `DailyGoal` | Cascade |
 | `TelegramReminderPreference` | `User` | Cascade |
 | `NotificationDelivery` | `User` | Cascade |
+| `UserNotification` | `User` | Cascade |
 | `AnalyticsEvent` | `User` | SetNull |
 | `UserSettings.default*` | Catalog tables | SetNull |
 | `ReadingProgress.last*` | Catalog tables | SetNull |
@@ -354,6 +368,7 @@ All Quran content is retrieved from Quran.Foundation using external resource IDs
 3. `20260730140000_reading_ayah_tracking` — ayah open history, unique verse progress, daily DESC index
 4. `20260730150000_favorites_bookmarks_indexes` — favorites/bookmarks keyset indexes + active bookmark uniqueness
 5. `20260730160000_telegram_notifications` — reminder preferences + notification deliveries (+ `local_time` CHECK)
+6. `20260801200000_user_notifications` — in-app inbox (`user_notifications` + `UserNotificationType`)
 6. `20260730170000_analytics_user_event_index` — analytics `(user_id, event_name, occurred_at)` index
 7. `20260730180000_production_hardening_indexes` — additional production indexes
 

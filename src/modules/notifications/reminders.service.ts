@@ -20,7 +20,7 @@ export class RemindersService {
   ) {}
 
   async getDailyReminder(userId: string): Promise<DailyReminderResponseDto> {
-    await this.usersService.getActiveByIdOrThrow(userId);
+    const user = await this.usersService.getActiveByIdOrThrow(userId);
     const timezone = await this.assertValidTimezone(userId);
     const preference =
       await this.notificationsRepository.findReminderPreference(userId);
@@ -30,6 +30,7 @@ export class RemindersService {
         enabled: false,
         localTime: '07:00',
         timezone,
+        allowsWriteToPm: user.allowsWriteToPm,
         updatedAt: null,
       };
     }
@@ -38,6 +39,7 @@ export class RemindersService {
       enabled: preference.enabled,
       localTime: preference.localTime,
       timezone,
+      allowsWriteToPm: user.allowsWriteToPm,
       updatedAt: preference.updatedAt,
     };
   }
@@ -46,7 +48,7 @@ export class RemindersService {
     userId: string,
     dto: UpsertDailyReminderDto,
   ): Promise<DailyReminderResponseDto> {
-    await this.usersService.getActiveByIdOrThrow(userId);
+    const user = await this.usersService.getActiveByIdOrThrow(userId);
     const timezone = await this.assertValidTimezone(userId);
     const preference =
       await this.notificationsRepository.upsertReminderPreference({
@@ -59,6 +61,7 @@ export class RemindersService {
       enabled: preference.enabled,
       localTime: preference.localTime,
       timezone,
+      allowsWriteToPm: user.allowsWriteToPm,
       updatedAt: preference.updatedAt,
     };
   }

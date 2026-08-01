@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   DailyGoalMetric,
   NotificationDeliveryStatus,
+  UserNotificationType,
 } from '../../generated/prisma';
 import { resolveDailyAyahForDate } from '../../common/quran/daily-ayah';
 import {
@@ -10,6 +11,7 @@ import {
 } from '../reading/utils/reading-date.utils';
 import { TelegramBlockedError } from '../telegram/errors/telegram-error.mapper';
 import { TelegramBotService } from '../telegram/telegram-bot.service';
+import { buildDailyReminderInboxCopy } from './notification-copy';
 import { NotificationsRepository } from './notifications.repository';
 
 export interface DeliverDailyReminderResult {
@@ -54,6 +56,43 @@ export class NotificationService {
       };
     }
 
+    const ayah = resolveDailyAyahForDate(input.localDate);
+    const progress =
+      await this.notificationsRepository.findActiveGoalsProgress(
+        input.userId,
+        toDateOnly(input.localDate),
+      );
+
+    const goalLines = progress.goals
+      .map((goal) => {
+        const actual =
+          goal.metric === DailyGoalMetric.MINUTES
+            ? Math.floor(progress.activeSeconds / 60)
+            : progress.versesRead;
+        if (actual >= goal.targetValue) {
+          return null;
+        }
+        return `${goal.metric}: ${actual}/${goal.targetValue}`;
+      })
+      .filter((line): line is string => line !== null);
+
+    const copy = buildDailyReminderInboxCopy({
+      verseKey: ayah.verseKey,
+      goalLines,
+    });
+
+    await this.notificationsRepository.upsertUserNotification({
+      userId: input.userId,
+      type: UserNotificationType.DAILY_REMINDER,
+      title: copy.title,
+      body: copy.body,
+      dedupeKey: input.localDate,
+      payload: {
+        verseKey: ayah.verseKey,
+        localDate: input.localDate,
+      },
+    });
+
     if (!user.allowsWriteToPm) {
       await this.notificationsRepository.markDeliveryFailed({
         id: claim.delivery.id,
@@ -64,26 +103,6 @@ export class NotificationService {
     }
 
     try {
-      const ayah = resolveDailyAyahForDate(input.localDate);
-      const progress =
-        await this.notificationsRepository.findActiveGoalsProgress(
-          input.userId,
-          toDateOnly(input.localDate),
-        );
-
-      const goalLines = progress.goals
-        .map((goal) => {
-          const actual =
-            goal.metric === DailyGoalMetric.MINUTES
-              ? Math.floor(progress.activeSeconds / 60)
-              : progress.versesRead;
-          if (actual >= goal.targetValue) {
-            return null;
-          }
-          return `${goal.metric}: ${actual}/${goal.targetValue}`;
-        })
-        .filter((line): line is string => line !== null);
-
       const sent = await this.telegramBotService.sendDailyReminder({
         chatId: user.telegramId,
         localDate: input.localDate,

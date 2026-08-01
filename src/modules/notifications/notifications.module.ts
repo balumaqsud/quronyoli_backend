@@ -5,6 +5,8 @@ import { NOTIFICATION_QUEUES } from '../../common/constants';
 import { BullRootModule } from '../../infrastructure/queue/bull-root.module';
 import { UsersModule } from '../users/users.module';
 import { TelegramModule } from '../telegram/telegram.module';
+import { InboxController } from './inbox.controller';
+import { InboxService } from './inbox.service';
 import { NotificationService } from './notification.service';
 import { NotificationsController } from './notifications.controller';
 import { NotificationsRepository } from './notifications.repository';
@@ -28,13 +30,14 @@ const isTestEnv = process.env.NODE_ENV === 'test';
           }),
         ]),
   ],
-  controllers: [NotificationsController],
+  controllers: [InboxController, NotificationsController],
   providers: [
     NotificationsRepository,
     RemindersService,
+    InboxService,
     NotificationService,
     ...(isTestEnv ? [] : [ReminderScanService, ReminderProcessor]),
   ],
-  exports: [NotificationService, RemindersService],
+  exports: [NotificationService, RemindersService, InboxService],
 })
 export class NotificationsModule {}

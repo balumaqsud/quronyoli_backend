@@ -34,6 +34,7 @@ describe('NotificationService', () => {
       | 'markDeliverySent'
       | 'markDeliveryFailed'
       | 'findActiveGoalsProgress'
+      | 'upsertUserNotification'
     >
   >;
   let botService: jest.Mocked<Pick<TelegramBotService, 'sendDailyReminder'>>;
@@ -46,6 +47,7 @@ describe('NotificationService', () => {
       markDeliverySent: jest.fn(),
       markDeliveryFailed: jest.fn(),
       findActiveGoalsProgress: jest.fn(),
+      upsertUserNotification: jest.fn().mockResolvedValue({} as never),
     };
     botService = {
       sendDailyReminder: jest.fn(),
@@ -89,6 +91,13 @@ describe('NotificationService', () => {
     });
 
     expect(result).toEqual({ status: 'sent', messageId: '99' });
+    expect(repository.upsertUserNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        dedupeKey: '2026-07-30',
+        title: 'Kunlik eslatma',
+      }),
+    );
     expect(botService.sendDailyReminder).toHaveBeenCalledWith(
       expect.objectContaining({
         chatId: '42',
@@ -99,6 +108,37 @@ describe('NotificationService', () => {
       id: 'delivery-1',
       telegramMessageId: '99',
     });
+  });
+
+  it('upserts inbox even when write-to-pm is disabled', async () => {
+    repository.findUserForDelivery.mockResolvedValue({
+      id: 'user-1',
+      telegramId: '42',
+      allowsWriteToPm: false,
+      settings: { timezone: 'Asia/Tashkent' },
+    });
+    repository.claimDelivery.mockResolvedValue({
+      claimed: true,
+      delivery: {
+        id: 'delivery-1',
+        status: NotificationDeliveryStatus.PENDING,
+      } as never,
+    });
+    repository.findActiveGoalsProgress.mockResolvedValue({
+      goals: [],
+      versesRead: 0,
+      activeSeconds: 0,
+    });
+
+    await expect(
+      service.deliverDailyReminder({
+        userId: 'user-1',
+        localDate: '2026-07-30',
+      }),
+    ).resolves.toEqual({ status: 'skipped', reason: 'write_to_pm_disabled' });
+
+    expect(repository.upsertUserNotification).toHaveBeenCalled();
+    expect(botService.sendDailyReminder).not.toHaveBeenCalled();
   });
 
   it('skips blocked Telegram chats without retrying', async () => {
@@ -130,6 +170,7 @@ describe('NotificationService', () => {
         localDate: '2026-07-30',
       }),
     ).resolves.toEqual({ status: 'skipped', reason: 'telegram_blocked' });
+    expect(repository.upsertUserNotification).toHaveBeenCalled();
   });
 
   it('is idempotent when delivery already exists', async () => {

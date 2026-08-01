@@ -81,7 +81,7 @@ Cursor payload is an encoded `{ at, id }` pair (`src/common/pagination`). Invali
 
 ## Route inventory
 
-**74** routes under `/api/v1`. Auth column: **Public**, **Bearer**, **Cookie** (refresh), or **Webhook secret**.
+**78** routes under `/api/v1`. Auth column: **Public**, **Bearer**, **Cookie** (refresh), or **Webhook secret**.
 
 ### Health — `/api/v1/health`
 
@@ -155,13 +155,19 @@ Cursor payload is an encoded `{ at, id }` pair (`src/common/pagination`). Invali
 | PATCH | `/api/v1/goals/:id` | Bearer | Update goal |
 | DELETE | `/api/v1/goals/:id` | Bearer | Soft-delete goal |
 
-### Notifications — `/api/v1/notifications/reminders`
+### Notifications — `/api/v1/notifications`
 
 | Method | Path | Auth | Summary |
 | --- | --- | --- | --- |
+| GET | `/api/v1/notifications` | Bearer | List in-app notifications (keyset; optional `unreadOnly`) |
+| GET | `/api/v1/notifications/unread-count` | Bearer | Unread count for bell badge |
+| POST | `/api/v1/notifications/read-all` | Bearer | Mark all notifications as read |
+| POST | `/api/v1/notifications/:id/read` | Bearer | Mark one notification as read |
 | GET | `/api/v1/notifications/reminders/daily` | Bearer | Get daily reminder preference |
 | PUT | `/api/v1/notifications/reminders/daily` | Bearer | Upsert daily reminder preference |
 | DELETE | `/api/v1/notifications/reminders/daily` | Bearer | Disable / remove preference |
+
+Daily reminder preference responses include `allowsWriteToPm` so the client can prompt the user to open the bot when Telegram PM writes are blocked. Inbox copy and Telegram reminder text are Uzbek.
 
 ### Analytics — `/api/v1/analytics`
 
@@ -238,8 +244,8 @@ QF proxy behavior, cache TTLs, and resource IDs: [quran-foundation.md](./quran-f
 | Favorites | 5 |
 | Bookmarks | 5 |
 | Goals | 5 |
-| Notifications | 3 |
+| Notifications | 7 |
 | Analytics | 3 |
 | Telegram | 3 |
 | Quran | 33 |
-| **Total** | **74** |
+| **Total** | **78** |
