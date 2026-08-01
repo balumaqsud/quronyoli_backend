@@ -1,70 +1,85 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class MushafPageResponseDto {
+export class MushafPageListItemDto {
   @ApiProperty({ example: 1 })
-  page_number!: number;
-
-  @ApiProperty({ example: 1, description: 'Mushaf ID (1 = Madani QCF V2)' })
-  mushaf_id!: number;
+  page!: number;
 
   @ApiProperty({ example: '1:1' })
-  first_verse_key!: string;
+  firstVerse!: string;
 
   @ApiProperty({ example: '1:7' })
-  last_verse_key!: string;
-
-  @ApiProperty({ type: [String], example: ['1:1', '1:2'] })
-  verse_keys!: string[];
-
-  @ApiProperty({ type: [Number], example: [1] })
-  surah_ids!: number[];
-
-  @ApiProperty({ example: 1 })
-  juz_number!: number;
-
-  @ApiProperty({ example: 1 })
-  hizb_number!: number;
-
-  @ApiProperty({ example: 1, description: 'Primary rub el hizb for the page' })
-  rub_el_hizb!: number;
-
-  @ApiProperty({ type: [Number], example: [1] })
-  juz_numbers!: number[];
-
-  @ApiProperty({ type: [Number], example: [1] })
-  hizb_numbers!: number[];
-
-  @ApiProperty({ type: [Number], example: [1] })
-  rub_el_hizb_numbers!: number[];
+  lastVerse!: string;
 
   @ApiProperty({ example: 7 })
-  verse_count!: number;
+  verseCount!: number;
+}
+
+export class MushafPageDetailDto {
+  @ApiProperty({ example: 1 })
+  pageNumber!: number;
+
+  @ApiProperty({ example: 1, description: 'Mushaf ID (1 = Madani QCF V2)' })
+  mushafId!: number;
+
+  @ApiProperty({ example: '1:1' })
+  firstVerseKey!: string;
+
+  @ApiProperty({ example: '1:7' })
+  lastVerseKey!: string;
+
+  @ApiProperty({ example: 7 })
+  verseCount!: number;
+
+  @ApiProperty({ type: [Number], example: [1] })
+  surahIds!: number[];
+
+  @ApiProperty({ example: 1 })
+  juzNumber!: number;
+
+  @ApiProperty({ example: 1 })
+  hizbNumber!: number;
+
+  @ApiProperty({ example: 1, description: 'Primary rub el hizb for the page' })
+  rubElHizb!: number;
+
+  @ApiProperty({ type: [Number], example: [1] })
+  juzNumbers!: number[];
+
+  @ApiProperty({ type: [Number], example: [1] })
+  hizbNumbers!: number[];
+
+  @ApiProperty({ type: [Number], example: [1] })
+  rubElHizbNumbers!: number[];
+
+  @ApiProperty({
+    type: [String],
+    example: ['1:1', '1:2', '1:3', '1:4', '1:5', '1:6', '1:7'],
+    description: 'Verse keys on this page (relationships only; no text)',
+  })
+  verses!: string[];
 
   @ApiPropertyOptional({
     nullable: true,
     example: 'https://c22506.r6.cf1.rackcdn.com/1_1.png',
   })
-  image_url!: string | null;
+  imageUrl!: string | null;
 
   @ApiPropertyOptional({ nullable: true, example: 675 })
-  image_width!: number | null;
+  imageWidth!: number | null;
 
   @ApiProperty({ example: '2026-08-01T00:00:00.000Z' })
-  synced_at!: string;
+  syncedAt!: string;
 }
 
-export class MushafPagesListResponseDto {
-  @ApiProperty({ example: 1 })
-  mushaf_id!: number;
+export class MushafPageVersesResponseDto {
+  @ApiProperty({ type: MushafPageDetailDto })
+  page!: MushafPageDetailDto;
 
-  @ApiProperty({ example: 604 })
-  total!: number;
-
-  @ApiProperty({ type: [MushafPageResponseDto] })
-  pages!: MushafPageResponseDto[];
-}
-
-export class MushafPageDetailResponseDto {
-  @ApiProperty({ type: MushafPageResponseDto })
-  page!: MushafPageResponseDto;
+  @ApiProperty({
+    description:
+      'QF verse bodies for this page (Arabic, words, optional translations/tafsir/audio)',
+    type: 'array',
+    items: { type: 'object', additionalProperties: true },
+  })
+  verses!: Record<string, unknown>[];
 }

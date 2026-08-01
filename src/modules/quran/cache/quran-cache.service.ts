@@ -22,6 +22,35 @@ export class QuranCacheService {
     return `qf:cache:${namespace}:${digest}`;
   }
 
+  /** Literal Redis key for a single page metadata payload (`page:1` … `page:604`). */
+  pageMetadataKey(pageNumber: number, mushafId = 1): string {
+    return mushafId === 1
+      ? `page:${pageNumber}`
+      : `page:${mushafId}:${pageNumber}`;
+  }
+
+  /** Literal Redis key for the compact pages list. */
+  pagesListKey(mushafId = 1): string {
+    return mushafId === 1 ? 'pages:list' : `pages:list:${mushafId}`;
+  }
+
+  /**
+   * Composed page+verses bundle key. Query digest avoids collisions across
+   * translations / tafsirs / audio / words variants.
+   */
+  pageVersesKey(
+    pageNumber: number,
+    mushafId: number,
+    query?: QuranQueryParams,
+  ): string {
+    const digest = createHash('sha1')
+      .update(this.canonicalizeQuery(query))
+      .digest('hex')
+      .slice(0, 16);
+    const base = this.pageMetadataKey(pageNumber, mushafId);
+    return `${base}:verses:${digest}`;
+  }
+
   async getJson<T>(key: string): Promise<T | null> {
     const raw = await this.redisService.get(key);
     if (!raw) {

@@ -8,12 +8,14 @@ import { QuranFoundationClient } from '../client/quran-foundation.client';
 import {
   DEFAULT_MUSHAF_ID,
   MADANI_MUSHAF_PAGE_COUNT,
+  MADANI_MUSHAF_VERSE_COUNT,
   MUSHAF_PAGE_SYNC_FIELDS,
 } from './qf-pages.constants';
 import {
   mapVersesToMushafPage,
   QfPageVerseSnippet,
-  toMushafPageApiShape,
+  toMushafPageDetail,
+  toMushafPageListItem,
 } from './qf-pages.mapper';
 import { MushafPageSyncStats, QfPagesRepository } from './qf-pages.repository';
 
@@ -21,6 +23,8 @@ export type QfPagesSyncResult = {
   mushafId: number;
   pages: MushafPageSyncStats;
   pageCountExpected: number;
+  verseCountExpected: number;
+  verseCountSynced: number;
 };
 
 type VersesByPageResponse = {
@@ -53,6 +57,7 @@ export class QfPagesSyncService {
     mushafId: number = DEFAULT_MUSHAF_ID,
   ): Promise<QfPagesSyncResult> {
     const seenPageNumbers: number[] = [];
+    const allVerseKeys = new Set<string>();
     let upserted = 0;
 
     for (
@@ -67,15 +72,23 @@ export class QfPagesSyncService {
         verses,
         this.config.audioCdnBase,
       );
+
+      for (const key of payload.verseKeys) {
+        if (allVerseKeys.has(key)) {
+          throw new Error(
+            `Duplicate verse_key "${key}" on page ${pageNumber}; every verse must belong to exactly one page`,
+          );
+        }
+        allVerseKeys.add(key);
+      }
+
       await this.repository.upsertPage(payload);
       seenPageNumbers.push(pageNumber);
       upserted += 1;
 
       await this.cache.setJson(
-        this.cache.buildKey('pages', `/local/mushaf_pages/${pageNumber}`, {
-          mushaf: mushafId,
-        }),
-        { page: toMushafPageApiShape(payload) },
+        this.cache.pageMetadataKey(pageNumber, mushafId),
+        toMushafPageDetail(payload),
         this.config.cacheTtl.chaptersSeconds,
       );
 
@@ -93,19 +106,48 @@ export class QfPagesSyncService {
     );
 
     const pages = await this.repository.findActiveByMushaf(mushafId);
-    await this.cache.setJson(
-      this.cache.buildKey('pages', '/local/mushaf_pages', { mushaf: mushafId }),
+    if (pages.length !== MADANI_MUSHAF_PAGE_COUNT) {
+      throw new Error(
+        `Expected ${MADANI_MUSHAF_PAGE_COUNT} active mushaf pages, got ${pages.length}`,
+      );
+    }
+
+    if (allVerseKeys.size !== MADANI_MUSHAF_VERSE_COUNT) {
+      throw new Error(
+        `Expected ${MADANI_MUSHAF_VERSE_COUNT} unique verse keys across pages, got ${allVerseKeys.size}`,
+      );
+    }
+
+    const firstPage = pages[0];
+    const lastPage = pages[pages.length - 1];
+    this.logger.info(
       {
-        mushaf_id: mushafId,
-        total: pages.length,
-        pages: pages.map((row) => toMushafPageApiShape(row)),
+        mushafId,
+        pageCount: pages.length,
+        verseCount: allVerseKeys.size,
+        firstPageKeys: {
+          first: firstPage?.firstVerseKey,
+          last: firstPage?.lastVerseKey,
+        },
+        lastPageKeys: {
+          first: lastPage?.firstVerseKey,
+          last: lastPage?.lastVerseKey,
+        },
       },
+      'Mushaf page sync integrity checks passed',
+    );
+
+    await this.cache.setJson(
+      this.cache.pagesListKey(mushafId),
+      pages.map((row) => toMushafPageListItem(row)),
       this.config.cacheTtl.chaptersSeconds,
     );
 
     return {
       mushafId,
       pageCountExpected: MADANI_MUSHAF_PAGE_COUNT,
+      verseCountExpected: MADANI_MUSHAF_VERSE_COUNT,
+      verseCountSynced: allVerseKeys.size,
       pages: {
         upserted,
         deactivated,

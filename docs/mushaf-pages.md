@@ -2,40 +2,38 @@
 
 ## Summary
 
-Quron Yo'li now syncs **604 Madani Mushaf page metadata rows** into PostgreSQL (`mushaf_pages`) from Quran.Foundation Content v4, serves list/detail from DB + Redis, and proxies verse bodies on demand. **Verse Arabic/translation/audio text is never stored.**
+Quron Yo'li syncs **604 Madani Mushaf page metadata rows** into PostgreSQL (`mushaf_pages`) from Quran.Foundation Content v4, serves list/detail from DB + Redis (`page:1` … `page:604`), and composes verse bodies on demand from QF. **Verse Arabic/translation/audio text is never stored** — only relationships (`verse_keys`, `surah_ids`, juz/hizb/rub).
 
-Upstream host: `https://apis.quran.foundation/content/api/v4` (authenticated Quran.com Content API). Public `api.quran.com` is not used in production.
+Upstream host: `https://apis.quran.foundation/content/api/v4` (authenticated Quran.com Content API).
 
 Default mushaf: **`mushaf=1`** (QCF V2 / recommended Madani).
 
 ---
 
-## What already existed
+## Audit verdict
 
-| Area | Status |
+| Requirement | Status |
 | --- | --- |
-| `GET /api/v1/quran/pages`, `/pages/:n`, `/pages/lookup` | Live QF proxy + Redis (`chapters` TTL) |
-| `GET /api/v1/quran/ayahs/by-page/:page` | Live QF `/verses/by_page/{n}` proxy |
-| Static `GET /mushafs` | Hardcoded IDs 1–7, 19 (no `/resources/mushafs` upstream) |
-| Media URL normalizer | Protocol-relative `image_url` → `https:` |
-| Catalog sync | Translations / tafsirs / reciters only |
+| Sync CLI for 604 Madani pages | `npm run qf:sync-pages` → `QfPagesSyncService` |
+| Table `mushaf_pages` (coords only) | Prisma `MushafPage` (superset of suggested columns) |
+| Every verse on exactly one page | Sync asserts disjoint `verse_keys` and total **6236** unique keys |
+| REST under `/api/v1/quran/pages*` | List, detail, verses (+ ayahs-by-page alias) |
+| Redis `page:{n}` | Literal keys for metadata; list `pages:list`; verses `page:{n}:verses:{digest}` |
+| Swagger | CamelCase DTOs for list, detail, and verses composition |
 
-## What was missing
+---
 
-- Local page index for all 604 pages
-- Typed page responses (`first_verse_key`, `surah_ids`, juz/hizb/rub, verse_count)
-- `GET /pages/:page/verses` convenience route
-- Default division `fields` on page verse fetches
-- Sync CLI for page metadata
-- Swagger response DTOs for page metadata
+## Data model
 
-## What was added
+Postgres stores page coordinates only:
 
-- Prisma model `MushafPage` → table `mushaf_pages` (coordinates + optional verse image meta only)
-- Sync: `npm run qf:sync-pages` → fetches `/verses/by_page/{1..604}` and upserts rows
-- DB-backed `GET /pages` and `GET /pages/:pageNumber` (Redis namespace `pages`)
-- `GET /pages/:pageNumber/verses` (QF proxy; defaults `fields` + `mushaf=1`)
-- Docs / Swagger / unit tests
+- `page_number`, `first_verse_key`, `last_verse_key`, `verse_count`
+- `verse_keys[]`, `surah_ids[]`
+- `juz_number`, `hizb_number`, `rub_el_hizb_number` (+ multi-value arrays when a page spans divisions)
+- optional first-verse `image_url` / `image_width`
+- `created_at` / `updated_at` / `synced_at`
+
+No Arabic, translations, tafsir, or audio blobs.
 
 ---
 
@@ -43,15 +41,9 @@ Default mushaf: **`mushaf=1`** (QCF V2 / recommended Madani).
 
 | Purpose | Upstream |
 | --- | --- |
-| Page metadata sync | `GET /verses/by_page/{n}?mushaf=1&fields=verse_key,juz_number,hizb_number,rub_el_hizb_number,page_number,image_url,image_width` |
-| Page verses (runtime) | `GET /verses/by_page/{n}` (same; client may add translations/words/audio) |
-| Page boundary lookup | `GET /pages/lookup` (unchanged live proxy) |
-| Mushaf catalog | **Not available** (`/resources/mushafs` → 404); static map in app |
-
-### Images
-
-- No full-page Mushaf PNG catalog from QF.
-- Per-verse `image_url` / `image_width` when requested; sync stores the **first** verse image on the page row (normalized to `https:`).
+| Page metadata sync | `GET /verses/by_page/{n}?mushaf=1&fields=verse_key,juz_number,…` |
+| Page verses (runtime) | `GET /verses/by_page/{n}` (client may add `translations`, `audio`, `tafsirs`) |
+| Page boundary lookup | `GET /pages/lookup` (live proxy) |
 
 ---
 
@@ -59,13 +51,30 @@ Default mushaf: **`mushaf=1`** (QCF V2 / recommended Madani).
 
 All under `/api/v1/quran`, JWT + rate limit:
 
-| Method | Path | Source |
-| --- | --- | --- |
-| GET | `/pages?mushaf=1` | Postgres `mushaf_pages` + Redis |
-| GET | `/pages/:pageNumber` | Postgres + Redis |
-| GET | `/pages/:pageNumber/verses` | QF proxy + Redis (`verses` TTL) |
-| GET | `/ayahs/by-page/:page` | Alias of `/pages/:page/verses` |
-| GET | `/pages/lookup` | QF proxy |
+| Method | Path | Source | Response |
+| --- | --- | --- | --- |
+| GET | `/pages?mushaf=1` | Postgres + Redis `pages:list` | `[{ page, firstVerse, lastVerse, verseCount }, …]` |
+| GET | `/pages/:pageNumber` | Postgres + Redis `page:{n}` | CamelCase page metadata (incl. `verses` as keys) |
+| GET | `/pages/:pageNumber/verses` | Local meta + QF verses | `{ page, verses }` — Arabic + words by default; translations/audio/tafsir via query |
+| GET | `/ayahs/by-page/:page` | Same as `/pages/:page/verses` | Same composed payload |
+| GET | `/pages/lookup` | QF proxy | Upstream lookup |
+
+### Example list item
+
+```json
+{ "page": 1, "firstVerse": "1:1", "lastVerse": "1:7", "verseCount": 7 }
+```
+
+### Redis keys
+
+| Key | Payload |
+| --- | --- |
+| `page:1` … `page:604` | Full page metadata (camelCase) |
+| `pages:list` | Compact list array |
+| `page:{n}:verses:{digest}` | Composed `{ page, verses }` (digest from query params) |
+| `page:{mushaf}:{n}` / `pages:list:{mushaf}` | Same when `mushaf != 1` |
+
+(App Redis `keyPrefix` still applies.)
 
 ### Sync
 
@@ -75,4 +84,10 @@ npm run qf:sync-pages
 npm run qf:sync-pages:prod
 ```
 
-Expect ~604 upserts for mushaf `1`. Empty DB → `GET /pages` returns **404** with a sync hint until the job completes.
+After sync:
+
+- Exactly **604** active rows
+- Exactly **6236** unique `verse_keys` with no cross-page duplicates
+- Redis `page:{n}` and `pages:list` warmed
+
+Empty DB → `GET /pages` returns **404** with a sync hint until the job completes.

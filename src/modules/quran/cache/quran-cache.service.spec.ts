@@ -61,4 +61,15 @@ describe('QuranCacheService', () => {
 
     expect(left).toBe(right);
   });
+
+  it('builds literal page Redis keys', () => {
+    expect(service.pageMetadataKey(1)).toBe('page:1');
+    expect(service.pageMetadataKey(2, 1)).toBe('page:2');
+    expect(service.pageMetadataKey(1, 19)).toBe('page:19:1');
+    expect(service.pagesListKey()).toBe('pages:list');
+    expect(service.pagesListKey(19)).toBe('pages:list:19');
+    expect(service.pageVersesKey(1, 1, { translations: '20' })).toMatch(
+      /^page:1:verses:[a-f0-9]{16}$/,
+    );
+  });
 });

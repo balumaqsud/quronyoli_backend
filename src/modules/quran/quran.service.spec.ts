@@ -17,6 +17,9 @@ describe('QuranService', () => {
   let cache: {
     buildKey: jest.Mock;
     getOrSet: jest.Mock;
+    pagesListKey: jest.Mock;
+    pageMetadataKey: jest.Mock;
+    pageVersesKey: jest.Mock;
   };
   let pagesRepository: {
     findActiveByMushaf: jest.Mock;
@@ -37,6 +40,9 @@ describe('QuranService', () => {
           async (_key: string, _ttl: number, loader: () => Promise<unknown>) =>
             loader(),
         ),
+      pagesListKey: jest.fn().mockReturnValue('pages:list'),
+      pageMetadataKey: jest.fn().mockReturnValue('page:1'),
+      pageVersesKey: jest.fn().mockReturnValue('page:1:verses:digest'),
     };
     pagesRepository = {
       findActiveByMushaf: jest.fn(),
@@ -151,24 +157,71 @@ describe('QuranService', () => {
       },
     ]);
 
-    await expect(service.getPages({})).resolves.toMatchObject({
-      mushaf_id: 1,
-      total: 1,
-      pages: [
-        expect.objectContaining({ page_number: 1, first_verse_key: '1:1' }),
-      ],
-    });
+    await expect(service.getPages({})).resolves.toEqual([
+      {
+        page: 1,
+        firstVerse: '1:1',
+        lastVerse: '1:7',
+        verseCount: 2,
+      },
+    ]);
+    expect(cache.pagesListKey).toHaveBeenCalledWith(1);
   });
 
-  it('applies default division fields when fetching page verses', async () => {
-    client.getContent.mockResolvedValue({ verses: [] });
+  it('composes page metadata with QF verses and applies defaults', async () => {
+    pagesRepository.findActivePage.mockResolvedValue({
+      mushafId: 1,
+      pageNumber: 1,
+      firstVerseKey: '1:1',
+      lastVerseKey: '1:7',
+      verseKeys: ['1:1', '1:7'],
+      surahIds: [1],
+      juzNumber: 1,
+      hizbNumber: 1,
+      rubElHizbNumber: 1,
+      juzNumbers: [1],
+      hizbNumbers: [1],
+      rubElHizbNumbers: [1],
+      verseCount: 2,
+      imageUrl: null,
+      imageWidth: null,
+      syncedAt: new Date('2026-08-01T00:00:00.000Z'),
+    });
+    client.getContent.mockResolvedValue({
+      verses: [{ verse_key: '1:1', text_uthmani: 'بِسْمِ' }],
+    });
 
-    await service.getPageVerses(1, {});
+    const result = await service.getPageVerses(1, {});
+
+    expect(result).toEqual({
+      page: {
+        pageNumber: 1,
+        mushafId: 1,
+        firstVerseKey: '1:1',
+        lastVerseKey: '1:7',
+        verseCount: 2,
+        surahIds: [1],
+        juzNumber: 1,
+        hizbNumber: 1,
+        rubElHizb: 1,
+        juzNumbers: [1],
+        hizbNumbers: [1],
+        rubElHizbNumbers: [1],
+        verses: ['1:1', '1:7'],
+        imageUrl: null,
+        imageWidth: null,
+        syncedAt: '2026-08-01T00:00:00.000Z',
+      },
+      verses: [{ verse_key: '1:1', text_uthmani: 'بِسْمِ' }],
+    });
 
     expect(client.getContent).toHaveBeenCalledWith('/verses/by_page/1', {
       mushaf: 1,
-      fields: 'page_number,juz_number,hizb_number,rub_el_hizb_number',
+      fields:
+        'text_uthmani,page_number,juz_number,hizb_number,rub_el_hizb_number',
+      words: 'true',
     });
+    expect(cache.pageVersesKey).toHaveBeenCalled();
   });
 
   it('rejects unsupported script names', async () => {

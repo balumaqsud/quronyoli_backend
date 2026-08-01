@@ -20,8 +20,9 @@ import { HttpCache } from '../../common/decorators/http-cache.decorator';
 import { AuthenticatedUser } from '../../infrastructure/auth/interfaces/jwt-payload.interface';
 import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
 import {
-  MushafPageDetailResponseDto,
-  MushafPagesListResponseDto,
+  MushafPageDetailDto,
+  MushafPageListItemDto,
+  MushafPageVersesResponseDto,
 } from './dto/mushaf-page-response.dto';
 import {
   AudioTimestampQueryDto,
@@ -131,9 +132,10 @@ export class QuranController {
   @ApiOperation({
     summary: 'Get ayahs by Mushaf page number',
     description:
-      'Alias of GET /pages/:page/verses. Proxies Quran.Foundation verses for the page.',
+      'Alias of GET /pages/:page/verses. Returns local page metadata plus QF verse bodies.',
   })
   @ApiParam({ name: 'page', example: 1 })
+  @ApiOkResponse({ type: MushafPageVersesResponseDto })
   getAyahsByPage(
     @Param('page', ParseIntPipe) page: number,
     @Query() query: VersesQueryDto,
@@ -203,9 +205,9 @@ export class QuranController {
   @ApiOperation({
     summary: 'List Madani Mushaf page metadata',
     description:
-      'Returns locally synced page coordinates (604 pages for mushaf=1). Run qf:sync-pages first.',
+      'Returns a compact array of locally synced pages (604 for mushaf=1). Cached under Redis key pages:list. Run qf:sync-pages first.',
   })
-  @ApiOkResponse({ type: MushafPagesListResponseDto })
+  @ApiOkResponse({ type: MushafPageListItemDto, isArray: true })
   getPages(@Query() query: MushafPagesQueryDto): Promise<unknown> {
     return this.quranService.getPages(query);
   }
@@ -220,9 +222,10 @@ export class QuranController {
   @ApiOperation({
     summary: 'Get verses for a Mushaf page',
     description:
-      'Proxies Quran.Foundation /verses/by_page/{n}. Defaults include page_number, juz_number, hizb_number, rub_el_hizb_number. Does not read verse text from Postgres.',
+      'Composes local page metadata with Quran.Foundation verse bodies (Arabic text + words by default; translations/audio/tafsir via query). Verse text is not stored in Postgres. Cached under page:{n}:verses:{digest}.',
   })
   @ApiParam({ name: 'pageNumber', example: 1 })
+  @ApiOkResponse({ type: MushafPageVersesResponseDto })
   getPageVerses(
     @Param('pageNumber', ParseIntPipe) pageNumber: number,
     @Query() query: VersesQueryDto,
@@ -235,10 +238,10 @@ export class QuranController {
   @ApiOperation({
     summary: 'Get Mushaf page metadata by page number',
     description:
-      'Local mushaf_pages row: verse keys, surah ids, juz/hizb/rub, optional image meta.',
+      'Local mushaf_pages row: verse keys, surah ids, juz/hizb/rub, optional image meta. Cached under Redis key page:{n}.',
   })
   @ApiParam({ name: 'pageNumber', example: 1 })
-  @ApiOkResponse({ type: MushafPageDetailResponseDto })
+  @ApiOkResponse({ type: MushafPageDetailDto })
   getPage(
     @Param('pageNumber', ParseIntPipe) pageNumber: number,
     @Query() query: MushafPagesQueryDto,

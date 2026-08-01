@@ -35,9 +35,13 @@ import {
 import {
   DEFAULT_MUSHAF_ID,
   DEFAULT_PAGE_VERSE_FIELDS,
+  DEFAULT_PAGE_WORDS,
   MADANI_MUSHAF_PAGE_COUNT,
 } from './pages/qf-pages.constants';
-import { toMushafPageApiShape } from './pages/qf-pages.mapper';
+import {
+  toMushafPageDetail,
+  toMushafPageListItem,
+} from './pages/qf-pages.mapper';
 import { QfPagesRepository } from './pages/qf-pages.repository';
 import { normalizeQfMediaUrls } from './utils/qf-media-url.normalizer';
 
@@ -245,9 +249,7 @@ export class QuranService {
 
   getPages(query: MushafPagesQueryDto): Promise<unknown> {
     const mushafId = this.resolveMushafId(query.mushaf);
-    const cacheKey = this.cache.buildKey('pages', '/local/mushaf_pages', {
-      mushaf: mushafId,
-    });
+    const cacheKey = this.cache.pagesListKey(mushafId);
 
     return this.cache.getOrSet(
       cacheKey,
@@ -259,11 +261,7 @@ export class QuranService {
             `No mushaf pages synced for mushaf=${mushafId}. Run npm run qf:sync-pages.`,
           );
         }
-        return {
-          mushaf_id: mushafId,
-          total: pages.length,
-          pages: pages.map((row) => toMushafPageApiShape(row)),
-        };
+        return pages.map((row) => toMushafPageListItem(row));
       },
     );
   }
@@ -271,11 +269,7 @@ export class QuranService {
   getPage(pageNumber: number, query: MushafPagesQueryDto): Promise<unknown> {
     this.assertMadaniPageNumber(pageNumber);
     const mushafId = this.resolveMushafId(query.mushaf);
-    const cacheKey = this.cache.buildKey(
-      'pages',
-      `/local/mushaf_pages/${pageNumber}`,
-      { mushaf: mushafId },
-    );
+    const cacheKey = this.cache.pageMetadataKey(pageNumber, mushafId);
 
     return this.cache.getOrSet(
       cacheKey,
@@ -290,19 +284,44 @@ export class QuranService {
             `Mushaf page ${pageNumber} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
           );
         }
-        return { page: toMushafPageApiShape(row) };
+        return toMushafPageDetail(row);
       },
     );
   }
 
   getPageVerses(page: number, query: VersesQueryDto): Promise<unknown> {
     this.assertMadaniPageNumber(page);
-    return this.cachedContent(
-      'verses',
-      `/verses/by_page/${page}`,
-      this.verseQueryWithPageDefaults(query),
+    const mushafId = this.resolveMushafId(
+      query.mushaf !== undefined ? Number(query.mushaf) : undefined,
+    );
+    const params = this.verseQueryWithPageDefaults(query);
+    params.mushaf = mushafId;
+    const cacheKey = this.cache.pageVersesKey(page, mushafId, params);
+
+    return this.cache.getOrSet(
+      cacheKey,
       this.config.cacheTtl.versesSeconds,
-      true,
+      async () => {
+        const row = await this.pagesRepository.findActivePage(mushafId, page);
+        if (!row) {
+          throw new NotFoundException(
+            `Mushaf page ${page} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
+          );
+        }
+
+        const payload = await this.client.getContent<{
+          verses?: unknown[];
+        }>(`/verses/by_page/${page}`, params);
+        const normalized = normalizeQfMediaUrls(
+          payload,
+          this.config.audioCdnBase,
+        ) as { verses?: unknown[] };
+
+        return {
+          page: toMushafPageDetail(row),
+          verses: normalized.verses ?? [],
+        };
+      },
     );
   }
 
@@ -721,6 +740,9 @@ export class QuranService {
       typeof params.fields === 'string' ? params.fields : undefined,
       DEFAULT_PAGE_VERSE_FIELDS,
     );
+    if (params.words === undefined) {
+      params.words = DEFAULT_PAGE_WORDS;
+    }
     return params;
   }
 

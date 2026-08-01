@@ -1,7 +1,8 @@
 import {
   mapVersesToMushafPage,
   surahIdFromVerseKey,
-  toMushafPageApiShape,
+  toMushafPageDetail,
+  toMushafPageListItem,
 } from './qf-pages.mapper';
 
 describe('qf-pages.mapper', () => {
@@ -64,33 +65,41 @@ describe('qf-pages.mapper', () => {
     expect(payload.surahIds).toEqual([2]);
   });
 
-  it('serializes API shape in snake_case', () => {
+  it('serializes list and detail API shapes in camelCase', () => {
     const syncedAt = new Date('2026-08-01T00:00:00.000Z');
-    expect(
-      toMushafPageApiShape({
-        mushafId: 1,
-        pageNumber: 1,
-        firstVerseKey: '1:1',
-        lastVerseKey: '1:7',
-        verseKeys: ['1:1', '1:7'],
-        surahIds: [1],
-        juzNumber: 1,
-        hizbNumber: 1,
-        rubElHizbNumber: 1,
-        juzNumbers: [1],
-        hizbNumbers: [1],
-        rubElHizbNumbers: [1],
-        verseCount: 2,
-        imageUrl: null,
-        imageWidth: null,
-        syncedAt,
-      }),
-    ).toMatchObject({
-      page_number: 1,
-      mushaf_id: 1,
-      rub_el_hizb: 1,
-      verse_count: 2,
-      synced_at: syncedAt.toISOString(),
+    const row = {
+      mushafId: 1,
+      pageNumber: 1,
+      firstVerseKey: '1:1',
+      lastVerseKey: '1:7',
+      verseKeys: ['1:1', '1:7'],
+      surahIds: [1],
+      juzNumber: 1,
+      hizbNumber: 1,
+      rubElHizbNumber: 1,
+      juzNumbers: [1],
+      hizbNumbers: [1],
+      rubElHizbNumbers: [1],
+      verseCount: 2,
+      imageUrl: null,
+      imageWidth: null,
+      syncedAt,
+    };
+
+    expect(toMushafPageListItem(row)).toEqual({
+      page: 1,
+      firstVerse: '1:1',
+      lastVerse: '1:7',
+      verseCount: 2,
+    });
+
+    expect(toMushafPageDetail(row)).toMatchObject({
+      pageNumber: 1,
+      mushafId: 1,
+      rubElHizb: 1,
+      verseCount: 2,
+      verses: ['1:1', '1:7'],
+      syncedAt: syncedAt.toISOString(),
     });
   });
 });

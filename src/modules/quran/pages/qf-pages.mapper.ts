@@ -32,23 +32,33 @@ export type MushafPagePayload = {
   syncedAt: Date;
 };
 
-export type MushafPageApiShape = {
-  page_number: number;
-  mushaf_id: number;
-  first_verse_key: string;
-  last_verse_key: string;
-  verse_keys: string[];
-  surah_ids: number[];
-  juz_number: number;
-  hizb_number: number;
-  rub_el_hizb: number;
-  juz_numbers: number[];
-  hizb_numbers: number[];
-  rub_el_hizb_numbers: number[];
-  verse_count: number;
-  image_url: string | null;
-  image_width: number | null;
-  synced_at: string;
+/** Compact list item for GET /pages. */
+export type MushafPageListItem = {
+  page: number;
+  firstVerse: string;
+  lastVerse: string;
+  verseCount: number;
+};
+
+/** Full page metadata for GET /pages/:page and embedded in verses responses. */
+export type MushafPageDetail = {
+  pageNumber: number;
+  mushafId: number;
+  firstVerseKey: string;
+  lastVerseKey: string;
+  verseCount: number;
+  surahIds: number[];
+  juzNumber: number;
+  hizbNumber: number;
+  rubElHizb: number;
+  juzNumbers: number[];
+  hizbNumbers: number[];
+  rubElHizbNumbers: number[];
+  /** Verse keys only — relationships, no Arabic/translation text. */
+  verses: string[];
+  imageUrl: string | null;
+  imageWidth: number | null;
+  syncedAt: string;
 };
 
 function uniqueSortedInts(values: number[]): number[] {
@@ -160,7 +170,21 @@ export function mapVersesToMushafPage(
   };
 }
 
-export function toMushafPageApiShape(row: {
+export function toMushafPageListItem(row: {
+  pageNumber: number;
+  firstVerseKey: string;
+  lastVerseKey: string;
+  verseCount: number;
+}): MushafPageListItem {
+  return {
+    page: row.pageNumber,
+    firstVerse: row.firstVerseKey,
+    lastVerse: row.lastVerseKey,
+    verseCount: row.verseCount,
+  };
+}
+
+export function toMushafPageDetail(row: {
   mushafId: number;
   pageNumber: number;
   firstVerseKey: string;
@@ -177,23 +201,23 @@ export function toMushafPageApiShape(row: {
   imageUrl: string | null;
   imageWidth: number | null;
   syncedAt: Date;
-}): MushafPageApiShape {
+}): MushafPageDetail {
   return {
-    page_number: row.pageNumber,
-    mushaf_id: row.mushafId,
-    first_verse_key: row.firstVerseKey,
-    last_verse_key: row.lastVerseKey,
-    verse_keys: row.verseKeys,
-    surah_ids: row.surahIds,
-    juz_number: row.juzNumber,
-    hizb_number: row.hizbNumber,
-    rub_el_hizb: row.rubElHizbNumber,
-    juz_numbers: row.juzNumbers,
-    hizb_numbers: row.hizbNumbers,
-    rub_el_hizb_numbers: row.rubElHizbNumbers,
-    verse_count: row.verseCount,
-    image_url: row.imageUrl,
-    image_width: row.imageWidth,
-    synced_at: row.syncedAt.toISOString(),
+    pageNumber: row.pageNumber,
+    mushafId: row.mushafId,
+    firstVerseKey: row.firstVerseKey,
+    lastVerseKey: row.lastVerseKey,
+    verseCount: row.verseCount,
+    surahIds: row.surahIds,
+    juzNumber: row.juzNumber,
+    hizbNumber: row.hizbNumber,
+    rubElHizb: row.rubElHizbNumber,
+    juzNumbers: row.juzNumbers,
+    hizbNumbers: row.hizbNumbers,
+    rubElHizbNumbers: row.rubElHizbNumbers,
+    verses: row.verseKeys,
+    imageUrl: row.imageUrl,
+    imageWidth: row.imageWidth,
+    syncedAt: row.syncedAt.toISOString(),
   };
 }
