@@ -8,6 +8,7 @@ Verse content is fetched from **Quran.Foundation**. This database stores:
 - authentication and user profile data
 - user preferences
 - Quran.Foundation **resource catalogs** (metadata IDs only)
+- Madani Mushaf **page coordinates** (`mushaf_pages`; no verse text)
 - user engagement and reading analytics using chapter/verse coordinates
 
 ## Entity relationship overview
@@ -105,12 +106,27 @@ Unique on `(provider, external_id)`. Soft-deletable via `deletedAt`. Source: QF 
 Same identity pattern as translations. Source: QF `/resources/tafsirs`.
 
 ### `QuranReciter` (`quran_reciters`)
-Same identity pattern; optional style/arabic name. Source: QF `/resources/recitations` (ayah audio IDs used by settings / verse audio). Chapter reciters are not stored here.
+Same identity pattern; optional style/arabic name. Source: QF `/resources/recitations` (ayah) and `/resources/chapter_reciters` (chapter), distinguished by `kind`.
 
 Used by:
 
 - `UserSettings` defaults (`SET NULL`)
 - `ReadingProgress` last-used resources (`SET NULL`)
+
+### `MushafPage` (`mushaf_pages`)
+Madani (and other) Mushaf **page coordinates only** — no Arabic/translation/audio bodies.
+
+| Field | Notes |
+| --- | --- |
+| Unique | `(provider, mushaf_id, page_number)` |
+| `verse_keys` | Ordered verse keys on the page |
+| `surah_ids` | Distinct chapter numbers on the page |
+| `juz_number` / `hizb_number` / `rub_el_hizb_number` | From the first verse |
+| `juz_numbers` / `hizb_numbers` / `rub_el_hizb_numbers` | Distinct sets across the page |
+| `image_url` / `image_width` | Optional; first verse image from QF if present |
+| Sync | `npm run qf:sync-pages` via `/verses/by_page/{1..604}` |
+
+See [mushaf-pages.md](./mushaf-pages.md).
 
 ---
 

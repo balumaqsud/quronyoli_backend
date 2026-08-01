@@ -70,6 +70,17 @@ describe('QfCatalogSyncService', () => {
           ],
         });
       }
+      if (path === '/resources/chapter_reciters') {
+        return Promise.resolve({
+          reciters: [
+            {
+              id: 19,
+              name: 'Ahmed ibn Ali al-Ajmy',
+              style: { name: 'Murattal' },
+            },
+          ],
+        });
+      }
       return Promise.reject(new Error(`Unexpected path ${path}`));
     });
 
@@ -90,23 +101,38 @@ describe('QfCatalogSyncService', () => {
     });
   });
 
-  it('fetches all catalogs then upserts mapped rows', async () => {
+  it('fetches all catalogs then upserts mapped rows by kind', async () => {
     const result = await service.syncAll();
 
-    expect(getContent).toHaveBeenCalledTimes(3);
+    expect(getContent).toHaveBeenCalledTimes(4);
     expect(syncTranslations).toHaveBeenCalledWith([
       expect.objectContaining({ externalId: '20', languageCode: 'en' }),
     ]);
     expect(syncTafsirs).toHaveBeenCalledWith([
       expect.objectContaining({ externalId: '169' }),
     ]);
-    expect(syncReciters).toHaveBeenCalledWith([
-      expect.objectContaining({
-        externalId: '7',
-        name: 'Mishari Rashid al-`Afasy',
-      }),
-    ]);
+    expect(syncReciters).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          externalId: '7',
+          kind: 'AYAH',
+          name: 'Mishari Rashid al-`Afasy',
+        }),
+      ],
+      'AYAH',
+    );
+    expect(syncReciters).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          externalId: '19',
+          kind: 'CHAPTER',
+          name: 'Ahmed ibn Ali al-Ajmy',
+        }),
+      ],
+      'CHAPTER',
+    );
     expect(result.translations.upserted).toBe(1);
+    expect(result.chapterReciters.upserted).toBe(1);
   });
 
   it('does not write when upstream fetch fails', async () => {
@@ -126,10 +152,13 @@ describe('QfCatalogSyncService', () => {
       if (path.includes('tafsirs')) {
         return Promise.resolve({ tafsirs: [] });
       }
+      if (path.includes('chapter_reciters')) {
+        return Promise.resolve({ reciters: [] });
+      }
       return Promise.resolve({ recitations: [] });
     });
 
-    await expect(service.syncAll()).rejects.toThrow(/all three resource lists/);
+    await expect(service.syncAll()).rejects.toThrow(/all resource lists/);
     expect(syncTranslations).not.toHaveBeenCalled();
   });
 });

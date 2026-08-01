@@ -3,6 +3,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { QuranFoundationClient } from '../client/quran-foundation.client';
 import {
   extractResourceList,
+  mapChapterReciterResource,
   mapRecitationResource,
   mapTafsirResource,
   mapTranslationResource,
@@ -13,6 +14,7 @@ export type QfCatalogSyncResult = {
   translations: CatalogSyncStats;
   tafsirs: CatalogSyncStats;
   reciters: CatalogSyncStats;
+  chapterReciters: CatalogSyncStats;
 };
 
 @Injectable()
@@ -25,16 +27,21 @@ export class QfCatalogSyncService {
   ) {}
 
   /**
-   * Fetch all three catalogs first, then write. Fail closed on upstream errors
+   * Fetch catalogs first, then write. Fail closed on upstream errors
    * so we never deactivate local rows against a partial/failed fetch.
    */
   async syncAll(): Promise<QfCatalogSyncResult> {
-    const [translationPayload, tafsirPayload, recitationPayload] =
-      await Promise.all([
-        this.client.getContent<unknown>('/resources/translations'),
-        this.client.getContent<unknown>('/resources/tafsirs'),
-        this.client.getContent<unknown>('/resources/recitations'),
-      ]);
+    const [
+      translationPayload,
+      tafsirPayload,
+      recitationPayload,
+      chapterReciterPayload,
+    ] = await Promise.all([
+      this.client.getContent<unknown>('/resources/translations'),
+      this.client.getContent<unknown>('/resources/tafsirs'),
+      this.client.getContent<unknown>('/resources/recitations'),
+      this.client.getContent<unknown>('/resources/chapter_reciters'),
+    ]);
 
     const translations = this.mapAll(
       extractResourceList(translationPayload, ['translations']),
@@ -51,21 +58,32 @@ export class QfCatalogSyncService {
       mapRecitationResource,
       'recitation',
     );
+    const chapterReciters = this.mapAll(
+      extractResourceList(chapterReciterPayload, [
+        'reciters',
+        'chapter_reciters',
+      ]),
+      mapChapterReciterResource,
+      'chapter_reciter',
+    );
 
     if (
       translations.length === 0 &&
       tafsirs.length === 0 &&
-      reciters.length === 0
+      reciters.length === 0 &&
+      chapterReciters.length === 0
     ) {
-      throw new Error(
-        'QF catalog sync refused: all three resource lists were empty',
-      );
+      throw new Error('QF catalog sync refused: all resource lists were empty');
     }
 
     const result: QfCatalogSyncResult = {
       translations: await this.repository.syncTranslations(translations),
       tafsirs: await this.repository.syncTafsirs(tafsirs),
-      reciters: await this.repository.syncReciters(reciters),
+      reciters: await this.repository.syncReciters(reciters, 'AYAH'),
+      chapterReciters: await this.repository.syncReciters(
+        chapterReciters,
+        'CHAPTER',
+      ),
     };
 
     this.logger.info({ result }, 'Quran.Foundation catalog sync completed');

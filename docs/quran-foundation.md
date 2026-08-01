@@ -59,15 +59,24 @@ Settings defaults store QF resource IDs that must exist in Postgres. Sync them w
 npm run qf:sync-catalog
 # production artifact:
 npm run qf:sync-catalog:prod
+
+# Madani Mushaf page metadata (604 rows; coordinates only):
+npm run qf:sync-pages
+npm run qf:sync-pages:prod
 ```
 
 Behavior:
 
-- Fetches full Content catalogs first (fail closed on OAuth/network/parse errors).
-- Upserts `quran_translations`, `quran_tafsirs`, and `quran_reciters` on `(provider, external_id)`.
-- Maps **recitations** (ayah audio) into `quran_reciters` — not chapter reciters.
-- Reactivates resources that return upstream; sets `is_active=false` for missing IDs (never deletes).
+- Fetches Content catalogs first (fail closed on OAuth/network/parse errors).
+- Upserts `quran_translations`, `quran_tafsirs`, and `quran_reciters` on `(provider, external_id, kind)`.
+- Maps **ayah** `/resources/recitations` with `kind=AYAH` and **chapter** `/resources/chapter_reciters` with `kind=CHAPTER` (separate ID namespaces).
+- Settings: `reciterId` validates ayah rows; `chapterReciterId` validates chapter rows.
+- Reactivates resources that return upstream; sets `is_active=false` for missing IDs within each kind (never deletes).
 - Requires working `content` scope. If `search` scope is denied for the client, Search routes fail until Quran.Foundation grants the entitlement — content/catalog sync still works.
+
+**Mushaf pages:** `qf:sync-pages` walks `/verses/by_page/1..604` with `mushaf=1` and upserts `mushaf_pages` (verse keys, surah ids, juz/hizb/rub, optional verse `image_url`). Verse text is not stored. See [mushaf-pages.md](./mushaf-pages.md).
+
+Relative ayah audio URLs are absolutized with `QF_AUDIO_CDN_BASE` (default `https://audio.qurancdn.com`). Protocol-relative `image_url` values become `https:`.
 
 ## Auth model
 
@@ -83,7 +92,8 @@ Redis keys are prefixed with the global `REDIS_KEY_PREFIX` and a `qf:` namespace
 
 | Resource | Default TTL |
 | --- | --- |
-| Chapters / Juz / Pages | 24h |
+| Chapters / Juz / Page metadata | 24h |
+| Page verses (by_page) | 1h |
 | Resource catalogs | 24h |
 | Verses / translations / tafsirs | 1h |
 | Audio | 1h |
@@ -118,12 +128,13 @@ Default: 60 requests / 60 seconds per user for `/api/v1/quran/*`.
 All under `/api/v1/quran` and JWT-protected:
 
 - Surahs: `GET /surahs`, `/surahs/:id`, `/surahs/:id/info`
-- Ayahs: `GET /ayahs/by-surah/:chapter`, `/ayahs/by-key/:verseKey`, `/ayahs/by-juz/:juz`, `/ayahs/by-page/:page`
-- Juz: `GET /juz`, `/juz/:id`
-- Pages: `GET /pages`, `/pages/:pageNumber`, `/pages/lookup`
-- Translations / Tafsirs: catalogs, info, and by-surah/ayah/juz/page content
+- Ayahs: `GET /ayahs/by-surah/:chapter`, `/ayahs/by-key/:verseKey`, `/ayahs/by-juz/:juz`, `/ayahs/by-page/:page`, `/ayahs/by-hizb/:hizb`, `/ayahs/by-rub/:rub`, `/ayahs/by-rub-el-hizb/:rub`, `/ayahs/by-ruku/:ruku`, `/ayahs/by-manzil/:manzil`, `/ayahs/daily`
+- Divisions: `GET /juz`, `/juz/:id`, `/hizbs`, `/hizbs/:id`, `/rub-el-hizbs`, `/rub-el-hizbs/:id`, `/rukus`, `/rukus/:id`, `/manzils`, `/manzils/:id`
+- Pages: `GET /pages`, `/pages/:pageNumber`, `/pages/:pageNumber/verses`, `/pages/lookup` (see [mushaf-pages.md](./mushaf-pages.md))
+- Resources: `GET /translations*`, `/tafsirs*`, `/languages`, `/mushafs` (static mushaf ID map), `/footnotes/:id`
+- Scripts / tajweed: `GET /scripts/:script` (e.g. `uthmani_tajweed`)
 - Audio: recitations, chapter reciters, chapter/ayah audio, timestamps
-- Search: `GET /search`
+- Search: `GET /search` (requires QF `search` scope entitlement)
 
 ## Explicit non-goals
 

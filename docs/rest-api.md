@@ -196,12 +196,13 @@ All routes require **Bearer** auth and `QuranRateLimitGuard`. Stable catalog GET
 | GET | `/api/v1/quran/ayahs/daily` | Daily ayah (timezone-aware) |
 | GET | `/api/v1/quran/ayahs/by-key/:verseKey` | Ayah by key (**records reading open**) |
 | GET | `/api/v1/quran/ayahs/by-juz/:juz` | Ayahs by juz |
-| GET | `/api/v1/quran/ayahs/by-page/:page` | Ayahs by page |
+| GET | `/api/v1/quran/ayahs/by-page/:page` | Ayahs by page (alias of `/pages/:page/verses`) |
 | GET | `/api/v1/quran/juz` | List juz |
 | GET | `/api/v1/quran/juz/:id` | Juz by id |
-| GET | `/api/v1/quran/pages` | List pages |
-| GET | `/api/v1/quran/pages/lookup` | Page lookup |
-| GET | `/api/v1/quran/pages/:pageNumber` | Page by number |
+| GET | `/api/v1/quran/pages` | List Madani page metadata (DB) |
+| GET | `/api/v1/quran/pages/lookup` | Page lookup (QF proxy) |
+| GET | `/api/v1/quran/pages/:pageNumber` | Page metadata by number (DB) |
+| GET | `/api/v1/quran/pages/:pageNumber/verses` | Verses for page (QF proxy) |
 | GET | `/api/v1/quran/translations` | Translation resources |
 | GET | `/api/v1/quran/translations/:translationId/info` | Translation info |
 | GET | `/api/v1/quran/translations/:resourceId/by-surah/:chapter` | Translation by surah |

@@ -13,12 +13,14 @@ export type SettingsWithCatalog = UserSettings & {
   defaultTranslation: Omit<QuranTranslation, 'metadata'> | null;
   defaultTafsir: Omit<QuranTafsir, 'metadata'> | null;
   defaultReciter: Omit<QuranReciter, 'metadata'> | null;
+  defaultChapterReciter: Omit<QuranReciter, 'metadata'> | null;
 };
 
 export interface ResolvedCatalogIds {
   defaultTranslationId?: string | null;
   defaultTafsirId?: string | null;
   defaultReciterId?: string | null;
+  defaultChapterReciterId?: string | null;
 }
 
 export interface SettingsUpdateData extends ResolvedCatalogIds {

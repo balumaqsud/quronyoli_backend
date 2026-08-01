@@ -20,10 +20,16 @@ import { HttpCache } from '../../common/decorators/http-cache.decorator';
 import { AuthenticatedUser } from '../../infrastructure/auth/interfaces/jwt-payload.interface';
 import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
 import {
+  MushafPageDetailResponseDto,
+  MushafPagesListResponseDto,
+} from './dto/mushaf-page-response.dto';
+import {
   AudioTimestampQueryDto,
   LanguageQueryDto,
+  MushafPagesQueryDto,
   PageLookupQueryDto,
   PaginationQueryDto,
+  ScriptQueryDto,
   SearchQueryDto,
   VersesQueryDto,
 } from './dto/quran-query.dto';
@@ -122,12 +128,62 @@ export class QuranController {
   }
 
   @Get('ayahs/by-page/:page')
-  @ApiOperation({ summary: 'Get ayahs by page number' })
+  @ApiOperation({
+    summary: 'Get ayahs by Mushaf page number',
+    description:
+      'Alias of GET /pages/:page/verses. Proxies Quran.Foundation verses for the page.',
+  })
+  @ApiParam({ name: 'page', example: 1 })
   getAyahsByPage(
     @Param('page', ParseIntPipe) page: number,
     @Query() query: VersesQueryDto,
   ): Promise<unknown> {
     return this.quranService.getAyahsByPage(page, query);
+  }
+
+  @Get('ayahs/by-hizb/:hizb')
+  @ApiOperation({ summary: 'Get ayahs by hizb number' })
+  getAyahsByHizb(
+    @Param('hizb', ParseIntPipe) hizb: number,
+    @Query() query: VersesQueryDto,
+  ): Promise<unknown> {
+    return this.quranService.getAyahsByHizb(hizb, query);
+  }
+
+  @Get('ayahs/by-rub/:rub')
+  @ApiOperation({ summary: 'Get ayahs by rub number' })
+  getAyahsByRub(
+    @Param('rub', ParseIntPipe) rub: number,
+    @Query() query: VersesQueryDto,
+  ): Promise<unknown> {
+    return this.quranService.getAyahsByRub(rub, query);
+  }
+
+  @Get('ayahs/by-rub-el-hizb/:rub')
+  @ApiOperation({ summary: 'Get ayahs by rub el hizb number' })
+  getAyahsByRubElHizb(
+    @Param('rub', ParseIntPipe) rub: number,
+    @Query() query: VersesQueryDto,
+  ): Promise<unknown> {
+    return this.quranService.getAyahsByRubElHizb(rub, query);
+  }
+
+  @Get('ayahs/by-ruku/:ruku')
+  @ApiOperation({ summary: 'Get ayahs by ruku number' })
+  getAyahsByRuku(
+    @Param('ruku', ParseIntPipe) ruku: number,
+    @Query() query: VersesQueryDto,
+  ): Promise<unknown> {
+    return this.quranService.getAyahsByRuku(ruku, query);
+  }
+
+  @Get('ayahs/by-manzil/:manzil')
+  @ApiOperation({ summary: 'Get ayahs by manzil number' })
+  getAyahsByManzil(
+    @Param('manzil', ParseIntPipe) manzil: number,
+    @Query() query: VersesQueryDto,
+  ): Promise<unknown> {
+    return this.quranService.getAyahsByManzil(manzil, query);
   }
 
   @Get('juz')
@@ -143,24 +199,152 @@ export class QuranController {
   }
 
   @Get('pages')
-  @ApiOperation({ summary: 'List pages' })
-  getPages(@Query() query: LanguageQueryDto): Promise<unknown> {
+  @HttpCache('private-short')
+  @ApiOperation({
+    summary: 'List Madani Mushaf page metadata',
+    description:
+      'Returns locally synced page coordinates (604 pages for mushaf=1). Run qf:sync-pages first.',
+  })
+  @ApiOkResponse({ type: MushafPagesListResponseDto })
+  getPages(@Query() query: MushafPagesQueryDto): Promise<unknown> {
     return this.quranService.getPages(query);
   }
 
   @Get('pages/lookup')
-  @ApiOperation({ summary: 'Lookup mushaf page boundaries' })
+  @ApiOperation({ summary: 'Lookup mushaf page boundaries (live QF proxy)' })
   lookupPages(@Query() query: PageLookupQueryDto): Promise<unknown> {
     return this.quranService.lookupPages(query);
   }
 
+  @Get('pages/:pageNumber/verses')
+  @ApiOperation({
+    summary: 'Get verses for a Mushaf page',
+    description:
+      'Proxies Quran.Foundation /verses/by_page/{n}. Defaults include page_number, juz_number, hizb_number, rub_el_hizb_number. Does not read verse text from Postgres.',
+  })
+  @ApiParam({ name: 'pageNumber', example: 1 })
+  getPageVerses(
+    @Param('pageNumber', ParseIntPipe) pageNumber: number,
+    @Query() query: VersesQueryDto,
+  ): Promise<unknown> {
+    return this.quranService.getPageVerses(pageNumber, query);
+  }
+
   @Get('pages/:pageNumber')
-  @ApiOperation({ summary: 'Get page metadata' })
+  @HttpCache('private-short')
+  @ApiOperation({
+    summary: 'Get Mushaf page metadata by page number',
+    description:
+      'Local mushaf_pages row: verse keys, surah ids, juz/hizb/rub, optional image meta.',
+  })
+  @ApiParam({ name: 'pageNumber', example: 1 })
+  @ApiOkResponse({ type: MushafPageDetailResponseDto })
   getPage(
     @Param('pageNumber', ParseIntPipe) pageNumber: number,
-    @Query() query: LanguageQueryDto,
+    @Query() query: MushafPagesQueryDto,
   ): Promise<unknown> {
     return this.quranService.getPage(pageNumber, query);
+  }
+
+  @Get('hizbs')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'List hizb metadata' })
+  getHizbs(): Promise<unknown> {
+    return this.quranService.getHizbs();
+  }
+
+  @Get('hizbs/:id')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'Get hizb metadata by ID' })
+  getHizb(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
+    return this.quranService.getHizb(id);
+  }
+
+  @Get('rub-el-hizbs')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'List rub el hizb metadata' })
+  getRubElHizbs(): Promise<unknown> {
+    return this.quranService.getRubElHizbs();
+  }
+
+  @Get('rub-el-hizbs/:id')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'Get rub el hizb metadata by ID' })
+  getRubElHizb(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
+    return this.quranService.getRubElHizb(id);
+  }
+
+  @Get('rukus')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'List ruku metadata' })
+  getRukus(): Promise<unknown> {
+    return this.quranService.getRukus();
+  }
+
+  @Get('rukus/:id')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'Get ruku metadata by ID' })
+  getRuku(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
+    return this.quranService.getRuku(id);
+  }
+
+  @Get('manzils')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'List manzil metadata' })
+  getManzils(): Promise<unknown> {
+    return this.quranService.getManzils();
+  }
+
+  @Get('manzils/:id')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'Get manzil metadata by ID' })
+  getManzil(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
+    return this.quranService.getManzil(id);
+  }
+
+  @Get('languages')
+  @HttpCache('private-short')
+  @ApiOperation({ summary: 'List Quran.Foundation language resources' })
+  getLanguages(@Query() query: LanguageQueryDto): Promise<unknown> {
+    return this.quranService.getLanguages(query);
+  }
+
+  @Get('mushafs')
+  @HttpCache('private-short')
+  @ApiOperation({
+    summary: 'List known mushaf IDs for verse/page rendering',
+    description:
+      'Static metadata — Quran.Foundation has no /resources/mushafs catalog. Pass mushaf= on verse queries.',
+  })
+  getMushafs(): { mushafs: unknown } {
+    return this.quranService.getMushafs();
+  }
+
+  @Get('scripts/:script')
+  @ApiOperation({
+    summary: 'Get Quran text in a specific script (e.g. uthmani_tajweed)',
+  })
+  @ApiParam({
+    name: 'script',
+    example: 'uthmani_tajweed',
+    description:
+      'uthmani | uthmani_tajweed | uthmani_simple | imlaei | indopak | code_v1 | code_v2 | qpc_hafs',
+  })
+  getScript(
+    @Param('script') script: string,
+    @Query() query: ScriptQueryDto,
+  ): Promise<unknown> {
+    return this.quranService.getScript(script, query);
+  }
+
+  @Get('footnotes/:id')
+  @ApiOperation({
+    summary: 'Get a translation footnote by ID',
+    description:
+      'Footnote IDs come from <sup foot_note=ID> markers in translation HTML.',
+  })
+  getFootnote(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
+    return this.quranService.getFootnote(id);
   }
 
   @Get('translations')

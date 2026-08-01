@@ -19,6 +19,18 @@ export class LanguageQueryDto {
   language?: string;
 }
 
+export class MushafPagesQueryDto {
+  @ApiPropertyOptional({
+    example: 1,
+    description: 'Mushaf ID (default 1 = Madani QCF V2)',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  mushaf?: number;
+}
+
 export class PaginationQueryDto extends LanguageQueryDto {
   @ApiPropertyOptional({ example: 1, minimum: 1 })
   @IsOptional()
@@ -198,4 +210,62 @@ export class AudioTimestampQueryDto {
   @IsOptional()
   @IsString()
   word?: string;
+}
+
+export class ScriptQueryDto {
+  @ApiPropertyOptional({ example: '1:1' })
+  @IsOptional()
+  @IsString()
+  verse_key?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(114)
+  chapter_number?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(30)
+  juz_number?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page_number?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  hizb_number?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  rub_el_hizb_number?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  ruku_number?: number;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  manzil_number?: number;
 }

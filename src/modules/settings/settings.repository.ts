@@ -44,6 +44,7 @@ const reciterSelect = {
   id: true,
   provider: true,
   externalId: true,
+  kind: true,
   name: true,
   arabicName: true,
   style: true,
@@ -58,6 +59,7 @@ const settingsInclude = {
   defaultTranslation: { select: translationSelect },
   defaultTafsir: { select: tafsirSelect },
   defaultReciter: { select: reciterSelect },
+  defaultChapterReciter: { select: reciterSelect },
 } satisfies Prisma.UserSettingsInclude;
 
 @Injectable()
@@ -128,6 +130,21 @@ export class SettingsRepository {
       where: {
         provider: QURAN_FOUNDATION_PROVIDER,
         externalId,
+        kind: 'AYAH',
+        isActive: true,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async findActiveChapterReciterByExternalId(
+    externalId: string,
+  ): Promise<QuranReciter | null> {
+    return await this.prisma.quranReciter.findFirst({
+      where: {
+        provider: QURAN_FOUNDATION_PROVIDER,
+        externalId,
+        kind: 'CHAPTER',
         isActive: true,
         deletedAt: null,
       },

@@ -60,6 +60,7 @@ export type CatalogTafsirPayload = CatalogTranslationPayload;
 export type CatalogReciterPayload = {
   provider: string;
   externalId: string;
+  kind: 'AYAH' | 'CHAPTER';
   name: string;
   arabicName: string | null;
   style: string | null;
@@ -194,6 +195,7 @@ export function mapRecitationResource(
   return {
     provider: QURAN_FOUNDATION_PROVIDER,
     externalId: requireId(raw),
+    kind: 'AYAH',
     name,
     arabicName,
     style,
@@ -203,6 +205,50 @@ export function mapRecitationResource(
     metadata: {
       ...raw,
       source: 'recitations',
+    },
+  };
+}
+
+export function mapChapterReciterResource(
+  rawInput: unknown,
+): CatalogReciterPayload {
+  const raw = asRecord(rawInput);
+  if (!raw) {
+    throw new Error('Chapter reciter resource must be an object');
+  }
+
+  const nestedName = asRecord(raw.name);
+  const translated = resolveTranslatedName(raw);
+  const name =
+    asString(raw.name) ??
+    asString(nestedName?.name) ??
+    asString(raw.reciter_name) ??
+    asString(raw.reciterName) ??
+    asString(translated?.name);
+
+  if (!name) {
+    throw new Error(`Chapter reciter ${String(raw.id)} is missing name`);
+  }
+
+  const styleRaw = raw.style;
+  const style =
+    typeof styleRaw === 'string'
+      ? asString(styleRaw)
+      : asString(asRecord(styleRaw)?.name);
+
+  return {
+    provider: QURAN_FOUNDATION_PROVIDER,
+    externalId: requireId(raw),
+    kind: 'CHAPTER',
+    name,
+    arabicName: asNullableString(raw.arabic_name ?? raw.arabicName),
+    style,
+    slug: asNullableString(raw.slug),
+    isActive: true,
+    deletedAt: null,
+    metadata: {
+      ...raw,
+      source: 'chapter_reciters',
     },
   };
 }

@@ -176,11 +176,13 @@ describe('Auth & Users (e2e)', () => {
     defaultTranslationId: null,
     defaultTafsirId: null,
     defaultReciterId: null,
+    defaultChapterReciterId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     defaultTranslation: null,
     defaultTafsir: null,
     defaultReciter: null,
+    defaultChapterReciter: null,
   };
 
   let storedSettings = { ...defaultSettings };

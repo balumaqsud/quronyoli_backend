@@ -116,7 +116,8 @@ export class UpdateSettingsDto {
   tafsirId?: string | null;
 
   @ApiPropertyOptional({
-    description: 'Quran.Foundation reciter resource ID. Pass null to clear.',
+    description:
+      'Quran.Foundation ayah-by-ayah recitation resource ID. Pass null to clear.',
     example: '7',
     nullable: true,
   })
@@ -125,4 +126,16 @@ export class UpdateSettingsDto {
   @IsString()
   @MaxLength(128)
   reciterId?: string | null;
+
+  @ApiPropertyOptional({
+    description:
+      'Quran.Foundation chapter reciter resource ID. Pass null to clear.',
+    example: '7',
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateIf((_, value: unknown) => value !== null)
+  @IsString()
+  @MaxLength(128)
+  chapterReciterId?: string | null;
 }

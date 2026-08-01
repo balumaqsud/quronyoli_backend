@@ -84,6 +84,13 @@ model UserSession {
   @@map("user_sessions")
 }
 
+enum QuranReciterKind {
+  AYAH
+  CHAPTER
+
+  @@map("quran_reciter_kind")
+}
+
 model UserSettings {
   userId                   String          @id @map("user_id") @db.Uuid
   locale                   String          @default("uz") @db.VarChar(16)
@@ -97,17 +104,20 @@ model UserSettings {
   defaultTranslationId     String?         @map("default_translation_id") @db.Uuid
   defaultTafsirId          String?         @map("default_tafsir_id") @db.Uuid
   defaultReciterId         String?         @map("default_reciter_id") @db.Uuid
+  defaultChapterReciterId  String?         @map("default_chapter_reciter_id") @db.Uuid
   createdAt                DateTime        @default(now()) @map("created_at")
   updatedAt                DateTime        @updatedAt @map("updated_at")
 
-  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  defaultTranslation QuranTranslation? @relation("UserSettingsDefaultTranslation", fields: [defaultTranslationId], references: [id], onDelete: SetNull)
-  defaultTafsir      QuranTafsir?      @relation("UserSettingsDefaultTafsir", fields: [defaultTafsirId], references: [id], onDelete: SetNull)
-  defaultReciter     QuranReciter?     @relation("UserSettingsDefaultReciter", fields: [defaultReciterId], references: [id], onDelete: SetNull)
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultTranslation     QuranTranslation? @relation("UserSettingsDefaultTranslation", fields: [defaultTranslationId], references: [id], onDelete: SetNull)
+  defaultTafsir          QuranTafsir?      @relation("UserSettingsDefaultTafsir", fields: [defaultTafsirId], references: [id], onDelete: SetNull)
+  defaultReciter         QuranReciter?     @relation("UserSettingsDefaultReciter", fields: [defaultReciterId], references: [id], onDelete: SetNull)
+  defaultChapterReciter  QuranReciter?     @relation("UserSettingsDefaultChapterReciter", fields: [defaultChapterReciterId], references: [id], onDelete: SetNull)
 
   @@index([defaultTranslationId])
   @@index([defaultTafsirId])
   @@index([defaultReciterId])
+  @@index([defaultChapterReciterId])
   @@map("user_settings")
 }
 
@@ -160,26 +170,59 @@ model QuranTafsir {
 }
 
 model QuranReciter {
-  id          String    @id @default(uuid()) @db.Uuid
-  provider    String    @default("quran.foundation") @db.VarChar(64)
-  externalId  String    @map("external_id") @db.VarChar(128)
-  name        String    @db.VarChar(255)
-  arabicName  String?   @map("arabic_name") @db.VarChar(255)
-  style       String?   @db.VarChar(128)
-  slug        String?   @db.VarChar(128)
-  isActive    Boolean   @default(true) @map("is_active")
+  id          String           @id @default(uuid()) @db.Uuid
+  provider    String           @default("quran.foundation") @db.VarChar(64)
+  externalId  String           @map("external_id") @db.VarChar(128)
+  kind        QuranReciterKind @default(AYAH)
+  name        String           @db.VarChar(255)
+  arabicName  String?          @map("arabic_name") @db.VarChar(255)
+  style       String?          @db.VarChar(128)
+  slug        String?          @db.VarChar(128)
+  isActive    Boolean          @default(true) @map("is_active")
   metadata    Json?
-  deletedAt   DateTime? @map("deleted_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime?        @map("deleted_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
-  userSettingsDefaults UserSettings[]    @relation("UserSettingsDefaultReciter")
-  readingProgressUses  ReadingProgress[] @relation("ReadingProgressReciter")
+  userSettingsDefaults        UserSettings[]    @relation("UserSettingsDefaultReciter")
+  userSettingsChapterDefaults UserSettings[]    @relation("UserSettingsDefaultChapterReciter")
+  readingProgressUses         ReadingProgress[] @relation("ReadingProgressReciter")
 
-  @@unique([provider, externalId])
+  @@unique([provider, externalId, kind])
+  @@index([kind])
   @@index([isActive])
   @@index([deletedAt])
   @@map("quran_reciters")
+}
+
+/// Madani (and other mushaf) page coordinates only — no verse Arabic/translation text.
+model MushafPage {
+  id                 String   @id @default(uuid()) @db.Uuid
+  provider           String   @default("quran.foundation") @db.VarChar(64)
+  mushafId           Int      @default(1) @map("mushaf_id")
+  pageNumber         Int      @map("page_number")
+  firstVerseKey      String   @map("first_verse_key") @db.VarChar(16)
+  lastVerseKey       String   @map("last_verse_key") @db.VarChar(16)
+  verseKeys          String[] @map("verse_keys")
+  surahIds           Int[]    @map("surah_ids")
+  juzNumber          Int      @map("juz_number")
+  hizbNumber         Int      @map("hizb_number")
+  rubElHizbNumber    Int      @map("rub_el_hizb_number")
+  juzNumbers         Int[]    @map("juz_numbers")
+  hizbNumbers        Int[]    @map("hizb_numbers")
+  rubElHizbNumbers   Int[]    @map("rub_el_hizb_numbers")
+  verseCount         Int      @map("verse_count")
+  imageUrl           String?  @map("image_url") @db.VarChar(512)
+  imageWidth         Int?     @map("image_width")
+  isActive           Boolean  @default(true) @map("is_active")
+  syncedAt           DateTime @map("synced_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@unique([provider, mushafId, pageNumber])
+  @@index([mushafId, pageNumber])
+  @@index([isActive])
+  @@map("mushaf_pages")
 }
 
 model Favorite {

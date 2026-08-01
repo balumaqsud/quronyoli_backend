@@ -66,9 +66,18 @@ export class SettingsResponseDto {
   @ApiPropertyOptional({
     type: CatalogResourceDto,
     nullable: true,
-    description: 'Default reciter (Quran.Foundation resource)',
+    description:
+      'Default ayah-by-ayah reciter (Quran.Foundation /resources/recitations)',
   })
   reciter!: CatalogResourceDto | null;
+
+  @ApiPropertyOptional({
+    type: CatalogResourceDto,
+    nullable: true,
+    description:
+      'Default chapter reciter (Quran.Foundation /resources/chapter_reciters)',
+  })
+  chapterReciter!: CatalogResourceDto | null;
 
   @ApiProperty()
   updatedAt!: Date;

@@ -157,6 +157,7 @@ Compose builds `DATABASE_URL` for the `api` service as `postgresql://…@postgre
 | `QF_RATE_LIMIT_MAX` | `60` | Per-user Redis limiter |
 | `QF_RATE_LIMIT_WINDOW_SECONDS` | `60` | |
 | `QF_HTTP_MAX_SOCKETS` | `50` | |
+| `QF_AUDIO_CDN_BASE` | `https://audio.qurancdn.com` | Absolute base for relative ayah audio paths |
 | `QF_CACHE_TTL_CHAPTERS_SECONDS` | `86400` | |
 | `QF_CACHE_TTL_VERSES_SECONDS` | `3600` | |
 | `QF_CACHE_TTL_RESOURCES_SECONDS` | `86400` | |

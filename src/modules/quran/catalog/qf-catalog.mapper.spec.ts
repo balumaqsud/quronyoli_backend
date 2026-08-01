@@ -1,5 +1,6 @@
 import {
   extractResourceList,
+  mapChapterReciterResource,
   mapLanguageNameToCode,
   mapRecitationResource,
   mapTafsirResource,
@@ -84,6 +85,7 @@ describe('qf-catalog.mapper', () => {
 
       expect(mapped).toMatchObject({
         externalId: '7',
+        kind: 'AYAH',
         name: 'Mishari Rashid al-`Afasy',
         style: 'Murattal',
         isActive: true,
@@ -100,6 +102,25 @@ describe('qf-catalog.mapper', () => {
 
       expect(mapped.name).toBe('Mahmoud Khalil Al-Husary');
       expect(mapped.style).toBe('Muallim');
+      expect(mapped.kind).toBe('AYAH');
+    });
+  });
+
+  describe('mapChapterReciterResource', () => {
+    it('maps chapter reciter with nested style', () => {
+      const mapped = mapChapterReciterResource({
+        id: 19,
+        name: 'Ahmed ibn Ali al-Ajmy',
+        style: { name: 'Murattal' },
+      });
+
+      expect(mapped).toMatchObject({
+        externalId: '19',
+        kind: 'CHAPTER',
+        name: 'Ahmed ibn Ali al-Ajmy',
+        style: 'Murattal',
+      });
+      expect(mapped.metadata).toMatchObject({ source: 'chapter_reciters' });
     });
   });
 

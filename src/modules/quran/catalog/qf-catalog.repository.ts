@@ -131,6 +131,7 @@ export class QfCatalogRepository {
 
   async syncReciters(
     items: CatalogReciterPayload[],
+    kind: 'AYAH' | 'CHAPTER',
   ): Promise<CatalogSyncStats> {
     const seenIds = items.map((item) => item.externalId);
 
@@ -138,9 +139,10 @@ export class QfCatalogRepository {
       for (const item of items) {
         await tx.quranReciter.upsert({
           where: {
-            provider_externalId: {
+            provider_externalId_kind: {
               provider: item.provider,
               externalId: item.externalId,
+              kind: item.kind,
             },
           },
           create: item,
@@ -162,6 +164,7 @@ export class QfCatalogRepository {
               await tx.quranReciter.updateMany({
                 where: {
                   provider: QURAN_FOUNDATION_PROVIDER,
+                  kind,
                   isActive: true,
                 },
                 data: { isActive: false },
@@ -171,6 +174,7 @@ export class QfCatalogRepository {
               await tx.quranReciter.updateMany({
                 where: {
                   provider: QURAN_FOUNDATION_PROVIDER,
+                  kind,
                   isActive: true,
                   externalId: { notIn: seenIds },
                 },

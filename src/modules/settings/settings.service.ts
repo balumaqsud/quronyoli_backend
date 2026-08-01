@@ -74,6 +74,7 @@ export class SettingsService {
       translation: this.mapTranslation(settings.defaultTranslation),
       tafsir: this.mapTafsir(settings.defaultTafsir),
       reciter: this.mapReciter(settings.defaultReciter),
+      chapterReciter: this.mapReciter(settings.defaultChapterReciter),
       updatedAt: settings.updatedAt,
     };
   }
@@ -118,6 +119,11 @@ export class SettingsService {
     }
     if (dto.reciterId !== undefined) {
       data.defaultReciterId = await this.resolveReciterId(dto.reciterId);
+    }
+    if (dto.chapterReciterId !== undefined) {
+      data.defaultChapterReciterId = await this.resolveChapterReciterId(
+        dto.chapterReciterId,
+      );
     }
 
     return data;
@@ -172,7 +178,27 @@ export class SettingsService {
       await this.settingsRepository.findActiveReciterByExternalId(externalId);
     if (!resource) {
       throw new BadRequestException(
-        `Unknown or inactive Quran reciter resource: ${externalId}`,
+        `Unknown or inactive Quran ayah reciter resource: ${externalId}`,
+      );
+    }
+
+    return resource.id;
+  }
+
+  private async resolveChapterReciterId(
+    externalId: string | null,
+  ): Promise<string | null> {
+    if (externalId === null) {
+      return null;
+    }
+
+    const resource =
+      await this.settingsRepository.findActiveChapterReciterByExternalId(
+        externalId,
+      );
+    if (!resource) {
+      throw new BadRequestException(
+        `Unknown or inactive Quran chapter reciter resource: ${externalId}`,
       );
     }
 

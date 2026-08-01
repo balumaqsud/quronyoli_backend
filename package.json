@@ -30,6 +30,8 @@
     "qf:discover": "ts-node --transpile-only scripts/qf-discovery-sample.ts",
     "qf:sync-catalog": "ts-node --transpile-only src/commands/qf-sync-catalog.ts",
     "qf:sync-catalog:prod": "node dist/commands/qf-sync-catalog.js",
+    "qf:sync-pages": "ts-node --transpile-only src/commands/qf-sync-pages.ts",
+    "qf:sync-pages:prod": "node dist/commands/qf-sync-pages.js",
     "check": "npm run lint && npm run test && npm run prisma:validate && npm run build"
   },
   "dependencies": {

@@ -128,6 +128,7 @@ export interface QuranFoundationConfig {
   rateLimitMax: number;
   rateLimitWindowSeconds: number;
   httpMaxSockets: number;
+  audioCdnBase: string;
   cacheTtl: QuranFoundationCacheTtlConfig;
 }
 
@@ -448,6 +449,9 @@ export default (): AppConfiguration => {
         process.env.QF_HTTP_MAX_SOCKETS ?? '50',
         10,
       ),
+      // Relative ayah audio paths (e.g. Alafasy/mp3/001001.mp3) resolve here.
+      audioCdnBase:
+        process.env.QF_AUDIO_CDN_BASE ?? 'https://audio.qurancdn.com',
       cacheTtl: {
         chaptersSeconds: Number.parseInt(
           process.env.QF_CACHE_TTL_CHAPTERS_SECONDS ?? '86400',

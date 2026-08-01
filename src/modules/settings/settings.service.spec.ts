@@ -17,6 +17,7 @@ describe('SettingsService', () => {
       | 'findActiveTranslationByExternalId'
       | 'findActiveTafsirByExternalId'
       | 'findActiveReciterByExternalId'
+      | 'findActiveChapterReciterByExternalId'
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
@@ -35,11 +36,13 @@ describe('SettingsService', () => {
     defaultTranslationId: null,
     defaultTafsirId: null,
     defaultReciterId: null,
+    defaultChapterReciterId: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     defaultTranslation: null,
     defaultTafsir: null,
     defaultReciter: null,
+    defaultChapterReciter: null,
   };
 
   beforeEach(async () => {
@@ -49,6 +52,7 @@ describe('SettingsService', () => {
       findActiveTranslationByExternalId: jest.fn(),
       findActiveTafsirByExternalId: jest.fn(),
       findActiveReciterByExternalId: jest.fn(),
+      findActiveChapterReciterByExternalId: jest.fn(),
     };
     usersService = {
       getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
@@ -79,6 +83,7 @@ describe('SettingsService', () => {
       translation: null,
       tafsir: null,
       reciter: null,
+      chapterReciter: null,
     });
 
     expect(usersService.getActiveByIdOrThrow).toHaveBeenCalledWith('user-1');
@@ -174,14 +179,38 @@ describe('SettingsService', () => {
       translationId: null,
       tafsirId: null,
       reciterId: null,
+      chapterReciterId: null,
     });
 
     expect(repository.upsertWithUpdate).toHaveBeenCalledWith('user-1', {
       defaultTranslationId: null,
       defaultTafsirId: null,
       defaultReciterId: null,
+      defaultChapterReciterId: null,
     });
     expect(repository.findActiveTranslationByExternalId).not.toHaveBeenCalled();
+  });
+
+  it('rejects ayah reciter IDs used as chapterReciterId', async () => {
+    repository.findActiveChapterReciterByExternalId.mockResolvedValue(null);
+
+    await expect(
+      service.updateForUser('user-1', { chapterReciterId: '7' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(
+      repository.findActiveChapterReciterByExternalId,
+    ).toHaveBeenCalledWith('7');
+    expect(repository.upsertWithUpdate).not.toHaveBeenCalled();
+  });
+
+  it('rejects chapter reciter IDs used as reciterId', async () => {
+    repository.findActiveReciterByExternalId.mockResolvedValue(null);
+
+    await expect(
+      service.updateForUser('user-1', { reciterId: '1' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.findActiveReciterByExternalId).toHaveBeenCalledWith('1');
+    expect(repository.upsertWithUpdate).not.toHaveBeenCalled();
   });
 
   it('rejects unknown translation resource IDs', async () => {

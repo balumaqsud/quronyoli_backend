@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CONFIG_KEYS } from '../../common/constants';
 import { resolveDailyAyahForDate } from '../../common/quran/daily-ayah';
@@ -12,8 +16,10 @@ import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
 import {
   AudioTimestampQueryDto,
   LanguageQueryDto,
+  MushafPagesQueryDto,
   PageLookupQueryDto,
   PaginationQueryDto,
+  ScriptQueryDto,
   SearchQueryDto,
   VersesQueryDto,
 } from './dto/quran-query.dto';
@@ -21,6 +27,19 @@ import {
   QuranQueryParams,
   QuranQueryValue,
 } from './interfaces/quran-foundation.interface';
+import {
+  isQfMushafId,
+  isQfScriptName,
+  QF_MUSHAF_RESOURCES,
+} from './mushafs/qf-mushafs';
+import {
+  DEFAULT_MUSHAF_ID,
+  DEFAULT_PAGE_VERSE_FIELDS,
+  MADANI_MUSHAF_PAGE_COUNT,
+} from './pages/qf-pages.constants';
+import { toMushafPageApiShape } from './pages/qf-pages.mapper';
+import { QfPagesRepository } from './pages/qf-pages.repository';
+import { normalizeQfMediaUrls } from './utils/qf-media-url.normalizer';
 
 @Injectable()
 export class QuranService {
@@ -32,6 +51,7 @@ export class QuranService {
     private readonly configService: ConfigService,
     private readonly analyticsTracking: AnalyticsTrackingService,
     private readonly readingService: ReadingService,
+    private readonly pagesRepository: QfPagesRepository,
   ) {
     this.config = this.configService.getOrThrow<QuranFoundationConfig>(
       CONFIG_KEYS.QURAN_FOUNDATION,
@@ -71,6 +91,7 @@ export class QuranService {
       `/verses/by_chapter/${chapter}`,
       this.verseQuery(query),
       this.config.cacheTtl.versesSeconds,
+      true,
     );
   }
 
@@ -80,6 +101,7 @@ export class QuranService {
       `/verses/by_key/${encodeURIComponent(verseKey)}`,
       this.verseQuery(query),
       this.config.cacheTtl.versesSeconds,
+      true,
     );
   }
 
@@ -144,15 +166,62 @@ export class QuranService {
       `/verses/by_juz/${juz}`,
       this.verseQuery(query),
       this.config.cacheTtl.versesSeconds,
+      true,
     );
   }
 
   getAyahsByPage(page: number, query: VersesQueryDto): Promise<unknown> {
+    this.assertMadaniPageNumber(page);
+    return this.getPageVerses(page, query);
+  }
+
+  getAyahsByHizb(hizb: number, query: VersesQueryDto): Promise<unknown> {
     return this.cachedContent(
       'verses',
-      `/verses/by_page/${page}`,
+      `/verses/by_hizb/${hizb}`,
       this.verseQuery(query),
       this.config.cacheTtl.versesSeconds,
+      true,
+    );
+  }
+
+  getAyahsByRub(rub: number, query: VersesQueryDto): Promise<unknown> {
+    return this.cachedContent(
+      'verses',
+      `/verses/by_rub/${rub}`,
+      this.verseQuery(query),
+      this.config.cacheTtl.versesSeconds,
+      true,
+    );
+  }
+
+  getAyahsByRubElHizb(rub: number, query: VersesQueryDto): Promise<unknown> {
+    return this.cachedContent(
+      'verses',
+      `/verses/by_rub_el_hizb/${rub}`,
+      this.verseQuery(query),
+      this.config.cacheTtl.versesSeconds,
+      true,
+    );
+  }
+
+  getAyahsByRuku(ruku: number, query: VersesQueryDto): Promise<unknown> {
+    return this.cachedContent(
+      'verses',
+      `/verses/by_ruku/${ruku}`,
+      this.verseQuery(query),
+      this.config.cacheTtl.versesSeconds,
+      true,
+    );
+  }
+
+  getAyahsByManzil(manzil: number, query: VersesQueryDto): Promise<unknown> {
+    return this.cachedContent(
+      'verses',
+      `/verses/by_manzil/${manzil}`,
+      this.verseQuery(query),
+      this.config.cacheTtl.versesSeconds,
+      true,
     );
   }
 
@@ -174,21 +243,66 @@ export class QuranService {
     );
   }
 
-  getPages(query: LanguageQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'chapters',
-      '/pages',
-      this.pick(query, ['language']),
+  getPages(query: MushafPagesQueryDto): Promise<unknown> {
+    const mushafId = this.resolveMushafId(query.mushaf);
+    const cacheKey = this.cache.buildKey('pages', '/local/mushaf_pages', {
+      mushaf: mushafId,
+    });
+
+    return this.cache.getOrSet(
+      cacheKey,
       this.config.cacheTtl.chaptersSeconds,
+      async () => {
+        const pages = await this.pagesRepository.findActiveByMushaf(mushafId);
+        if (pages.length === 0) {
+          throw new NotFoundException(
+            `No mushaf pages synced for mushaf=${mushafId}. Run npm run qf:sync-pages.`,
+          );
+        }
+        return {
+          mushaf_id: mushafId,
+          total: pages.length,
+          pages: pages.map((row) => toMushafPageApiShape(row)),
+        };
+      },
     );
   }
 
-  getPage(pageNumber: number, query: LanguageQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'chapters',
-      `/pages/${pageNumber}`,
-      this.pick(query, ['language']),
+  getPage(pageNumber: number, query: MushafPagesQueryDto): Promise<unknown> {
+    this.assertMadaniPageNumber(pageNumber);
+    const mushafId = this.resolveMushafId(query.mushaf);
+    const cacheKey = this.cache.buildKey(
+      'pages',
+      `/local/mushaf_pages/${pageNumber}`,
+      { mushaf: mushafId },
+    );
+
+    return this.cache.getOrSet(
+      cacheKey,
       this.config.cacheTtl.chaptersSeconds,
+      async () => {
+        const row = await this.pagesRepository.findActivePage(
+          mushafId,
+          pageNumber,
+        );
+        if (!row) {
+          throw new NotFoundException(
+            `Mushaf page ${pageNumber} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
+          );
+        }
+        return { page: toMushafPageApiShape(row) };
+      },
+    );
+  }
+
+  getPageVerses(page: number, query: VersesQueryDto): Promise<unknown> {
+    this.assertMadaniPageNumber(page);
+    return this.cachedContent(
+      'verses',
+      `/verses/by_page/${page}`,
+      this.verseQueryWithPageDefaults(query),
+      this.config.cacheTtl.versesSeconds,
+      true,
     );
   }
 
@@ -205,6 +319,125 @@ export class QuranService {
         'to',
       ]),
       this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getHizbs(): Promise<unknown> {
+    return this.cachedContent(
+      'chapters',
+      '/hizbs',
+      undefined,
+      this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getHizb(id: number): Promise<unknown> {
+    return this.cachedContent(
+      'chapters',
+      `/hizbs/${id}`,
+      undefined,
+      this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getRubElHizbs(): Promise<unknown> {
+    return this.cachedContent(
+      'chapters',
+      '/rub_el_hizbs',
+      undefined,
+      this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getRubElHizb(id: number): Promise<unknown> {
+    return this.cachedContent(
+      'chapters',
+      `/rub_el_hizbs/${id}`,
+      undefined,
+      this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getRukus(): Promise<unknown> {
+    return this.cachedContent(
+      'chapters',
+      '/rukus',
+      undefined,
+      this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getRuku(id: number): Promise<unknown> {
+    return this.cachedContent(
+      'chapters',
+      `/rukus/${id}`,
+      undefined,
+      this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getManzils(): Promise<unknown> {
+    return this.cachedContent(
+      'chapters',
+      '/manzils',
+      undefined,
+      this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getManzil(id: number): Promise<unknown> {
+    return this.cachedContent(
+      'chapters',
+      `/manzils/${id}`,
+      undefined,
+      this.config.cacheTtl.chaptersSeconds,
+    );
+  }
+
+  getLanguages(query: LanguageQueryDto): Promise<unknown> {
+    return this.cachedContent(
+      'resources',
+      '/resources/languages',
+      this.pick(query, ['language']),
+      this.config.cacheTtl.resourcesSeconds,
+    );
+  }
+
+  getMushafs(): { mushafs: typeof QF_MUSHAF_RESOURCES } {
+    return { mushafs: QF_MUSHAF_RESOURCES };
+  }
+
+  async getScript(script: string, query: ScriptQueryDto): Promise<unknown> {
+    if (!isQfScriptName(script)) {
+      throw new BadRequestException(
+        `Unsupported Quran script "${script}". Allowed: uthmani, uthmani_tajweed, uthmani_simple, imlaei, indopak, code_v1, code_v2, qpc_hafs`,
+      );
+    }
+
+    return this.cachedContent(
+      'verses',
+      `/quran/verses/${script}`,
+      this.pick(query, [
+        'verse_key',
+        'chapter_number',
+        'juz_number',
+        'page_number',
+        'hizb_number',
+        'rub_el_hizb_number',
+        'ruku_number',
+        'manzil_number',
+      ]),
+      this.config.cacheTtl.versesSeconds,
+      true,
+    );
+  }
+
+  getFootnote(id: number): Promise<unknown> {
+    return this.cachedContent(
+      'resources',
+      `/foot_notes/${id}`,
+      undefined,
+      this.config.cacheTtl.resourcesSeconds,
     );
   }
 
@@ -364,6 +597,7 @@ export class QuranService {
       `/chapter_recitations/${reciterId}`,
       undefined,
       this.config.cacheTtl.audioSeconds,
+      true,
     );
   }
 
@@ -373,6 +607,7 @@ export class QuranService {
       `/chapter_recitations/${reciterId}/${chapter}`,
       undefined,
       this.config.cacheTtl.audioSeconds,
+      true,
     );
   }
 
@@ -386,6 +621,7 @@ export class QuranService {
       `/recitations/${recitationId}/by_chapter/${chapter}`,
       this.pick(query, ['page', 'per_page']),
       this.config.cacheTtl.audioSeconds,
+      true,
     );
   }
 
@@ -395,6 +631,7 @@ export class QuranService {
       `/recitations/${recitationId}/by_ayah/${encodeURIComponent(ayahKey)}`,
       undefined,
       this.config.cacheTtl.audioSeconds,
+      true,
     );
   }
 
@@ -446,11 +683,16 @@ export class QuranService {
     path: string,
     query: QuranQueryParams | undefined,
     ttlSeconds: number,
+    normalizeMedia = false,
   ): Promise<unknown> {
     const cacheKey = this.cache.buildKey(namespace, path, query);
-    return this.cache.getOrSet(cacheKey, ttlSeconds, () =>
-      this.client.getContent<unknown>(path, query),
-    );
+    return this.cache.getOrSet(cacheKey, ttlSeconds, async () => {
+      const payload = await this.client.getContent<unknown>(path, query);
+      if (!normalizeMedia) {
+        return payload;
+      }
+      return normalizeQfMediaUrls(payload, this.config.audioCdnBase);
+    });
   }
 
   private verseQuery(query: VersesQueryDto): QuranQueryParams {
@@ -468,6 +710,50 @@ export class QuranService {
       'tafsir_fields',
       'mushaf',
     ]);
+  }
+
+  private verseQueryWithPageDefaults(query: VersesQueryDto): QuranQueryParams {
+    const params = this.verseQuery(query);
+    if (!params.mushaf) {
+      params.mushaf = DEFAULT_MUSHAF_ID;
+    }
+    params.fields = this.mergeFields(
+      typeof params.fields === 'string' ? params.fields : undefined,
+      DEFAULT_PAGE_VERSE_FIELDS,
+    );
+    return params;
+  }
+
+  private mergeFields(
+    clientFields: string | undefined,
+    defaults: string,
+  ): string {
+    const parts = new Set<string>();
+    for (const field of `${defaults},${clientFields ?? ''}`.split(',')) {
+      const trimmed = field.trim();
+      if (trimmed) {
+        parts.add(trimmed);
+      }
+    }
+    return [...parts].join(',');
+  }
+
+  private resolveMushafId(mushaf?: number): number {
+    const mushafId = mushaf ?? DEFAULT_MUSHAF_ID;
+    if (!isQfMushafId(mushafId)) {
+      throw new BadRequestException(
+        `Unsupported mushaf id "${mushafId}". Allowed: ${QF_MUSHAF_RESOURCES.map((m) => m.id).join(', ')}`,
+      );
+    }
+    return mushafId;
+  }
+
+  private assertMadaniPageNumber(page: number): void {
+    if (page < 1 || page > MADANI_MUSHAF_PAGE_COUNT) {
+      throw new BadRequestException(
+        `Page must be between 1 and ${MADANI_MUSHAF_PAGE_COUNT}`,
+      );
+    }
   }
 
   private pick<T extends object>(

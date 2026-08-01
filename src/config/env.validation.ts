@@ -133,6 +133,9 @@ export const envValidationSchema = Joi.object({
   QF_RATE_LIMIT_MAX: Joi.number().integer().min(1).default(60),
   QF_RATE_LIMIT_WINDOW_SECONDS: Joi.number().integer().min(1).default(60),
   QF_HTTP_MAX_SOCKETS: Joi.number().integer().min(1).max(500).default(50),
+  QF_AUDIO_CDN_BASE: Joi.string()
+    .uri({ scheme: ['https'] })
+    .default('https://audio.qurancdn.com'),
   QF_CACHE_TTL_CHAPTERS_SECONDS: Joi.number().integer().min(1).default(86400),
   QF_CACHE_TTL_VERSES_SECONDS: Joi.number().integer().min(1).default(3600),
   QF_CACHE_TTL_RESOURCES_SECONDS: Joi.number().integer().min(1).default(86400),
