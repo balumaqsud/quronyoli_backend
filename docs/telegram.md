@@ -22,7 +22,9 @@ Registered via `setMyCommands` on bootstrap:
 
 Legacy commands (`/bugun`, `/tasodifiy`, `/suralar`, `/juz`, `/davom`, `/saqlangan`, `/yordam`, `/haqimizda`) still respond with a short “Ilovada oching” message and the same single button (not listed in BotFather menu).
 
-**Ilovani ochish** uses Telegram Direct Link: `https://t.me/<bot>/<shortName>` (optional `?startapp=`).
+**Ilovani ochish** uses a native Telegram `web_app` button pointing at `TELEGRAM_WEB_APP_URL` (HTTPS Mini App). Share / external deep links still use Direct Links: `https://t.me/<bot>/<shortName>` (optional `?startapp=`).
+
+On bootstrap the bot also calls `setChatMenuButton` with the same HTTPS Web App URL (bottom menu label `Quron Yo'li`).
 
 Telegram Bot API **cannot** wipe a user’s full chat history; there is no `/tozalash` clear-chat feature.
 
@@ -54,5 +56,6 @@ Telegram must send header `X-Telegram-Bot-Api-Secret-Token` matching `TELEGRAM_W
 ## Deep links
 
 - Bot: `https://t.me/<bot>?start=ayah_<chapter>_<verse>`
-- Mini App: `https://t.me/<bot>/<shortName>?startapp=ayah_<chapter>_<verse>`
+- Mini App Direct Link (share): `https://t.me/<bot>/<shortName>?startapp=ayah_<chapter>_<verse>`
+- Chat `web_app` buttons: `TELEGRAM_WEB_APP_URL` (+ optional `?startapp=ayah_<chapter>_<verse>`)
 - Share: `https://t.me/share/url?...`

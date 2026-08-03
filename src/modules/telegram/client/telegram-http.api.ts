@@ -13,6 +13,7 @@ import {
   TelegramAnswerCallbackQueryRequest,
   TelegramBotCommand,
   TelegramEditMessageRequest,
+  TelegramMenuButton,
   TelegramMessage,
   TelegramSendAudioRequest,
   TelegramSendMessageRequest,
@@ -84,6 +85,12 @@ export class TelegramHttpApi implements TelegramApi {
 
   async setMyCommands(commands: TelegramBotCommand[]): Promise<boolean> {
     return this.call<boolean>('setMyCommands', { commands });
+  }
+
+  async setChatMenuButton(menuButton: TelegramMenuButton): Promise<boolean> {
+    return this.call<boolean>('setChatMenuButton', {
+      menu_button: menuButton,
+    });
   }
 
   async setWebhook(url: string, secretToken: string): Promise<boolean> {

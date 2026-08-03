@@ -57,8 +57,8 @@ export class TelegramLinksService {
   }
 
   /**
-   * Telegram Direct Link that always opens the Mini App inside Telegram.
-   * Prefer this for inline keyboard `url` buttons (Ilovani ochish + ayah opens).
+   * Telegram Direct Link (`t.me/<bot>/<shortName>`). Use for share / external
+   * deep links only — requires BotFather Mini App short name.
    */
   buildMiniAppDirectLink(startParam?: string): string {
     const shortName = this.config.miniAppShortName || 'app';
@@ -74,9 +74,22 @@ export class TelegramLinksService {
     return this.buildMiniAppDirectLink(startParam);
   }
 
-  /** HTTPS Web App URL for native `web_app` keyboard buttons. */
+  /** HTTPS Web App origin (no trailing slash). */
   getWebAppUrl(): string {
     return this.config.webAppUrl.replace(/\/$/, '');
+  }
+
+  /**
+   * HTTPS URL for inline/menu `web_app` buttons (opens Mini App without
+   * relying on BotFather Direct Link short name). Optional startapp query
+   * for deep links the frontend can read.
+   */
+  buildWebAppButtonUrl(startParam?: string): string {
+    const base = this.getWebAppUrl();
+    if (!startParam) {
+      return base;
+    }
+    return `${base}/?startapp=${encodeURIComponent(startParam)}`;
   }
 
   private buildShareUrl(url: string, text: string): string {

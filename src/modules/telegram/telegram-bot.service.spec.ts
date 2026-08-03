@@ -19,6 +19,7 @@ describe('TelegramBotService', () => {
     answerCallbackQuery: jest.fn().mockResolvedValue(true),
     editMessageText: jest.fn().mockResolvedValue(true),
     setMyCommands: jest.fn().mockResolvedValue(true),
+    setChatMenuButton: jest.fn().mockResolvedValue(true),
   };
 
   const linksService = new TelegramLinksService({
@@ -96,13 +97,13 @@ describe('TelegramBotService', () => {
     const payload = sendMessage.mock.calls[0]?.[0];
     expect(payload?.text).toContain("Quron Yo'liga xush kelibsiz");
     const markup = payload?.replyMarkup as {
-      inline_keyboard: Array<Array<{ text?: string; url?: string }>>;
+      inline_keyboard: Array<Array<{ text?: string; web_app?: { url?: string } }>>;
     };
     expect(markup.inline_keyboard).toHaveLength(1);
     expect(markup.inline_keyboard[0]).toHaveLength(1);
     expect(markup.inline_keyboard[0]?.[0]).toEqual({
       text: '📖 Ilovani ochish',
-      url: 'https://t.me/QuronYoliBot/app',
+      web_app: { url: 'https://quronyoli-front.vercel.app' },
     });
   });
 
@@ -111,10 +112,10 @@ describe('TelegramBotService', () => {
     const payload = sendMessage.mock.calls[0]?.[0];
     expect(payload?.text).toContain('Ilovani ochish');
     const markup = payload?.replyMarkup as {
-      inline_keyboard: Array<Array<{ url?: string }>>;
+      inline_keyboard: Array<Array<{ web_app?: { url?: string } }>>;
     };
-    expect(markup.inline_keyboard[0]?.[0]?.url).toBe(
-      'https://t.me/QuronYoliBot/app',
+    expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toBe(
+      'https://quronyoli-front.vercel.app',
     );
   });
 
@@ -123,10 +124,10 @@ describe('TelegramBotService', () => {
     const payload = sendMessage.mock.calls[0]?.[0];
     expect(payload?.text).toContain('Ilovada');
     const markup = payload?.replyMarkup as {
-      inline_keyboard: Array<Array<{ url?: string }>>;
+      inline_keyboard: Array<Array<{ web_app?: { url?: string } }>>;
     };
-    expect(markup.inline_keyboard[0]?.[0]?.url).toBe(
-      'https://t.me/QuronYoliBot/app',
+    expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toBe(
+      'https://quronyoli-front.vercel.app',
     );
   });
 
@@ -150,9 +151,9 @@ describe('TelegramBotService', () => {
       '<b>Kunlik eslatma</b>',
     );
     const markup = sendMessage.mock.calls[0]?.[0]?.replyMarkup as {
-      inline_keyboard: Array<Array<{ url?: string }>>;
+      inline_keyboard: Array<Array<{ web_app?: { url?: string } }>>;
     };
-    expect(markup.inline_keyboard[0]?.[0]?.url).toContain(
+    expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toContain(
       'startapp=ayah_2_255',
     );
   });
