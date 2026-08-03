@@ -9,12 +9,26 @@ export interface AudioTimestampQuery {
   word?: string;
 }
 
+/** Word segment: [word_index, start_ms, end_ms] */
+export type QfAudioWordSegment = [number, number, number];
+
+export interface QfChapterAudioTimestamp {
+  verseKey?: string;
+  timestampFrom?: number;
+  timestampTo?: number;
+  duration?: number;
+  segments?: QfAudioWordSegment[];
+  [key: string]: unknown;
+}
+
 export interface QfChapterAudioFile {
   id?: number;
   chapterId?: number;
   fileSize?: number;
   format?: string;
   audioUrl?: string;
+  /** Present when upstream is called with segments=true */
+  timestamps?: QfChapterAudioTimestamp[];
   [key: string]: unknown;
 }
 

@@ -211,7 +211,7 @@ Filters verified: `verse_key`, `chapter_number` (and docs also list juz/hizb/rub
 | Method | Path | Status | QY | Notes |
 | --- | --- | --- | --- | --- |
 | GET | `/chapter_recitations/{reciterId}` | 200 | Yes | |
-| GET | `/chapter_recitations/{reciterId}/{chapter}` | 200 | Yes | Absolute `audio_url` |
+| GET | `/chapter_recitations/{reciterId}/{chapter}` | 200 | Yes | Absolute `audio_url`; app passes `segments=true` for verse timestamps |
 | GET | `/recitations/{id}/by_chapter/{c}` | 200 | Yes | |
 | GET | `/recitations/{id}/by_ayah/{key}` | 200 | Yes | Relative `url` path |
 | GET | `/audio/reciters/{id}/timestamp` | 200 | Yes | |
@@ -400,6 +400,10 @@ Relative ayah URLs need a CDN base (commonly Quran.com audio CDN). Confirm absol
 
 ### Chapter audio
 
+Without `segments` (QF default): file metadata + `audio_url` only.
+
+With `segments=true` (what this app requests for a single chapter):
+
 ```json
 {
   "audio_file": {
@@ -407,10 +411,21 @@ Relative ayah URLs need a CDN base (commonly Quran.com audio CDN). Confirm absol
     "chapter_id": 1,
     "file_size": 839808,
     "format": "mp3",
-    "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/1.mp3"
+    "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/1.mp3",
+    "timestamps": [
+      {
+        "verse_key": "1:1",
+        "timestamp_from": 0,
+        "timestamp_to": 6493,
+        "duration": -6493,
+        "segments": [[1, 0, 630], [2, 650, 1570]]
+      }
+    ]
   }
 }
 ```
+
+Times are milliseconds. Each `segments` entry is `[word_index, start_ms, end_ms]`.
 
 ### Footnote
 
@@ -533,7 +548,7 @@ Paths (see §3 for status):
 | Tafsir picker | `/resources/tafsirs` |
 | Tafsir panel | `/tafsirs/{id}/by_ayah/{key}` or verse `tafsirs=` |
 | Ayah audio | `/resources/recitations` + `/recitations/{id}/by_ayah/{key}` |
-| Full-surah audio | `/resources/chapter_reciters` + `/chapter_recitations/{id}/{chapter}` |
+| Full-surah audio | `/resources/chapter_reciters` + `/chapter_recitations/{id}/{chapter}?segments=true` |
 | Footnotes | parse HTML → `/foot_notes/{id}` |
 | Languages metadata | `/resources/languages` |
 | Offline/catalog freshness | `/resources/sync` + snapshots |
