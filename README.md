@@ -9,12 +9,12 @@ Production NestJS backend for the **Quron Yo'li** Telegram Mini App: Telegram Mi
 | Runtime | Node.js 22+, npm 10+ |
 | Framework | NestJS 11 + TypeScript (strict) |
 | API | REST under `/api/v1`, Swagger/OpenAPI |
-| Database | PostgreSQL 16 + Prisma ORM 7 (`@prisma/adapter-pg`) |
+| Database | PostgreSQL 17 + Prisma ORM 7 (`@prisma/adapter-pg`) |
 | Cache / queues | Redis 7 (`ioredis`) + BullMQ |
 | Auth | Telegram `initData` HMAC + JWT access + HttpOnly refresh cookies |
-| Logging | Pino (`nestjs-pino`) |
-| Hardening | Helmet, compression, global throttling, request timeouts |
-| Packaging | Multi-stage Dockerfile + Docker Compose |
+| Logging | Pino (`nestjs-pino`) with daily rotating files in production |
+| Hardening | Helmet, compression, global throttling, request timeouts, Joi env validation |
+| Packaging | Multi-stage Dockerfile + Docker Compose v2 |
 
 ## Requirements
 
@@ -25,13 +25,26 @@ Production NestJS backend for the **Quron Yo'li** Telegram Mini App: Telegram Mi
 
 ## Quick start
 
+### Production (Ubuntu)
+
 ```bash
-cp .env.example .env
-# Fill required secrets from .env.example (never commit real values)
+cp .env.production .env
+# Fill REPLACE_* secrets
+docker compose -f docker-compose.yml up -d --build
+```
+
+See [README_DEPLOYMENT.md](README_DEPLOYMENT.md) and [README_DOCKER.md](README_DOCKER.md).
+
+### Local development
+
+```bash
+cp .env.development .env
+# Fill required secrets (Telegram, QF, JWT, REDIS_PASSWORD)
 npm install
 npx prisma generate
 docker compose up -d postgres redis
 npx prisma migrate deploy
+npx prisma db seed
 npm run start:dev
 ```
 
@@ -40,20 +53,24 @@ npm run start:dev
 | `http://localhost:3000/api/v1` | API base |
 | `http://localhost:3000/docs` | Swagger UI (when `SWAGGER_ENABLED` is true) |
 | `http://localhost:3000/api/v1/health` | Readiness (Postgres + Redis) |
+| `http://localhost:3000/api/health` | Unversioned readiness alias |
 | `http://localhost:3000/api/v1/health/live` | Liveness |
 
 Full-stack Compose (API + Postgres + Redis):
 
 ```bash
-cp .env.example .env
-docker compose up --build
+cp .env.development .env
+docker compose up --build -d
+docker compose --profile dev up -d   # optional: pgAdmin + Redis Insight
 ```
 
-**Docker caveats**
+**Docker notes**
 
-- Container `CMD` runs `npx prisma migrate deploy && node dist/main.js` — migrations apply on every start, then the Nest entrypoint is `dist/main.js`.
+- Entrypoint runs `prisma migrate deploy` → idempotent seed → `node dist/main.js`.
+- Production compose (`-f docker-compose.yml`) does **not** publish Postgres/Redis ports.
 - Compose overrides `DATABASE_URL` / `REDIS_HOST` to service DNS (`postgres`, `redis`). Local `npm run start:dev` should point at `localhost`.
 - `POSTGRES_*` variables seed the Compose Postgres image only; the app always uses `DATABASE_URL`.
+- `REDIS_PASSWORD` is required for Compose and for `NODE_ENV=production`.
 
 ## Scripts
 

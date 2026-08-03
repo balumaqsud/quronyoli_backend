@@ -26,9 +26,15 @@ export const envValidationSchema = Joi.object({
 
   REDIS_HOST: Joi.string().hostname().required(),
   REDIS_PORT: Joi.number().port().default(6379),
-  REDIS_PASSWORD: Joi.string().allow('').default(''),
+  REDIS_PASSWORD: Joi.when('NODE_ENV', {
+    is: 'production',
+    then: Joi.string().min(16).required(),
+    otherwise: Joi.string().allow('').default(''),
+  }),
   REDIS_DB: Joi.number().integer().min(0).default(0),
   REDIS_KEY_PREFIX: Joi.string().default('quron-yoli:'),
+  LOG_DIR: Joi.string().default('logs'),
+  UPLOADS_DIR: Joi.string().default('uploads'),
 
   JWT_ACCESS_SECRET: Joi.string().min(32).required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),

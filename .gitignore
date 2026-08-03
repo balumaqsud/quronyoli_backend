@@ -2,8 +2,9 @@
 /dist
 /build
 
-# Logs
-logs
+# Logs (keep placeholder)
+logs/*
+!logs/.gitkeep
 *.log
 npm-debug.log*
 pnpm-debug.log*
@@ -38,6 +39,14 @@ lerna-debug.log*
 .env
 .env.*
 !.env.example
+!.env.production
+!.env.development
+
+# Runtime persistence (keep directory placeholders)
+uploads/*
+!uploads/.gitkeep
+backups/
+!logs/.gitkeep
 
 # Prisma
 /src/generated

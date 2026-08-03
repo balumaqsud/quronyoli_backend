@@ -1,0 +1,43 @@
+# Auto-merged by Docker Compose v2 for local development.
+# Production servers should use:
+#   docker compose -f docker-compose.yml up -d
+# (skips this override so Postgres/Redis stay internal-only)
+
+services:
+  postgres:
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+
+  redis:
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+
+  pgadmin:
+    profiles: [dev]
+    image: dpage/pgadmin4:latest
+    container_name: quron-yoli-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@quron-yoli.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - '${PGADMIN_PORT:-5050}:80'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - quron-yoli
+
+  redis-insight:
+    profiles: [dev]
+    image: redis/redisinsight:latest
+    container_name: quron-yoli-redis-insight
+    restart: unless-stopped
+    ports:
+      - '${REDIS_INSIGHT_PORT:-5540}:5540'
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - quron-yoli

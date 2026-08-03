@@ -21,10 +21,14 @@ RUN npm prune --omit=dev
 FROM node:${NODE_VERSION}-alpine AS production
 WORKDIR /app
 ENV NODE_ENV=production
+ENV LOG_DIR=/app/logs
+ENV UPLOADS_DIR=/app/uploads
 
 RUN apk add --no-cache libc6-compat openssl wget \
   && addgroup -S nestjs \
-  && adduser -S nestjs -G nestjs
+  && adduser -S nestjs -G nestjs \
+  && mkdir -p /app/logs /app/uploads \
+  && chown -R nestjs:nestjs /app
 
 COPY --from=build --chown=nestjs:nestjs /app/package.json ./
 COPY --from=build --chown=nestjs:nestjs /app/package-lock.json ./
@@ -33,11 +37,15 @@ COPY --from=build --chown=nestjs:nestjs /app/dist ./dist
 COPY --from=build --chown=nestjs:nestjs /app/prisma ./prisma
 COPY --from=build --chown=nestjs:nestjs /app/prisma.config.ts ./
 COPY --from=build --chown=nestjs:nestjs /app/src/generated ./dist/generated
+COPY --chown=nestjs:nestjs docker/entrypoint.sh /app/docker/entrypoint.sh
+
+RUN chmod +x /app/docker/entrypoint.sh
 
 USER nestjs
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD wget -qO- http://127.0.0.1:3000/api/v1/health/live || exit 1
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
+CMD ["node", "dist/main.js"]

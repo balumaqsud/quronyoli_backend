@@ -13,6 +13,9 @@ Staff-engineer reference for the Quron Yo'li NestJS backend. Prefer linking thes
 | [environment.md](./environment.md) | `.env.example` + Joi defaults, secrets, Compose-only vars, QF overrides |
 | [deployment.md](./deployment.md) | Build / migrate / start, probes, `TRUST_PROXY`, cookies, webhook TLS, rollback |
 | [docker.md](./docker.md) | Dockerfile stages, Compose services, local vs prod caveats |
+| [PRODUCTION_READINESS_REPORT.md](./PRODUCTION_READINESS_REPORT.md) | Production hardening report (score, changes, recommendations) |
+| [../README_DEPLOYMENT.md](../README_DEPLOYMENT.md) | Ubuntu 24.04 one-command deploy |
+| [../README_DOCKER.md](../README_DOCKER.md) | Docker Compose quick reference |
 | [database-schema.md](./database-schema.md) | Prisma/PostgreSQL ERD, cascades, soft delete, SQL-only constraints |
 | [future-improvements.md](./future-improvements.md) | Prioritized follow-ups |
 
