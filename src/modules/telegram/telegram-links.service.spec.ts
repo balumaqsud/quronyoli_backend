@@ -29,4 +29,13 @@ describe('TelegramLinksService', () => {
   it('exposes web app https url for optional web_app buttons', () => {
     expect(service.getWebAppUrl()).toBe('https://quronyoli-front.vercel.app');
   });
+
+  it('builds web_app button urls with optional startapp query', () => {
+    expect(service.buildWebAppButtonUrl()).toBe(
+      'https://quronyoli-front.vercel.app',
+    );
+    expect(service.buildWebAppButtonUrl('ayah_2_255')).toBe(
+      'https://quronyoli-front.vercel.app/?startapp=ayah_2_255',
+    );
+  });
 });

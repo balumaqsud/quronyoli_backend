@@ -48,6 +48,25 @@ export interface TelegramBotCommand {
   description: string;
 }
 
+export interface TelegramMenuButtonWebApp {
+  type: 'web_app';
+  text: string;
+  web_app: { url: string };
+}
+
+export interface TelegramMenuButtonCommands {
+  type: 'commands';
+}
+
+export interface TelegramMenuButtonDefault {
+  type: 'default';
+}
+
+export type TelegramMenuButton =
+  | TelegramMenuButtonWebApp
+  | TelegramMenuButtonCommands
+  | TelegramMenuButtonDefault;
+
 export interface TelegramMessage {
   message_id: number;
   chat: { id: number; type: string };
@@ -125,6 +144,7 @@ export interface TelegramApi {
     request: TelegramEditMessageRequest,
   ): Promise<TelegramMessage | boolean>;
   setMyCommands(commands: TelegramBotCommand[]): Promise<boolean>;
+  setChatMenuButton(menuButton: TelegramMenuButton): Promise<boolean>;
   setWebhook(url: string, secretToken: string): Promise<boolean>;
   deleteWebhook(dropPendingUpdates?: boolean): Promise<boolean>;
   getWebhookInfo(): Promise<TelegramWebhookInfo>;

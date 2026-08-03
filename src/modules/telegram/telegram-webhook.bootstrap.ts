@@ -33,6 +33,20 @@ export class TelegramWebhookBootstrapService implements OnModuleInit {
       );
     }
 
+    try {
+      await this.telegramApi.setChatMenuButton({
+        type: 'web_app',
+        text: "Quron Yo'li",
+        web_app: { url: config.webAppUrl.replace(/\/$/, '') },
+      });
+      this.logger.info('Telegram chat menu button registered');
+    } catch (error) {
+      this.logger.error(
+        { err: error instanceof Error ? error.message : 'unknown' },
+        'Failed to register Telegram chat menu button',
+      );
+    }
+
     if (!config.webhookAutoRegister || !config.webhookUrl) {
       return;
     }

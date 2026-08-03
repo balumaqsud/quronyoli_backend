@@ -591,6 +591,8 @@ describe('Auth & Users (e2e)', () => {
       chat: { id: 42, type: 'private' },
       date: 1,
     }),
+    setMyCommands: jest.fn().mockResolvedValue(true),
+    setChatMenuButton: jest.fn().mockResolvedValue(true),
     setWebhook: jest.fn().mockResolvedValue(true),
     deleteWebhook: jest.fn().mockResolvedValue(true),
     getWebhookInfo: jest.fn().mockResolvedValue({

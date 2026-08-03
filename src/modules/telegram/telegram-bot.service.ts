@@ -301,11 +301,11 @@ export class TelegramBotService {
 
   private ilovaniOchishButton(startParam?: string): {
     text: string;
-    url: string;
+    web_app: { url: string };
   } {
     return {
       text: '📖 Ilovani ochish',
-      url: this.linksService.buildMiniAppDirectLink(startParam),
+      web_app: { url: this.linksService.buildWebAppButtonUrl(startParam) },
     };
   }
 

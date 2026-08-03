@@ -13,7 +13,10 @@ import {
 } from './interfaces/telegram-api.interface';
 import { TelegramLinksService } from './telegram-links.service';
 import { encodeVerseKey } from './utils/telegram-callbacks';
-import { escapeHtml } from './utils/telegram-text.utils';
+import {
+  buildAyahStartPayload,
+  escapeHtml,
+} from './utils/telegram-text.utils';
 
 export type AyahCardContent = {
   verseKey: string;
@@ -127,7 +130,14 @@ export class TelegramAyahCardService {
       [
         {
           text: '📖 Ilovani ochish',
-          url: share.miniAppDeepLink,
+          web_app: {
+            url: this.linksService.buildWebAppButtonUrl(
+              buildAyahStartPayload(
+                Number(verseKey.split(':')[0]),
+                Number(verseKey.split(':')[1]),
+              ),
+            ),
+          },
         },
       ],
     ];
