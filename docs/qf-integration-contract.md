@@ -108,7 +108,7 @@ Upstream paths are relative to `QF_CONTENT_PATH_PREFIX` unless noted. Cache clas
 | Tafsir body | GET | `/tafsirs/{id}/by_{chapter\|ayah\|juz\|page}/…` | `language`, `page`, `per_page` | yes | Verse |
 | Recitations | GET | `/resources/recitations` | `language` | — | Stable |
 | Chapter reciters | GET | `/resources/chapter_reciters` | `language` | — | Stable |
-| Chapter audio | GET | `/chapter_recitations/{reciterId}`, `…/{chapter}` | — | — | Audio |
+| Chapter audio | GET | `/chapter_recitations/{reciterId}`, `…/{chapter}` | `segments=true` on single chapter (app always) | — | Audio |
 | Ayah audio | GET | `/recitations/{id}/by_chapter/{c}`, `…/by_ayah/{key}` | `page`, `per_page` | yes (chapter) | Audio |
 | Timestamps | GET | `/audio/reciters/{reciterId}/timestamp` | `chapter_number`, `verse_key`, `verse_id`, `word` | — | Audio |
 | Search | GET | `{searchPrefix}/search` | `query`, `mode`, `page`, `size`, `translation_ids`, … | `page`, `size` (app max 50) | Search |
@@ -332,7 +332,7 @@ Base app path: `GET /api/v1/quran/*` (JWT + `QuranRateLimitGuard`).
 | `/audio/recitations` | `/resources/recitations` | `getRecitations` |
 | `/audio/chapter-reciters` | `/resources/chapter_reciters` | `getChapterReciters` |
 | `/audio/chapter-reciters/:id` | `/chapter_recitations/:id` | `getChapterAudioFiles` |
-| `/audio/chapter-reciters/:id/:c` | `/chapter_recitations/:id/:c` | `getChapterAudioFile` |
+| `/audio/chapter-reciters/:id/:c` | `/chapter_recitations/:id/:c?segments=true` | `getChapterAudioFile` |
 | `/audio/recitations/:id/by-surah/:c` | `/recitations/:id/by_chapter/:c` | `getAyahAudioByChapter` |
 | `/audio/recitations/:id/by-ayah/:k` | `/recitations/:id/by_ayah/:k` | `getAyahAudioByKey` |
 | `/audio/reciters/:id/timestamps` | `/audio/reciters/:id/timestamp` | `getAudioTimestamps` |

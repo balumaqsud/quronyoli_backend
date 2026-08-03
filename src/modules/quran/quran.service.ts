@@ -624,7 +624,7 @@ export class QuranService {
     return this.cachedContent(
       'audio',
       `/chapter_recitations/${reciterId}/${chapter}`,
-      undefined,
+      { segments: true },
       this.config.cacheTtl.audioSeconds,
       true,
     );

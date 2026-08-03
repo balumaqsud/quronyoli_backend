@@ -244,4 +244,48 @@ describe('QuranService', () => {
       ],
     });
   });
+
+  it('requests chapter audio with segments=true for ayah timestamps', async () => {
+    client.getContent.mockResolvedValue({
+      audio_file: {
+        id: 911,
+        chapter_id: 101,
+        audio_url:
+          'https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/101.mp3',
+        timestamps: [
+          {
+            verse_key: '101:1',
+            timestamp_from: 0,
+            timestamp_to: 2500,
+          },
+        ],
+      },
+    });
+
+    await expect(service.getChapterAudioFile(7, 101)).resolves.toEqual({
+      audio_file: {
+        id: 911,
+        chapter_id: 101,
+        audio_url:
+          'https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/101.mp3',
+        timestamps: [
+          {
+            verse_key: '101:1',
+            timestamp_from: 0,
+            timestamp_to: 2500,
+          },
+        ],
+      },
+    });
+
+    expect(cache.buildKey).toHaveBeenCalledWith(
+      'audio',
+      '/chapter_recitations/7/101',
+      { segments: true },
+    );
+    expect(client.getContent).toHaveBeenCalledWith(
+      '/chapter_recitations/7/101',
+      { segments: true },
+    );
+  });
 });
