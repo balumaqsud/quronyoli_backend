@@ -1,8 +1,16 @@
 # Environment
 
-Canonical template: [`.env.example`](../.env.example).  
+Canonical templates: [`.env.example`](../.env.example), [`.env.development`](../.env.development), [`.env.production`](../.env.production).  
 Validation: `src/config/env.validation.ts` (Joi).  
 Typed loading: `src/config/configuration.ts`.
+
+Checklist alias mapping (docs only — do not rename in code):
+
+| Checklist name | Actual env |
+| --- | --- |
+| `JWT_SECRET` | `JWT_ACCESS_SECRET` (+ `JWT_REFRESH_SECRET`) |
+| `BOT_TOKEN` | `TELEGRAM_BOT_TOKEN` |
+| `QURAN_API_KEY` | `QF_CLIENT_ID` + `QF_CLIENT_SECRET` |
 
 Do **not** copy real secrets from a local `.env` into docs or commits. Placeholders below match `.env.example` / Joi only.
 
@@ -32,6 +40,8 @@ Do **not** copy real secrets from a local `.env` into docs or commits. Placehold
 | `SLOW_REQUEST_MS` | `1000` | Warn threshold |
 | `SHUTDOWN_DRAIN_MS` | `5000` | BullMQ drain on shutdown |
 | `LOG_LEVEL` | `info` | Pino levels |
+| `LOG_DIR` | `logs` | Daily rotating log directory (`application` / `error` / `http`) |
+| `UPLOADS_DIR` | `uploads` | Persistent uploads directory (created on boot) |
 | `SWAGGER_ENABLED` | optional | If unset: enabled unless `NODE_ENV=production` |
 | `SWAGGER_PATH` | `docs` | Swagger mount path |
 
@@ -56,7 +66,7 @@ Compose builds `DATABASE_URL` for the `api` service as `postgresql://…@postgre
 | --- | --- | --- |
 | `REDIS_HOST` | — | **required** (`localhost` locally; `redis` in Compose) |
 | `REDIS_PORT` | `6379` | |
-| `REDIS_PASSWORD` | `''` | **secret** when set |
+| `REDIS_PASSWORD` | `''` (non-prod) | **secret**; **required min 16** when `NODE_ENV=production`; required by Compose |
 | `REDIS_DB` | `0` | |
 | `REDIS_KEY_PREFIX` | `quron-yoli:` | Key namespace |
 

@@ -5,8 +5,10 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { randomUUID } from 'crypto';
 import { IncomingMessage, ServerResponse } from 'http';
+import pino from 'pino';
 import configuration, { AppConfig } from './config/configuration';
 import { envValidationSchema } from './config/env.validation';
+import { createProductionTransport } from './config/logger.streams';
 import { CONFIG_KEYS, REQUEST_ID_HEADER } from './common/constants';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { HttpCacheInterceptor } from './common/interceptors/http-cache.interceptor';
@@ -50,45 +52,59 @@ import { AuthModule } from './modules/auth/auth.module';
         const appConfig = configService.getOrThrow<AppConfig>(CONFIG_KEYS.APP);
         const isProduction = appConfig.nodeEnv === 'production';
 
+        const pinoHttpBase = {
+          level: appConfig.logLevel,
+          genReqId: (req: IncomingMessage, res: ServerResponse): string => {
+            const existingHeader = req.headers[REQUEST_ID_HEADER];
+            const existingId = Array.isArray(existingHeader)
+              ? existingHeader[0]
+              : existingHeader;
+            const requestId = existingId ?? randomUUID();
+            res.setHeader(REQUEST_ID_HEADER, requestId);
+            return requestId;
+          },
+          redact: {
+            paths: [
+              'req.headers.authorization',
+              'req.headers.cookie',
+              'req.headers["x-api-key"]',
+            ],
+            remove: true,
+          },
+          customProps: () => ({
+            context: 'HTTP',
+          }),
+          serializers: {
+            req: (req: IncomingMessage & { id?: string }) => ({
+              id: req.id,
+              method: req.method,
+              url: req.url,
+            }),
+          },
+        };
+
+        if (isProduction) {
+          const transport = pino.transport(
+            createProductionTransport(appConfig.logDir),
+          );
+          return {
+            pinoHttp: {
+              ...pinoHttpBase,
+              logger: pino({ level: appConfig.logLevel }, transport),
+            },
+          };
+        }
+
         return {
           pinoHttp: {
-            level: appConfig.logLevel,
-            genReqId: (req: IncomingMessage, res: ServerResponse): string => {
-              const existingHeader = req.headers[REQUEST_ID_HEADER];
-              const existingId = Array.isArray(existingHeader)
-                ? existingHeader[0]
-                : existingHeader;
-              const requestId = existingId ?? randomUUID();
-              res.setHeader(REQUEST_ID_HEADER, requestId);
-              return requestId;
-            },
-            transport: isProduction
-              ? undefined
-              : {
-                  target: 'pino-pretty',
-                  options: {
-                    singleLine: true,
-                    colorize: true,
-                    translateTime: 'SYS:standard',
-                  },
-                },
-            redact: {
-              paths: [
-                'req.headers.authorization',
-                'req.headers.cookie',
-                'req.headers["x-api-key"]',
-              ],
-              remove: true,
-            },
-            customProps: () => ({
-              context: 'HTTP',
-            }),
-            serializers: {
-              req: (req: IncomingMessage & { id?: string }) => ({
-                id: req.id,
-                method: req.method,
-                url: req.url,
-              }),
+            ...pinoHttpBase,
+            transport: {
+              target: 'pino-pretty',
+              options: {
+                singleLine: true,
+                colorize: true,
+                translateTime: 'SYS:standard',
+              },
             },
           },
         };

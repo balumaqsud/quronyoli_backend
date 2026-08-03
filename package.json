@@ -27,6 +27,9 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:validate": "prisma validate",
+    "prisma:seed": "prisma db seed",
+    "backup": "bash scripts/backup.sh",
+    "restore": "bash scripts/restore.sh",
     "qf:discover": "ts-node --transpile-only scripts/qf-discovery-sample.ts",
     "qf:sync-catalog": "ts-node --transpile-only src/commands/qf-sync-catalog.ts",
     "qf:sync-catalog:prod": "node dist/commands/qf-sync-catalog.js",
@@ -64,6 +67,7 @@
     "pg": "^8.22.0",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
+    "pino-roll": "^4.0.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
@@ -123,5 +127,8 @@
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/$1"
     }
+  },
+  "prisma": {
+    "seed": "node prisma/seed.cjs"
   }
 }

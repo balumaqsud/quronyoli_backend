@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { json, urlencoded } from 'express';
+import { mkdirSync } from 'fs';
 import helmet from 'helmet';
 import { Logger as PinoNestLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -25,10 +26,16 @@ async function bootstrap(): Promise<void> {
   const httpConfig = configService.getOrThrow<HttpConfig>(CONFIG_KEYS.HTTP);
   const isProduction = appConfig.nodeEnv === 'production';
 
+  mkdirSync(appConfig.uploadsDir, { recursive: true });
+  mkdirSync(appConfig.logDir, { recursive: true });
+
+  const expressApp = app.getHttpAdapter().getInstance() as {
+    set: (key: string, value: unknown) => void;
+    disable: (key: string) => void;
+  };
+  expressApp.disable('x-powered-by');
+
   if (appConfig.trustProxy) {
-    const expressApp = app.getHttpAdapter().getInstance() as {
-      set: (key: string, value: unknown) => void;
-    };
     expressApp.set('trust proxy', 1);
   }
 
@@ -131,5 +138,22 @@ async function bootstrap(): Promise<void> {
     Logger.log(`Swagger docs: ${appUrl}/${appConfig.swaggerPath}`, 'Bootstrap');
   }
 }
+
+process.on('uncaughtException', (error: Error) => {
+  Logger.error(
+    `Uncaught exception: ${error.message}`,
+    error.stack,
+    'Process',
+  );
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason: unknown) => {
+  const message =
+    reason instanceof Error ? reason.message : String(reason);
+  const stack = reason instanceof Error ? reason.stack : undefined;
+  Logger.error(`Unhandled rejection: ${message}`, stack, 'Process');
+  process.exit(1);
+});
 
 void bootstrap();

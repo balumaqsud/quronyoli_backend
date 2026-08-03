@@ -8,6 +8,8 @@ export interface AppConfig {
   apiVersion: string;
   corsOrigins: string[];
   logLevel: string;
+  logDir: string;
+  uploadsDir: string;
   swaggerEnabled: boolean;
   swaggerPath: string;
   trustProxy: boolean;
@@ -267,6 +269,8 @@ export default (): AppConfiguration => {
       apiVersion: process.env.API_VERSION ?? '1',
       corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
       logLevel: process.env.LOG_LEVEL ?? 'info',
+      logDir: process.env.LOG_DIR ?? 'logs',
+      uploadsDir: process.env.UPLOADS_DIR ?? 'uploads',
       swaggerEnabled:
         process.env.SWAGGER_ENABLED !== undefined
           ? process.env.SWAGGER_ENABLED === 'true'

@@ -1,14 +1,21 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: quron-yoli-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-quron_yoli}
-    ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      TZ: UTC
+      PGTZ: UTC
+      LANG: en_US.utf8
+    command:
+      - postgres
+      - -c
+      - timezone=UTC
+      - -c
+      - log_timezone=UTC
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,33 +28,37 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    networks:
+      - quron-yoli
 
   redis:
     image: redis:7-alpine
     container_name: quron-yoli-redis
     restart: unless-stopped
-    command: >
-      sh -c 'if [ -n "$$REDIS_PASSWORD" ]; then
-        redis-server --requirepass "$$REDIS_PASSWORD";
-      else
-        redis-server;
-      fi'
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      - --appendonly
+      - 'yes'
+      - --protected-mode
+      - 'yes'
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-    ports:
-      - '${REDIS_PORT:-6379}:6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis_data:/data
     healthcheck:
       test:
         [
           'CMD-SHELL',
-          'if [ -n "$$REDIS_PASSWORD" ]; then redis-cli -a "$$REDIS_PASSWORD" ping; else redis-cli ping; fi',
+          'redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG',
         ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 5s
+    networks:
+      - quron-yoli
 
   api:
     build:
@@ -67,10 +78,15 @@ services:
       PORT: ${PORT:-3000}
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-quron_yoli}?schema=public
       REDIS_HOST: redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PORT: '6379'
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      LOG_DIR: /app/logs
+      UPLOADS_DIR: /app/uploads
     ports:
       - '${PORT:-3000}:${PORT:-3000}'
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
     healthcheck:
       test:
         [
@@ -80,8 +96,14 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 40s
+      start_period: 60s
+    networks:
+      - quron-yoli
 
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  quron-yoli:
+    driver: bridge
