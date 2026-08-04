@@ -118,6 +118,11 @@ export class TelegramAyahCardService {
       Number(verseKey.split(':')[1]),
     );
 
+    const startParam = buildAyahStartPayload(
+      Number(verseKey.split(':')[0]),
+      Number(verseKey.split(':')[1]),
+    );
+
     const rows: TelegramInlineKeyboardButton[][] = [
       [
         { text: '🎧 Tinglash', callback_data: `PLAY_AUDIO:${encoded}` },
@@ -131,13 +136,14 @@ export class TelegramAyahCardService {
         {
           text: '📖 Ilovani ochish',
           web_app: {
-            url: this.linksService.buildWebAppButtonUrl(
-              buildAyahStartPayload(
-                Number(verseKey.split(':')[0]),
-                Number(verseKey.split(':')[1]),
-              ),
-            ),
+            url: this.linksService.buildWebAppButtonUrl(startParam),
           },
+        },
+      ],
+      [
+        {
+          text: "🌐 Quron Yo'li",
+          url: this.linksService.buildMainMiniAppUrl(startParam),
         },
       ],
     ];

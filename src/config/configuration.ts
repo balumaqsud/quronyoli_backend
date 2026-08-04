@@ -49,6 +49,8 @@ export interface TelegramConfig {
   webhookUrl?: string;
   webhookSecret: string;
   webhookAutoRegister: boolean;
+  /** One-shot: drop pending updates when registering webhook on boot. */
+  webhookDropPendingUpdates: boolean;
   miniAppUrl: string;
   webAppUrl: string;
   miniAppShortName: string;
@@ -332,6 +334,8 @@ export default (): AppConfiguration => {
       webhookSecret: getRequiredEnv('TELEGRAM_WEBHOOK_SECRET'),
       webhookAutoRegister:
         process.env.TELEGRAM_WEBHOOK_AUTO_REGISTER === 'true',
+      webhookDropPendingUpdates:
+        process.env.TELEGRAM_WEBHOOK_DROP_PENDING_UPDATES === 'true',
       miniAppUrl: getRequiredEnv('TELEGRAM_MINI_APP_URL'),
       webAppUrl: getRequiredEnv('TELEGRAM_WEB_APP_URL'),
       miniAppShortName: process.env.TELEGRAM_MINI_APP_SHORT_NAME ?? 'app',

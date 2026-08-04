@@ -93,11 +93,15 @@ export class TelegramHttpApi implements TelegramApi {
     });
   }
 
-  async setWebhook(url: string, secretToken: string): Promise<boolean> {
+  async setWebhook(
+    url: string,
+    secretToken: string,
+    dropPendingUpdates = false,
+  ): Promise<boolean> {
     return this.call<boolean>('setWebhook', {
       url,
       secret_token: secretToken,
-      drop_pending_updates: false,
+      drop_pending_updates: dropPendingUpdates,
       allowed_updates: ['message', 'callback_query'],
     });
   }

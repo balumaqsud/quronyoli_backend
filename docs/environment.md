@@ -91,6 +91,7 @@ Compose builds `DATABASE_URL` for the `api` service as `postgresql://…@postgre
 | `TELEGRAM_WEBHOOK_URL` | optional / `''` | HTTPS webhook URL |
 | `TELEGRAM_WEBHOOK_SECRET` | — | **required** **secret** · min 16 |
 | `TELEGRAM_WEBHOOK_AUTO_REGISTER` | `false` | Register webhook on boot when true |
+| `TELEGRAM_WEBHOOK_DROP_PENDING_UPDATES` | `false` | One-shot: drop pending updates when registering webhook |
 | `TELEGRAM_MINI_APP_URL` | — | **required** Telegram deep link, e.g. `https://t.me/QuronYoliBot/app` |
 | `TELEGRAM_WEB_APP_URL` | — | **required** deployed Mini App HTTPS URL used by native `web_app` buttons |
 | `TELEGRAM_MINI_APP_SHORT_NAME` | `app` | |

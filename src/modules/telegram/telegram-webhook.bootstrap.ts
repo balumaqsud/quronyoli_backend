@@ -55,8 +55,12 @@ export class TelegramWebhookBootstrapService implements OnModuleInit {
       await this.telegramApi.setWebhook(
         config.webhookUrl,
         config.webhookSecret,
+        config.webhookDropPendingUpdates,
       );
-      this.logger.info('Telegram webhook registered');
+      this.logger.info(
+        { dropPendingUpdates: config.webhookDropPendingUpdates },
+        'Telegram webhook registered',
+      );
     } catch (error) {
       this.logger.error(
         { err: error instanceof Error ? error.message : 'unknown' },

@@ -38,4 +38,13 @@ describe('TelegramLinksService', () => {
       'https://quronyoli-front.vercel.app/?startapp=ayah_2_255',
     );
   });
+
+  it('builds Main Mini App urls with optional startapp', () => {
+    expect(service.buildMainMiniAppUrl()).toBe(
+      'https://t.me/QuronYoliBot?startapp',
+    );
+    expect(service.buildMainMiniAppUrl('ayah_2_255')).toBe(
+      'https://t.me/QuronYoliBot?startapp=ayah_2_255',
+    );
+  });
 });

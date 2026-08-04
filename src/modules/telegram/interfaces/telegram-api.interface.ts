@@ -145,7 +145,11 @@ export interface TelegramApi {
   ): Promise<TelegramMessage | boolean>;
   setMyCommands(commands: TelegramBotCommand[]): Promise<boolean>;
   setChatMenuButton(menuButton: TelegramMenuButton): Promise<boolean>;
-  setWebhook(url: string, secretToken: string): Promise<boolean>;
+  setWebhook(
+    url: string,
+    secretToken: string,
+    dropPendingUpdates?: boolean,
+  ): Promise<boolean>;
   deleteWebhook(dropPendingUpdates?: boolean): Promise<boolean>;
   getWebhookInfo(): Promise<TelegramWebhookInfo>;
 }

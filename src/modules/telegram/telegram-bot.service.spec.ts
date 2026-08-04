@@ -90,20 +90,26 @@ describe('TelegramBotService', () => {
     usersService.upsertFromTelegram.mockResolvedValue(user);
   });
 
-  it('sends welcome with only Ilovani ochish for /start', async () => {
+  it('sends welcome with web_app and Main Mini App fallback for /start', async () => {
     await service.handleStartCommand({ ...baseMessage, text: '/start' });
 
     expect(usersService.upsertFromTelegram).toHaveBeenCalled();
     const payload = sendMessage.mock.calls[0]?.[0];
     expect(payload?.text).toContain("Quron Yo'liga xush kelibsiz");
     const markup = payload?.replyMarkup as {
-      inline_keyboard: Array<Array<{ text?: string; web_app?: { url?: string } }>>;
+      inline_keyboard: Array<
+        Array<{ text?: string; web_app?: { url?: string }; url?: string }>
+      >;
     };
-    expect(markup.inline_keyboard).toHaveLength(1);
+    expect(markup.inline_keyboard).toHaveLength(2);
     expect(markup.inline_keyboard[0]).toHaveLength(1);
     expect(markup.inline_keyboard[0]?.[0]).toEqual({
       text: '📖 Ilovani ochish',
       web_app: { url: 'https://quronyoli-front.vercel.app' },
+    });
+    expect(markup.inline_keyboard[1]?.[0]).toEqual({
+      text: "🌐 Quron Yo'li",
+      url: 'https://t.me/QuronYoliBot?startapp',
     });
   });
 
@@ -151,9 +157,15 @@ describe('TelegramBotService', () => {
       '<b>Kunlik eslatma</b>',
     );
     const markup = sendMessage.mock.calls[0]?.[0]?.replyMarkup as {
-      inline_keyboard: Array<Array<{ web_app?: { url?: string } }>>;
+      inline_keyboard: Array<
+        Array<{ web_app?: { url?: string }; url?: string }>
+      >;
     };
+    expect(markup.inline_keyboard).toHaveLength(2);
     expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toContain(
+      'startapp=ayah_2_255',
+    );
+    expect(markup.inline_keyboard[1]?.[0]?.url).toContain(
       'startapp=ayah_2_255',
     );
   });

@@ -92,6 +92,18 @@ export class TelegramLinksService {
     return `${base}/?startapp=${encodeURIComponent(startParam)}`;
   }
 
+  /**
+   * Main Mini App deep link (`t.me/<bot>?startapp=`). Works when BotFather
+   * Main Mini App is configured — no short-name Direct Link required.
+   */
+  buildMainMiniAppUrl(startParam?: string): string {
+    const base = `https://t.me/${this.config.botUsername}`;
+    if (!startParam) {
+      return `${base}?startapp`;
+    }
+    return `${base}?startapp=${encodeURIComponent(startParam)}`;
+  }
+
   private buildShareUrl(url: string, text: string): string {
     return `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
   }

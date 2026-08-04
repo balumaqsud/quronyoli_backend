@@ -60,6 +60,10 @@ export const envValidationSchema = Joi.object({
     .truthy('true')
     .falsy('false')
     .default(false),
+  TELEGRAM_WEBHOOK_DROP_PENDING_UPDATES: Joi.boolean()
+    .truthy('true')
+    .falsy('false')
+    .default(false),
   TELEGRAM_MINI_APP_URL: Joi.string()
     .uri({ scheme: ['https'] })
     .required(),

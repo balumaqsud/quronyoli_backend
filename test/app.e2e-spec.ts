@@ -1236,6 +1236,29 @@ describe('Auth & Users (e2e)', () => {
     expect(telegramApi.sendMessage).toHaveBeenCalled();
   });
 
+  it('accepts Telegram webhook messages with unknown Bot API fields', async () => {
+    telegramApi.sendMessage.mockClear();
+
+    await request(app.getHttpServer())
+      .post('/api/v1/telegram/webhook')
+      .set('x-telegram-bot-api-secret-token', 'dev-webhook-secret-min16')
+      .send({
+        update_id: 3,
+        message: {
+          message_id: 11,
+          date: 1,
+          chat: { id: 42, type: 'private' },
+          from: { id: 42, is_bot: false, first_name: 'Test' },
+          text: '/start',
+          entities: [{ offset: 0, length: 6, type: 'bot_command' }],
+          link_preview_options: { is_disabled: true },
+        },
+      })
+      .expect(200);
+
+    expect(telegramApi.sendMessage).toHaveBeenCalled();
+  });
+
   it('rejects Telegram webhooks with an invalid secret', async () => {
     await request(app.getHttpServer())
       .post('/api/v1/telegram/webhook')

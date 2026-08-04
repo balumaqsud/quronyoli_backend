@@ -22,13 +22,13 @@ Registered via `setMyCommands` on bootstrap:
 
 Legacy commands (`/bugun`, `/tasodifiy`, `/suralar`, `/juz`, `/davom`, `/saqlangan`, `/yordam`, `/haqimizda`) still respond with a short “Ilovada oching” message and the same single button (not listed in BotFather menu).
 
-**Ilovani ochish** uses a native Telegram `web_app` button pointing at `TELEGRAM_WEB_APP_URL` (HTTPS Mini App). Share / external deep links still use Direct Links: `https://t.me/<bot>/<shortName>` (optional `?startapp=`).
+**Ilovani ochish** uses a native Telegram `web_app` button pointing at `TELEGRAM_WEB_APP_URL` (HTTPS Mini App), plus a fallback Main Mini App URL button (`t.me/<bot>?startapp=`). Share / external deep links still use Direct Links: `https://t.me/<bot>/<shortName>` (optional `?startapp=`).
 
 On bootstrap the bot also calls `setChatMenuButton` with the same HTTPS Web App URL (bottom menu label `Quron Yo'li`).
 
 Telegram Bot API **cannot** wipe a user’s full chat history; there is no `/tozalash` clear-chat feature.
 
-Webhook `allowed_updates`: `message`, `callback_query` (legacy callbacks soft-redirect to Mini App).
+Webhook `allowed_updates`: `message`, `callback_query` (legacy callbacks soft-redirect to Mini App). Inbound `message` payloads are accepted loosely (Telegram adds fields often); only `update_id` is strictly validated.
 
 ## Architecture
 
@@ -44,7 +44,7 @@ See `.env.example` for:
 
 - `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_WEBHOOK_SECRET`
 - `TELEGRAM_MINI_APP_URL`, `TELEGRAM_WEB_APP_URL`, `TELEGRAM_MINI_APP_SHORT_NAME`
-- `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_AUTO_REGISTER`
+- `TELEGRAM_WEBHOOK_URL`, `TELEGRAM_WEBHOOK_AUTO_REGISTER`, `TELEGRAM_WEBHOOK_DROP_PENDING_UPDATES`
 - BullMQ / reminder scan settings under `NOTIFICATIONS_*`
 
 Never log the bot token or webhook secret.

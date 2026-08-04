@@ -309,11 +309,24 @@ export class TelegramBotService {
     };
   }
 
+  private mainMiniAppFallbackButton(startParam?: string): {
+    text: string;
+    url: string;
+  } {
+    return {
+      text: "🌐 Quron Yo'li",
+      url: this.linksService.buildMainMiniAppUrl(startParam),
+    };
+  }
+
   private openMiniAppKeyboard(
     startParam?: string,
   ): TelegramInlineKeyboardMarkup {
     return {
-      inline_keyboard: [[this.ilovaniOchishButton(startParam)]],
+      inline_keyboard: [
+        [this.ilovaniOchishButton(startParam)],
+        [this.mainMiniAppFallbackButton(startParam)],
+      ],
     };
   }
 
