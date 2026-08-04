@@ -16,6 +16,15 @@ docker compose -f docker-compose.yml up -d --build
 
 Using `-f docker-compose.yml` skips [`docker-compose.override.yml`](docker-compose.override.yml) so Postgres and Redis stay **internal-only** (not published to the host).
 
+### Update production (keep data)
+
+```bash
+./scripts/update.sh
+# or: npm run update:prod
+```
+
+Pulls latest code, rebuilds, applies Prisma migrations additively, **never** deletes volumes. See [README_DEPLOYMENT.md](README_DEPLOYMENT.md).
+
 ### Local development
 
 ```bash
@@ -53,12 +62,12 @@ Migrations use **deploy only** (never reset). Seed is idempotent and never delet
 
 | Name / path | Purpose |
 | --- | --- |
-| `postgres_data` | PostgreSQL data |
-| `redis_data` | Redis AOF/RDB |
+| `quron-yoli_postgres_data` | PostgreSQL data (Compose project `quron-yoli`) |
+| `quron-yoli_redis_data` | Redis AOF/RDB |
 | `./uploads` | Persistent uploads dir (created automatically) |
 | `./logs` | Daily rotating Pino logs |
 
-No other bind mounts in production compose.
+No other bind mounts in production compose. Never use `docker compose down -v` on production.
 
 ## Health
 

@@ -19,6 +19,31 @@ cp .env.production .env
 docker compose -f docker-compose.yml up -d --build
 ```
 
+## One-command update (keep DB data)
+
+After the first deploy, every time `main` has new backend code (including new Prisma migrations / tables):
+
+```bash
+cd /opt/quron-yoli_backend   # or your install path
+./scripts/update.sh
+# or: npm run update:prod
+```
+
+What it does:
+
+1. Pre-update backup (skip with `SKIP_BACKUP=1`)
+2. `git pull --ff-only`
+3. `docker compose -f docker-compose.yml up -d --build` — **volumes are never removed**
+4. Waits for `/api/v1/health/ready`
+5. Entrypoint runs `prisma migrate deploy` (additive; creates new tables without wiping rows)
+
+### Hard rules (data safety)
+
+- Never `docker compose down -v` on production
+- Never `prisma migrate reset` or `db push --force-reset` on production
+- Do not change `POSTGRES_USER` / `POSTGRES_DB` after first boot
+- Schema changes: run `npm run prisma:migrate:dev` in development, commit `prisma/migrations/`, merge to main, then `./scripts/update.sh` on the server
+
 Verify:
 
 ```bash

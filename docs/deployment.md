@@ -18,6 +18,39 @@ docker compose -f docker-compose.yml up -d --build
 
 Entrypoint automatically: wait for DB → `prisma migrate deploy` → idempotent seed → NestJS.
 
+## Updating production (one command, data preserved)
+
+Use this after the first install whenever `main` has new API code or Prisma migrations:
+
+```bash
+./scripts/update.sh
+# or: npm run update:prod
+```
+
+Flow: optional backup → `git pull --ff-only` → `docker compose -f docker-compose.yml up -d --build` → wait for readiness. Named volumes `quron-yoli_postgres_data` / `quron-yoli_redis_data` are **never** removed. New tables/columns apply via `prisma migrate deploy` in the API entrypoint.
+
+| Env | Effect |
+| --- | --- |
+| `SKIP_BACKUP=1` | Skip pre-update backup |
+| `SKIP_GIT_PULL=1` | Rebuild current tree without pulling |
+
+### Dev → server schema workflow
+
+```bash
+# Development
+npm run prisma:migrate:dev   # creates prisma/migrations/... (additive SQL)
+git commit && merge to main
+
+# Server
+./scripts/update.sh
+```
+
+### Never do on production
+
+- `docker compose down -v` (deletes Postgres/Redis data)
+- `prisma migrate reset` / `db push --force-reset`
+- Changing `POSTGRES_USER` or `POSTGRES_DB` after the volume was first initialized
+
 ## Build / migrate / start
 
 ### Local / VM (Node process)
@@ -153,7 +186,7 @@ The sync upserts QF `/resources/translations`, `/resources/tafsirs`, and `/resou
 ## Rollout checklist
 
 1. Apply config secrets in the secret store / env.
-2. Deploy new image or artifact (`docker compose -f docker-compose.yml up -d --build`).
+2. Prefer `./scripts/update.sh` (or `npm run update:prod`) so backup + pull + rebuild keep volumes. Manual equivalent: `docker compose -f docker-compose.yml up -d --build` (never `-v`).
 3. Confirm migrate succeeds (container logs or explicit `prisma migrate deploy`).
 4. Run `qf:sync-catalog:prod` (and pages if needed) so settings catalogs are populated.
 5. Wait for readiness (`/api/v1/health/ready` or `/api/health`).

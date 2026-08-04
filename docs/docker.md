@@ -58,6 +58,17 @@ Deploy production without the override:
 docker compose -f docker-compose.yml up -d --build
 ```
 
+Project name is pinned as `quron-yoli` so volume names do not depend on the checkout folder.
+
+### Updating without wiping data
+
+```bash
+./scripts/update.sh
+# or: npm run update:prod
+```
+
+Rebuilds the API, runs additive `prisma migrate deploy` on start, and **never** runs `down -v`. See [deployment.md](./deployment.md).
+
 ### Local override: [`docker-compose.override.yml`](../docker-compose.override.yml)
 
 Auto-merged for plain `docker compose up`:
@@ -90,14 +101,16 @@ Host `.env` `DATABASE_URL` / `REDIS_HOST=localhost` values are **overridden** in
 
 ## Volumes
 
-| Volume / mount | Path |
-| --- | --- |
-| `postgres_data` | `/var/lib/postgresql/data` |
-| `redis_data` | `/data` |
-| `./uploads` | `/app/uploads` |
-| `./logs` | `/app/logs` |
+| Volume / mount | Docker volume name | Path |
+| --- | --- | --- |
+| `postgres_data` | `quron-yoli_postgres_data` | `/var/lib/postgresql/data` |
+| `redis_data` | `quron-yoli_redis_data` | `/data` |
+| `./uploads` | (bind) | `/app/uploads` |
+| `./logs` | (bind) | `/app/logs` |
 
-Destroying named volumes wipes DB/cache state. Bind mounts persist on the host.
+Destroying named volumes (`docker compose down -v` or `docker volume rm`) wipes DB/cache state. Bind mounts persist on the host. Normal `up -d --build` and `./scripts/update.sh` keep volumes intact.
+
+If you already ran Compose under a different project/folder name, volumes may still be named `<oldproject>_postgres_data`. Either rename/reattach them to `quron-yoli_postgres_data` / `quron-yoli_redis_data`, or temporarily set the volume `name:` fields to match the existing volume names before the first update with this compose file.
 
 ## Redis configuration
 

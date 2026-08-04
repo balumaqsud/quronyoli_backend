@@ -1,3 +1,5 @@
+name: quron-yoli
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -102,7 +104,9 @@ services:
 
 volumes:
   postgres_data:
+    name: quron-yoli_postgres_data
   redis_data:
+    name: quron-yoli_redis_data
 
 networks:
   quron-yoli:
