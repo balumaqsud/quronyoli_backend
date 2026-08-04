@@ -1,5 +1,5 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { User } from '../../generated/prisma';
+import { AdminRole, User } from '../../generated/prisma';
 import {
   UpsertTelegramUserInput,
   UserResponseDto,
@@ -26,6 +26,10 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async findAdminRole(userId: string): Promise<AdminRole | null> {
+    return this.usersRepository.findAdminRole(userId);
   }
 
   toResponse(user: User): UserResponseDto {

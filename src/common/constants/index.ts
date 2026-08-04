@@ -11,9 +11,11 @@ export const CONFIG_KEYS = {
   THROTTLE: 'throttle',
   AUTH_COOKIE: 'authCookie',
   QURAN_FOUNDATION: 'quranFoundation',
+  SUPER_ADMIN: 'superAdmin',
 } as const;
 
 export const IS_PUBLIC_KEY = 'isPublic';
+export const ROLES_KEY = 'roles';
 export const REQUEST_ID_HEADER = 'x-request-id';
 export const TELEGRAM_WEBHOOK_SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 

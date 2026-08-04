@@ -154,4 +154,7 @@ export const envValidationSchema = Joi.object({
 
   SWAGGER_ENABLED: Joi.boolean().truthy('true').falsy('false').optional(),
   SWAGGER_PATH: Joi.string().default('docs'),
+
+  SUPER_ADMIN_TELEGRAM_ID: Joi.string().optional().allow(''),
+  SUPER_ADMIN_USERNAME: Joi.string().optional().allow(''),
 });

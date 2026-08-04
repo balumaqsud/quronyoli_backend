@@ -3,7 +3,11 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { JwtConfig } from '../../config/configuration';
 import { CONFIG_KEYS } from '../../common/constants';
-import { JwtPayload, TokenPair } from './interfaces/jwt-payload.interface';
+import {
+  GenerateTokenOptions,
+  JwtPayload,
+  TokenPair,
+} from './interfaces/jwt-payload.interface';
 
 @Injectable()
 export class TokenService {
@@ -19,11 +23,13 @@ export class TokenService {
   async generateAccessToken(
     userId: string,
     sessionId: string,
+    options?: GenerateTokenOptions,
   ): Promise<string> {
     const payload: JwtPayload = {
       sub: userId,
       sid: sessionId,
       typ: 'access',
+      ...(options?.role ? { role: options.role } : {}),
     };
 
     return this.jwtService.signAsync(payload, {
@@ -36,11 +42,13 @@ export class TokenService {
   async generateRefreshToken(
     userId: string,
     sessionId: string,
+    options?: GenerateTokenOptions,
   ): Promise<string> {
     const payload: JwtPayload = {
       sub: userId,
       sid: sessionId,
       typ: 'refresh',
+      ...(options?.role ? { role: options.role } : {}),
     };
 
     return this.jwtService.signAsync(payload, {
@@ -53,10 +61,11 @@ export class TokenService {
   async generateTokenPair(
     userId: string,
     sessionId: string,
+    options?: GenerateTokenOptions,
   ): Promise<TokenPair> {
     const [accessToken, refreshToken] = await Promise.all([
-      this.generateAccessToken(userId, sessionId),
-      this.generateRefreshToken(userId, sessionId),
+      this.generateAccessToken(userId, sessionId, options),
+      this.generateRefreshToken(userId, sessionId, options),
     ]);
 
     return { accessToken, refreshToken };

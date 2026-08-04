@@ -40,6 +40,7 @@ export class QfCatalogRepository {
             isActive: true,
             deletedAt: null,
             metadata: item.metadata,
+            // Preserve admin-only fields: isDefault, sortOrder
           },
         });
       }
@@ -154,6 +155,7 @@ export class QfCatalogRepository {
             isActive: true,
             deletedAt: null,
             metadata: item.metadata,
+            // Preserve admin-only fields: isPopular, sortOrder
           },
         });
       }

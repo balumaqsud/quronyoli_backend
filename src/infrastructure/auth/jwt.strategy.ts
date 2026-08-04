@@ -30,6 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       sub: payload.sub,
       sid: payload.sid,
       typ: 'access',
+      ...(payload.role ? { role: payload.role } : {}),
       iat: payload.iat,
       exp: payload.exp,
     };
