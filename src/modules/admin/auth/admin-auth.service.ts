@@ -16,6 +16,7 @@ import { AuthRequestContext } from '../../auth/interfaces/auth-request-context.i
 import { SessionsRepository } from '../../auth/sessions.repository';
 import { TelegramInitDataVerifier } from '../../auth/telegram/telegram-init-data.verifier';
 import { UsersService } from '../../users/users.service';
+import { AuthenticatedUser } from '../../../infrastructure/auth/interfaces/jwt-payload.interface';
 import { AdminAuthTokensResponseDto } from './dto/admin-auth-response.dto';
 
 @Injectable()
@@ -201,6 +202,15 @@ export class AdminAuthService {
         },
       },
     };
+  }
+
+  async logout(
+    currentUser: AuthenticatedUser,
+    response: Response,
+  ): Promise<{ success: true }> {
+    await this.sessionsRepository.revoke(currentUser.sid);
+    this.authCookieService.clearRefreshToken(response);
+    return { success: true };
   }
 
   private hashToken(token: string): string {

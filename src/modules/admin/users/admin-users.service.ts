@@ -200,6 +200,10 @@ export class AdminUsersService {
   private buildWhere(query: AdminUsersQueryDto): Prisma.UserWhereInput {
     const where: Prisma.UserWhereInput = {};
 
+    if (query.includeDeleted !== true) {
+      where.deletedAt = null;
+    }
+
     if (query.languageCode) {
       where.languageCode = query.languageCode;
     }

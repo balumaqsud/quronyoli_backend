@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
@@ -11,6 +11,7 @@ import {
   Min,
 } from 'class-validator';
 import { OffsetPaginationQueryDto } from '../../../../common/pagination/offset-pagination.dto';
+import { toOptionalBoolean } from '../../../../common/validation/to-optional-boolean';
 import { QuranReciterKind } from '../../../../generated/prisma';
 
 export class AdminQarisQueryDto extends OffsetPaginationQueryDto {
@@ -21,13 +22,13 @@ export class AdminQarisQueryDto extends OffsetPaginationQueryDto {
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(toOptionalBoolean)
   @IsBoolean()
   isActive?: boolean;
 
   @ApiPropertyOptional()
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(toOptionalBoolean)
   @IsBoolean()
   isPopular?: boolean;
 }

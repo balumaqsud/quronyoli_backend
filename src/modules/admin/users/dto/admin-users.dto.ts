@@ -7,22 +7,7 @@ import {
   MaxLength,
 } from 'class-validator';
 import { OffsetPaginationQueryDto } from '../../../../common/pagination/offset-pagination.dto';
-
-const toOptionalBoolean = ({ value }: { value: unknown }): boolean | undefined => {
-  if (value === undefined || value === null || value === '') {
-    return undefined;
-  }
-  if (typeof value === 'boolean') {
-    return value;
-  }
-  if (value === 'true' || value === '1') {
-    return true;
-  }
-  if (value === 'false' || value === '0') {
-    return false;
-  }
-  return undefined;
-};
+import { toOptionalBoolean } from '../../../../common/validation/to-optional-boolean';
 
 export class AdminUsersQueryDto extends OffsetPaginationQueryDto {
   @ApiPropertyOptional({
@@ -50,6 +35,16 @@ export class AdminUsersQueryDto extends OffsetPaginationQueryDto {
   @Transform(toOptionalBoolean)
   @IsBoolean()
   isAdmin?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Include soft-deleted users. Default false (only non-deleted).',
+    default: false,
+  })
+  @IsOptional()
+  @Transform(toOptionalBoolean)
+  @IsBoolean()
+  includeDeleted?: boolean;
 }
 
 export class UpdateAdminUserDto {

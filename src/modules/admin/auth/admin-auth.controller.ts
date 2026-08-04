@@ -8,6 +8,7 @@ import {
   Res,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiBody,
   ApiOkResponse,
   ApiOperation,
@@ -17,7 +18,9 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
+import { CurrentUser } from '../../../common/decorators/current-user.decorator';
 import { Public } from '../../../common/decorators/public.decorator';
+import { AuthenticatedUser } from '../../../infrastructure/auth/interfaces/jwt-payload.interface';
 import { AuthCookieService } from '../../auth/auth-cookie.service';
 import { AuthContext } from '../../auth/decorators/auth-context.decorator';
 import { TelegramAuthDto } from '../../auth/dto/telegram-auth.dto';
@@ -87,6 +90,21 @@ export class AdminAuthController {
     );
 
     return this.adminAuthService.refresh(refreshToken, context, response);
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Revoke the current admin session and clear refresh cookie',
+  })
+  @ApiOkResponse({ description: 'Session revoked' })
+  @ApiUnauthorizedResponse({ description: 'Authentication required' })
+  async logout(
+    @CurrentUser() currentUser: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ success: true }> {
+    return this.adminAuthService.logout(currentUser, response);
   }
 
   private readCookie(request: Request, name: string): string | undefined {
