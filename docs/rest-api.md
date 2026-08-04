@@ -209,8 +209,8 @@ All routes require **Bearer** auth and `QuranRateLimitGuard`. Stable catalog GET
 | GET | `/api/v1/quran/pages/lookup` | Page lookup (QF proxy) |
 | GET | `/api/v1/quran/pages/:pageNumber` | Page metadata by number (DB, camelCase) |
 | GET | `/api/v1/quran/pages/:pageNumber/verses` | Page meta + QF verses (Arabic/words; optional translations/tafsir/audio) |
-| GET | `/api/v1/quran/translations` | Translation resources |
-| GET | `/api/v1/quran/translations/:translationId/info` | Translation info |
+| GET | `/api/v1/quran/translations` | Active translation resources from local catalog (admin `isActive`) |
+| GET | `/api/v1/quran/translations/:translationId/info` | Translation info (QF proxy) |
 | GET | `/api/v1/quran/translations/:resourceId/by-surah/:chapter` | Translation by surah |
 | GET | `/api/v1/quran/translations/:resourceId/by-ayah/:ayahKey` | Translation by ayah |
 | GET | `/api/v1/quran/translations/:resourceId/by-juz/:juz` | Translation by juz |
@@ -221,8 +221,8 @@ All routes require **Bearer** auth and `QuranRateLimitGuard`. Stable catalog GET
 | GET | `/api/v1/quran/tafsirs/:resourceId/by-ayah/:ayahKey` | Tafsir by ayah |
 | GET | `/api/v1/quran/tafsirs/:resourceId/by-juz/:juz` | Tafsir by juz |
 | GET | `/api/v1/quran/tafsirs/:resourceId/by-page/:page` | Tafsir by page |
-| GET | `/api/v1/quran/audio/recitations` | Recitations list |
-| GET | `/api/v1/quran/audio/chapter-reciters` | Chapter reciters |
+| GET | `/api/v1/quran/audio/recitations` | Active ayah recitations from local catalog (admin `isActive`) |
+| GET | `/api/v1/quran/audio/chapter-reciters` | Active chapter reciters from local catalog (admin `isActive`) |
 | GET | `/api/v1/quran/audio/chapter-reciters/:reciterId` | Chapter reciter |
 | GET | `/api/v1/quran/audio/chapter-reciters/:reciterId/:chapter` | Chapter audio |
 | GET | `/api/v1/quran/audio/recitations/:recitationId/by-surah/:chapter` | Recitation by surah |

@@ -188,7 +188,7 @@ The sync upserts QF `/resources/translations`, `/resources/tafsirs`, and `/resou
 1. Apply config secrets in the secret store / env.
 2. Prefer `./scripts/update.sh` (or `npm run update:prod`) so backup + pull + rebuild keep volumes. Manual equivalent: `docker compose -f docker-compose.yml up -d --build` (never `-v`).
 3. Confirm migrate succeeds (container logs or explicit `prisma migrate deploy`).
-4. Run `qf:sync-catalog:prod` (and pages if needed) so settings catalogs are populated.
+4. Run `qf:sync-catalog:prod` (and pages if needed) so settings catalogs are populated, then **enable** desired translations/qaris in admin (new sync rows start inactive; lists are admin-gated).
 5. Wait for readiness (`/api/v1/health/ready` or `/api/health`).
 6. Smoke: auth telegram (staging), health, one Quran GET, reminder preference if used.
 7. Watch error rate and slow-request logs.

@@ -11,6 +11,12 @@ import { AnalyticsTrackingService } from '../analytics/analytics-tracking.servic
 import { ReadingService } from '../reading/reading.service';
 import { formatLocalDate } from '../reading/utils/reading-date.utils';
 import { QuranCacheService } from './cache/quran-cache.service';
+import {
+  toQfReciterResource,
+  toQfTranslationResource,
+} from './catalog/qf-catalog-list.mapper';
+import { mapLanguageNameToCode } from './catalog/qf-catalog.mapper';
+import { QfCatalogRepository } from './catalog/qf-catalog.repository';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
 import {
@@ -56,6 +62,7 @@ export class QuranService {
     private readonly analyticsTracking: AnalyticsTrackingService,
     private readonly readingService: ReadingService,
     private readonly pagesRepository: QfPagesRepository,
+    private readonly catalogRepository: QfCatalogRepository,
   ) {
     this.config = this.configService.getOrThrow<QuranFoundationConfig>(
       CONFIG_KEYS.QURAN_FOUNDATION,
@@ -460,13 +467,14 @@ export class QuranService {
     );
   }
 
-  getTranslations(query: LanguageQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'resources',
-      '/resources/translations',
-      this.pick(query, ['language']),
-      this.config.cacheTtl.resourcesSeconds,
+  async getTranslations(query: LanguageQueryDto): Promise<unknown> {
+    const languageCode = this.resolveCatalogLanguageFilter(query.language);
+    const rows = await this.catalogRepository.listActiveTranslations(
+      languageCode ? { languageCode } : undefined,
     );
+    return {
+      translations: rows.map(toQfTranslationResource),
+    };
   }
 
   getTranslationInfo(translationId: number): Promise<unknown> {
@@ -592,22 +600,22 @@ export class QuranService {
     );
   }
 
-  getRecitations(query: LanguageQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'resources',
-      '/resources/recitations',
-      this.pick(query, ['language']),
-      this.config.cacheTtl.resourcesSeconds,
-    );
+  async getRecitations(_query: LanguageQueryDto): Promise<unknown> {
+    const rows = await this.catalogRepository.listActiveReciters({
+      kind: 'AYAH',
+    });
+    return {
+      recitations: rows.map(toQfReciterResource),
+    };
   }
 
-  getChapterReciters(query: LanguageQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'resources',
-      '/resources/chapter_reciters',
-      this.pick(query, ['language']),
-      this.config.cacheTtl.resourcesSeconds,
-    );
+  async getChapterReciters(_query: LanguageQueryDto): Promise<unknown> {
+    const rows = await this.catalogRepository.listActiveReciters({
+      kind: 'CHAPTER',
+    });
+    return {
+      reciters: rows.map(toQfReciterResource),
+    };
   }
 
   getChapterAudioFiles(reciterId: number): Promise<unknown> {
@@ -712,6 +720,20 @@ export class QuranService {
       }
       return normalizeQfMediaUrls(payload, this.config.audioCdnBase);
     });
+  }
+
+  /**
+   * Map optional list `language` query to a DB languageCode filter.
+   * Returns undefined when missing/unknown so all active rows are returned.
+   */
+  private resolveCatalogLanguageFilter(
+    language: string | undefined,
+  ): string | undefined {
+    if (!language?.trim()) {
+      return undefined;
+    }
+    const code = mapLanguageNameToCode(language);
+    return code === 'und' ? undefined : code;
   }
 
   private verseQuery(query: VersesQueryDto): QuranQueryParams {

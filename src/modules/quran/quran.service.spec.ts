@@ -4,6 +4,7 @@ import { CONFIG_KEYS } from '../../common/constants';
 import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { ReadingService } from '../reading/reading.service';
 import { QuranCacheService } from './cache/quran-cache.service';
+import { QfCatalogRepository } from './catalog/qf-catalog.repository';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { QfPagesRepository } from './pages/qf-pages.repository';
 import { QuranService } from './quran.service';
@@ -24,6 +25,10 @@ describe('QuranService', () => {
   let pagesRepository: {
     findActiveByMushaf: jest.Mock;
     findActivePage: jest.Mock;
+  };
+  let catalogRepository: {
+    listActiveTranslations: jest.Mock;
+    listActiveReciters: jest.Mock;
   };
   let analyticsTracking: jest.Mocked<Pick<AnalyticsTrackingService, 'track'>>;
 
@@ -48,6 +53,10 @@ describe('QuranService', () => {
       findActiveByMushaf: jest.fn(),
       findActivePage: jest.fn(),
     };
+    catalogRepository = {
+      listActiveTranslations: jest.fn().mockResolvedValue([]),
+      listActiveReciters: jest.fn().mockResolvedValue([]),
+    };
     analyticsTracking = {
       track: jest.fn().mockResolvedValue(undefined),
     };
@@ -63,6 +72,7 @@ describe('QuranService', () => {
         { provide: QuranFoundationClient, useValue: client },
         { provide: QuranCacheService, useValue: cache },
         { provide: QfPagesRepository, useValue: pagesRepository },
+        { provide: QfCatalogRepository, useValue: catalogRepository },
         { provide: AnalyticsTrackingService, useValue: analyticsTracking },
         { provide: ReadingService, useValue: readingService },
         {
@@ -287,5 +297,84 @@ describe('QuranService', () => {
       '/chapter_recitations/7/101',
       { segments: true },
     );
+  });
+
+  it('lists active translations from local catalog (not QF)', async () => {
+    catalogRepository.listActiveTranslations.mockResolvedValue([
+      {
+        id: 'uuid-1',
+        externalId: '85',
+        name: 'Mufti Taqi',
+        authorName: 'Taqi',
+        slug: null,
+        languageCode: 'uz',
+        metadata: { id: 85, name: 'Mufti Taqi', language_name: 'uzbek' },
+      },
+    ]);
+
+    await expect(service.getTranslations({ language: 'uz' })).resolves.toEqual({
+      translations: [
+        expect.objectContaining({
+          id: 85,
+          name: 'Mufti Taqi',
+          language_name: 'uzbek',
+        }),
+      ],
+    });
+
+    expect(catalogRepository.listActiveTranslations).toHaveBeenCalledWith({
+      languageCode: 'uz',
+    });
+    expect(client.getContent).not.toHaveBeenCalled();
+  });
+
+  it('lists active ayah recitations from local catalog', async () => {
+    catalogRepository.listActiveReciters.mockResolvedValue([
+      {
+        id: 'uuid-r',
+        externalId: '7',
+        name: 'Alafasy',
+        arabicName: null,
+        style: null,
+        slug: null,
+        metadata: { id: 7, reciter_name: 'Alafasy', source: 'recitations' },
+      },
+    ]);
+
+    await expect(service.getRecitations({})).resolves.toEqual({
+      recitations: [expect.objectContaining({ id: 7, reciter_name: 'Alafasy' })],
+    });
+
+    expect(catalogRepository.listActiveReciters).toHaveBeenCalledWith({
+      kind: 'AYAH',
+    });
+    expect(client.getContent).not.toHaveBeenCalled();
+  });
+
+  it('lists active chapter reciters from local catalog', async () => {
+    catalogRepository.listActiveReciters.mockResolvedValue([
+      {
+        id: 'uuid-c',
+        externalId: '7',
+        name: 'Alafasy',
+        arabicName: null,
+        style: null,
+        slug: null,
+        metadata: {
+          id: 7,
+          name: 'Alafasy',
+          source: 'chapter_reciters',
+        },
+      },
+    ]);
+
+    await expect(service.getChapterReciters({})).resolves.toEqual({
+      reciters: [expect.objectContaining({ id: 7, name: 'Alafasy' })],
+    });
+
+    expect(catalogRepository.listActiveReciters).toHaveBeenCalledWith({
+      kind: 'CHAPTER',
+    });
+    expect(client.getContent).not.toHaveBeenCalled();
   });
 });

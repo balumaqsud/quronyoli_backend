@@ -1,4 +1,9 @@
 import { Injectable } from '@nestjs/common';
+import {
+  QuranReciter,
+  QuranReciterKind,
+  QuranTranslation,
+} from '../../../generated/prisma';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { QURAN_FOUNDATION_PROVIDER } from '../../settings/interfaces/settings.interface';
 import {
@@ -17,6 +22,34 @@ export type CatalogSyncStats = {
 export class QfCatalogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  async listActiveTranslations(options?: {
+    languageCode?: string;
+  }): Promise<QuranTranslation[]> {
+    return this.prisma.quranTranslation.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        ...(options?.languageCode
+          ? { languageCode: options.languageCode }
+          : {}),
+      },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  async listActiveReciters(options: {
+    kind: QuranReciterKind;
+  }): Promise<QuranReciter[]> {
+    return this.prisma.quranReciter.findMany({
+      where: {
+        kind: options.kind,
+        isActive: true,
+        deletedAt: null,
+      },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+  }
+
   async syncTranslations(
     items: CatalogTranslationPayload[],
   ): Promise<CatalogSyncStats> {
@@ -31,16 +64,16 @@ export class QfCatalogRepository {
               externalId: item.externalId,
             },
           },
-          create: item,
+          // New rows start disabled until an admin enables them for the Mini App.
+          create: { ...item, isActive: false },
           update: {
             languageCode: item.languageCode,
             name: item.name,
             authorName: item.authorName,
             slug: item.slug,
-            isActive: true,
             deletedAt: null,
             metadata: item.metadata,
-            // Preserve admin-only fields: isDefault, sortOrder
+            // Preserve admin-controlled: isActive, isDefault, sortOrder
           },
         });
       }
@@ -87,15 +120,15 @@ export class QfCatalogRepository {
               externalId: item.externalId,
             },
           },
-          create: item,
+          create: { ...item, isActive: false },
           update: {
             languageCode: item.languageCode,
             name: item.name,
             authorName: item.authorName,
             slug: item.slug,
-            isActive: true,
             deletedAt: null,
             metadata: item.metadata,
+            // Preserve admin-controlled: isActive
           },
         });
       }
@@ -146,16 +179,15 @@ export class QfCatalogRepository {
               kind: item.kind,
             },
           },
-          create: item,
+          create: { ...item, isActive: false },
           update: {
             name: item.name,
             arabicName: item.arabicName,
             style: item.style,
             slug: item.slug,
-            isActive: true,
             deletedAt: null,
             metadata: item.metadata,
-            // Preserve admin-only fields: isPopular, sortOrder
+            // Preserve admin-controlled: isActive, isPopular, sortOrder
           },
         });
       }
