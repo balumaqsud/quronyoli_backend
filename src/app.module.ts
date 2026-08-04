@@ -32,6 +32,7 @@ import { UsersModule } from './modules/users/users.module';
 import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -121,6 +122,7 @@ import { AuthModule } from './modules/auth/auth.module';
     HealthModule,
     UsersModule,
     AuthModule,
+    AdminModule,
     ReadingModule,
     QuranModule,
     SettingsModule,

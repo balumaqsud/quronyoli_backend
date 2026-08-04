@@ -17,7 +17,10 @@ describe('AuthService', () => {
   let usersService: jest.Mocked<
     Pick<
       UsersService,
-      'upsertFromTelegram' | 'getActiveByIdOrThrow' | 'toResponse'
+      | 'upsertFromTelegram'
+      | 'getActiveByIdOrThrow'
+      | 'toResponse'
+      | 'findAdminRole'
     >
   >;
   let sessionsRepository: jest.Mocked<
@@ -45,6 +48,7 @@ describe('AuthService', () => {
     isPremium: false,
     allowsWriteToPm: false,
     isActive: true,
+    isBanned: false,
     lastLoginAt: new Date(),
     deletedAt: null,
     createdAt: new Date(),
@@ -70,6 +74,7 @@ describe('AuthService', () => {
       upsertFromTelegram: jest.fn(),
       getActiveByIdOrThrow: jest.fn(),
       toResponse: jest.fn(),
+      findAdminRole: jest.fn().mockResolvedValue(null),
     };
     sessionsRepository = {
       create: jest.fn(),

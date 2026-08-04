@@ -134,6 +134,11 @@ export interface QuranFoundationConfig {
   cacheTtl: QuranFoundationCacheTtlConfig;
 }
 
+export interface SuperAdminConfig {
+  telegramId?: string;
+  username?: string;
+}
+
 export interface AppConfiguration {
   app: AppConfig;
   database: DatabaseConfig;
@@ -147,6 +152,7 @@ export interface AppConfiguration {
   throttle: ThrottleConfig;
   authCookie: AuthCookieConfig;
   quranFoundation: QuranFoundationConfig;
+  superAdmin: SuperAdminConfig;
 }
 
 const parseCorsOrigins = (value: string | undefined): string[] => {
@@ -478,6 +484,10 @@ export default (): AppConfiguration => {
           10,
         ),
       },
+    },
+    superAdmin: {
+      telegramId: process.env.SUPER_ADMIN_TELEGRAM_ID || undefined,
+      username: process.env.SUPER_ADMIN_USERNAME || undefined,
     },
   };
 };

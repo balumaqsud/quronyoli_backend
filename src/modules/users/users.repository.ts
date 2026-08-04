@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { User } from '../../generated/prisma';
+import { AdminRole, User } from '../../generated/prisma';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import { UpsertTelegramUserInput } from './interfaces/user.interface';
 
@@ -27,6 +27,14 @@ export class UsersRepository {
     return await this.prisma.user.findUnique({
       where: { telegramId },
     });
+  }
+
+  async findAdminRole(userId: string): Promise<AdminRole | null> {
+    const admin = await this.prisma.admin.findUnique({
+      where: { userId },
+      select: { role: true },
+    });
+    return admin?.role ?? null;
   }
 
   async upsertFromTelegram(input: UpsertTelegramUserInput): Promise<User> {

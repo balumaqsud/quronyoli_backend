@@ -5,6 +5,8 @@ import { createKeepAliveHttpModule } from '../../common/http/create-keepalive-ht
 import { QuranFoundationConfig } from '../../config/configuration';
 import { ReadingModule } from '../reading/reading.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { QfCatalogRepository } from './catalog/qf-catalog.repository';
+import { QfCatalogSyncService } from './catalog/qf-catalog-sync.service';
 import { QuranCacheService } from './cache/quran-cache.service';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { QuranFoundationTokenService } from './client/quran-foundation-token.service';
@@ -41,7 +43,9 @@ import { QuranService } from './quran.service';
     QuranFoundationErrorMapper,
     QuranRateLimitGuard,
     QfPagesRepository,
+    QfCatalogRepository,
+    QfCatalogSyncService,
   ],
-  exports: [QuranService, QURAN_FOUNDATION_CLIENT],
+  exports: [QuranService, QURAN_FOUNDATION_CLIENT, QfCatalogSyncService],
 })
 export class QuranModule {}

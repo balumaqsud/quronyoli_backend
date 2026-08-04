@@ -1,6 +1,6 @@
 {
   "name": "quron-yoli_backend",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Production backend for the Quron Yo'li Telegram Mini App",
   "author": "Quron Yo'li",
   "private": true,

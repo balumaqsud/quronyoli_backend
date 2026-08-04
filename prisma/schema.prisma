@@ -33,6 +33,13 @@ enum UserNotificationType {
   DAILY_REMINDER
 }
 
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+
+  @@map("admin_role")
+}
+
 model User {
   id              String             @id @default(uuid()) @db.Uuid
   telegramId      String             @unique @map("telegram_id")
@@ -44,6 +51,7 @@ model User {
   isPremium       Boolean            @default(false) @map("is_premium")
   allowsWriteToPm Boolean            @default(false) @map("allows_write_to_pm")
   isActive        Boolean            @default(true) @map("is_active")
+  isBanned        Boolean            @default(false) @map("is_banned")
   lastLoginAt     DateTime?          @map("last_login_at")
   deletedAt       DateTime?          @map("deleted_at")
   createdAt       DateTime           @default(now()) @map("created_at")
@@ -63,10 +71,50 @@ model User {
   reminderPreference TelegramReminderPreference?
   notificationDeliveries NotificationDelivery[]
   userNotifications  UserNotification[]
+  admin              Admin?
 
   @@index([isActive])
+  @@index([isBanned])
   @@index([deletedAt])
+  @@index([lastLoginAt])
+  @@index([createdAt])
   @@map("users")
+}
+
+model Admin {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @unique @map("user_id") @db.Uuid
+  role      AdminRole
+  createdBy String?   @map("created_by") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  creator       Admin?    @relation("AdminCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdAdmins Admin[]   @relation("AdminCreatedBy")
+  logs          AdminLog[]
+
+  @@index([role])
+  @@map("admins")
+}
+
+model AdminLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  adminId     String   @map("admin_id") @db.Uuid
+  action      String   @db.VarChar(64)
+  entity      String   @db.VarChar(64)
+  entityId    String?  @map("entity_id") @db.Uuid
+  description String?  @db.VarChar(1000)
+  ipAddress   String?  @map("ip_address") @db.VarChar(128)
+  userAgent   String?  @map("user_agent") @db.VarChar(512)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt(sort: Desc)])
+  @@index([entity, entityId])
+  @@index([createdAt(sort: Desc)])
+  @@map("admin_logs")
 }
 
 model UserSession {
@@ -135,6 +183,8 @@ model QuranTranslation {
   authorName   String?  @map("author_name") @db.VarChar(255)
   slug         String?  @db.VarChar(128)
   isActive     Boolean  @default(true) @map("is_active")
+  isDefault    Boolean  @default(false) @map("is_default")
+  sortOrder    Int      @default(0) @map("sort_order")
   metadata     Json?
   deletedAt    DateTime? @map("deleted_at")
   createdAt    DateTime @default(now()) @map("created_at")
@@ -146,6 +196,8 @@ model QuranTranslation {
   @@unique([provider, externalId])
   @@index([languageCode])
   @@index([isActive])
+  @@index([isDefault])
+  @@index([sortOrder])
   @@index([deletedAt])
   @@map("quran_translations")
 }
@@ -184,6 +236,8 @@ model QuranReciter {
   style       String?          @db.VarChar(128)
   slug        String?          @db.VarChar(128)
   isActive    Boolean          @default(true) @map("is_active")
+  isPopular   Boolean          @default(false) @map("is_popular")
+  sortOrder   Int              @default(0) @map("sort_order")
   metadata    Json?
   deletedAt   DateTime?        @map("deleted_at")
   createdAt   DateTime         @default(now()) @map("created_at")
@@ -196,6 +250,8 @@ model QuranReciter {
   @@unique([provider, externalId, kind])
   @@index([kind])
   @@index([isActive])
+  @@index([isPopular])
+  @@index([sortOrder])
   @@index([deletedAt])
   @@map("quran_reciters")
 }
