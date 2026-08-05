@@ -21,7 +21,6 @@ import { AuthenticatedUser } from '../../infrastructure/auth/interfaces/jwt-payl
 import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
 import {
   MushafPageDetailDto,
-  MushafPageListItemDto,
   MushafPageVersesResponseDto,
 } from './dto/mushaf-page-response.dto';
 import {
@@ -205,9 +204,11 @@ export class QuranController {
   @ApiOperation({
     summary: 'List Madani Mushaf page metadata',
     description:
-      'Returns a compact array of locally synced pages (604 for mushaf=1). Cached under Redis key pages:list. Run qf:sync-pages first.',
+      'Returns locally synced page metadata plus total/totalPages (604 for mushaf=1). Not a live QF GET /pages proxy — run qf:sync-pages first. Cached under Redis key pages:list.',
   })
-  @ApiOkResponse({ type: MushafPageListItemDto, isArray: true })
+  @ApiOkResponse({
+    description: '{ pages: MushafPageListItemDto[], total, totalPages }',
+  })
   getPages(@Query() query: MushafPagesQueryDto): Promise<unknown> {
     return this.quranService.getPages(query);
   }
@@ -331,7 +332,7 @@ export class QuranController {
     name: 'script',
     example: 'uthmani_tajweed',
     description:
-      'uthmani | uthmani_tajweed | uthmani_simple | imlaei | indopak | code_v1 | code_v2 | qpc_hafs',
+      'uthmani | uthmani_tajweed | uthmani_simple | imlaei | indopak | indopak_nastaleeq | code_v1 | code_v2 | qpc_hafs',
   })
   getScript(
     @Param('script') script: string,

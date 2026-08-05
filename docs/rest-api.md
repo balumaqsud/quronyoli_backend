@@ -205,7 +205,7 @@ All routes require **Bearer** auth and `QuranRateLimitGuard`. Stable catalog GET
 | GET | `/api/v1/quran/ayahs/by-page/:page` | Ayahs by page (alias of `/pages/:page/verses`) |
 | GET | `/api/v1/quran/juz` | List juz |
 | GET | `/api/v1/quran/juz/:id` | Juz by id |
-| GET | `/api/v1/quran/pages` | List Madani page metadata (DB) — `[{ page, firstVerse, lastVerse, verseCount }]` |
+| GET | `/api/v1/quran/pages` | List Madani page metadata (DB) — `{ pages, total, totalPages }` |
 | GET | `/api/v1/quran/pages/lookup` | Page lookup (QF proxy) |
 | GET | `/api/v1/quran/pages/:pageNumber` | Page metadata by number (DB, camelCase) |
 | GET | `/api/v1/quran/pages/:pageNumber/verses` | Page meta + QF verses (Arabic/words; optional translations/tafsir/audio) |
@@ -230,7 +230,7 @@ All routes require **Bearer** auth and `QuranRateLimitGuard`. Stable catalog GET
 | GET | `/api/v1/quran/audio/reciters/:reciterId/timestamps` | Audio timestamps |
 | GET | `/api/v1/quran/search` | Search |
 
-QF proxy behavior, cache TTLs, and resource IDs: [quran-foundation.md](./quran-foundation.md), [qf-integration-contract.md](./qf-integration-contract.md).
+QF proxy behavior, cache TTLs, and resource IDs: [quran-foundation.md](./quran-foundation.md), [qf-integration-contract.md](./qf-integration-contract.md). Frontend mushaf/reader contract: [frontend-quran-api.md](./frontend-quran-api.md).
 
 ## Counts
 

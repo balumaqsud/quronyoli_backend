@@ -82,4 +82,24 @@ export class MushafPageVersesResponseDto {
     items: { type: 'object', additionalProperties: true },
   })
   verses!: Record<string, unknown>[];
+
+  @ApiPropertyOptional({
+    description:
+      'QF pagination summary after auto-following next_page until verseCount is met',
+    example: {
+      per_page: 50,
+      current_page: 1,
+      next_page: null,
+      total_records: 15,
+      complete: true,
+    },
+  })
+  pagination?: {
+    per_page?: number;
+    current_page?: number;
+    next_page?: number | null;
+    total_pages?: number;
+    total_records: number;
+    complete: boolean;
+  };
 }

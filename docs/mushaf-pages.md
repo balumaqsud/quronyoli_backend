@@ -53,7 +53,7 @@ All under `/api/v1/quran`, JWT + rate limit:
 
 | Method | Path | Source | Response |
 | --- | --- | --- | --- |
-| GET | `/pages?mushaf=1` | Postgres + Redis `pages:list` | `[{ page, firstVerse, lastVerse, verseCount }, …]` |
+| GET | `/pages?mushaf=1` | Postgres + Redis `pages:list` | `{ pages: [{ page, firstVerse, lastVerse, verseCount }, …], total, totalPages }` |
 | GET | `/pages/:pageNumber` | Postgres + Redis `page:{n}` | CamelCase page metadata (incl. `verses` as keys) |
 | GET | `/pages/:pageNumber/verses` | Local meta + QF verses | `{ page, verses }` — Arabic + words by default; translations/audio/tafsir via query |
 | GET | `/ayahs/by-page/:page` | Same as `/pages/:page/verses` | Same composed payload |
@@ -79,15 +79,23 @@ All under `/api/v1/quran`, JWT + rate limit:
 ### Sync
 
 ```bash
+# Default mushaf=1 (full QF crawl)
 npm run qf:sync-pages
+
+# Multiple Madani editions (604-page layout): clone coords from mushaf 1
+npm run qf:sync-pages -- --mushaf=1,4,5,19 --clone-from=1
+
 # production build:
 npm run qf:sync-pages:prod
+npm run qf:sync-pages:prod -- --mushaf=4,5,19 --clone-from=1
 ```
+
+Page serving is **per mushaf id**. Frontend Settings editions (QCF V2, QPC Hafs, Uthmani, QCF V4 Tajweed) each need synced rows or `GET /pages?mushaf=N` returns **404**. Editions that share the Madani 604 layout can use `--clone-from=1` instead of a full QF crawl.
 
 After sync:
 
-- Exactly **604** active rows
+- Exactly **604** active rows **per mushaf id**
 - Exactly **6236** unique `verse_keys` with no cross-page duplicates
-- Redis `page:{n}` and `pages:list` warmed
+- Redis `page:{n}` / `pages:list` (and `page:{mushaf}:{n}` / `pages:list:{mushaf}`) warmed
 
 Empty DB → `GET /pages` returns **404** with a sync hint until the job completes.

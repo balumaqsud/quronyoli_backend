@@ -41,6 +41,7 @@ import {
 import {
   DEFAULT_MUSHAF_ID,
   DEFAULT_PAGE_VERSE_FIELDS,
+  DEFAULT_PAGE_VERSE_PER_PAGE,
   DEFAULT_PAGE_WORDS,
   MADANI_MUSHAF_PAGE_COUNT,
 } from './pages/qf-pages.constants';
@@ -254,6 +255,10 @@ export class QuranService {
     );
   }
 
+  /**
+   * Local synced Madani page index (not live QF GET /pages).
+   * Empty DB → 404 until `npm run qf:sync-pages`.
+   */
   getPages(query: MushafPagesQueryDto): Promise<unknown> {
     const mushafId = this.resolveMushafId(query.mushaf);
     const cacheKey = this.cache.pagesListKey(mushafId);
@@ -268,9 +273,51 @@ export class QuranService {
             `No mushaf pages synced for mushaf=${mushafId}. Run npm run qf:sync-pages.`,
           );
         }
-        return pages.map((row) => toMushafPageListItem(row));
+        const list = pages.map((row) => toMushafPageListItem(row));
+        const total = list.length;
+        return {
+          pages: list,
+          total,
+          totalPages: total,
+        };
       },
-    );
+    ).then((cached) => this.normalizePagesListPayload(cached));
+  }
+
+  /** Accept legacy cached bare arrays from older sync warmers. */
+  private normalizePagesListPayload(cached: unknown): {
+    pages: unknown[];
+    total: number;
+    totalPages: number;
+  } {
+    if (Array.isArray(cached)) {
+      return {
+        pages: cached,
+        total: cached.length,
+        totalPages: cached.length,
+      };
+    }
+    if (cached && typeof cached === 'object') {
+      const body = cached as {
+        pages?: unknown[];
+        total?: number;
+        totalPages?: number;
+      };
+      const pages = Array.isArray(body.pages) ? body.pages : [];
+      const total =
+        typeof body.total === 'number'
+          ? body.total
+          : typeof body.totalPages === 'number'
+            ? body.totalPages
+            : pages.length;
+      return {
+        pages,
+        total,
+        totalPages:
+          typeof body.totalPages === 'number' ? body.totalPages : total,
+      };
+    }
+    return { pages: [], total: 0, totalPages: 0 };
   }
 
   getPage(pageNumber: number, query: MushafPagesQueryDto): Promise<unknown> {
@@ -316,17 +363,16 @@ export class QuranService {
           );
         }
 
-        const payload = await this.client.getContent<{
-          verses?: unknown[];
-        }>(`/verses/by_page/${page}`, params);
-        const normalized = normalizeQfMediaUrls(
-          payload,
-          this.config.audioCdnBase,
-        ) as { verses?: unknown[] };
+        const { verses, pagination } = await this.fetchCompletePageVerses(
+          page,
+          params,
+          row.verseCount,
+        );
 
         return {
           page: toMushafPageDetail(row),
-          verses: normalized.verses ?? [],
+          verses,
+          pagination,
         };
       },
     );
@@ -436,7 +482,7 @@ export class QuranService {
   async getScript(script: string, query: ScriptQueryDto): Promise<unknown> {
     if (!isQfScriptName(script)) {
       throw new BadRequestException(
-        `Unsupported Quran script "${script}". Allowed: uthmani, uthmani_tajweed, uthmani_simple, imlaei, indopak, code_v1, code_v2, qpc_hafs`,
+        `Unsupported Quran script "${script}". Allowed: uthmani, uthmani_tajweed, uthmani_simple, imlaei, indopak, indopak_nastaleeq, code_v1, code_v2, qpc_hafs`,
       );
     }
 
@@ -765,7 +811,102 @@ export class QuranService {
     if (params.words === undefined) {
       params.words = DEFAULT_PAGE_WORDS;
     }
+    if (params.per_page === undefined) {
+      params.per_page = DEFAULT_PAGE_VERSE_PER_PAGE;
+    }
     return params;
+  }
+
+  /**
+   * Fetch QF `/verses/by_page/{n}` and follow `pagination.next_page` until
+   * `expectedCount` ayahs are collected (or no next page).
+   */
+  private async fetchCompletePageVerses(
+    mushafPage: number,
+    params: QuranQueryParams,
+    expectedCount: number,
+  ): Promise<{
+    verses: unknown[];
+    pagination: {
+      per_page?: number;
+      current_page?: number;
+      next_page?: number | null;
+      total_pages?: number;
+      total_records: number;
+      complete: boolean;
+    };
+  }> {
+    const verses: unknown[] = [];
+    let qfPage =
+      typeof params.page === 'number' && Number.isFinite(params.page)
+        ? params.page
+        : 1;
+    let lastPagination: Record<string, unknown> | undefined;
+    const maxRounds = 20;
+
+    for (let round = 0; round < maxRounds; round += 1) {
+      const requestParams: QuranQueryParams = { ...params, page: qfPage };
+      const payload = await this.client.getContent<{
+        verses?: unknown[];
+        pagination?: Record<string, unknown>;
+      }>(`/verses/by_page/${mushafPage}`, requestParams);
+      const normalized = normalizeQfMediaUrls(
+        payload,
+        this.config.audioCdnBase,
+      ) as {
+        verses?: unknown[];
+        pagination?: Record<string, unknown>;
+      };
+
+      const batch = normalized.verses ?? [];
+      verses.push(...batch);
+      lastPagination = normalized.pagination;
+
+      if (expectedCount > 0 && verses.length >= expectedCount) {
+        break;
+      }
+
+      const nextPage = lastPagination?.next_page;
+      if (typeof nextPage !== 'number' || !Number.isFinite(nextPage)) {
+        break;
+      }
+      if (nextPage === qfPage) {
+        break;
+      }
+      qfPage = nextPage;
+    }
+
+    const complete = expectedCount <= 0 || verses.length >= expectedCount;
+    const sliced =
+      expectedCount > 0 && verses.length > expectedCount
+        ? verses.slice(0, expectedCount)
+        : verses;
+
+    return {
+      verses: sliced,
+      pagination: {
+        per_page:
+          typeof lastPagination?.per_page === 'number'
+            ? lastPagination.per_page
+            : typeof params.per_page === 'number'
+              ? params.per_page
+              : DEFAULT_PAGE_VERSE_PER_PAGE,
+        current_page:
+          typeof lastPagination?.current_page === 'number'
+            ? lastPagination.current_page
+            : qfPage,
+        next_page:
+          typeof lastPagination?.next_page === 'number'
+            ? lastPagination.next_page
+            : null,
+        total_pages:
+          typeof lastPagination?.total_pages === 'number'
+            ? lastPagination.total_pages
+            : undefined,
+        total_records: sliced.length,
+        complete,
+      },
+    };
   }
 
   private mergeFields(

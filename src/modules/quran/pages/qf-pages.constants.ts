@@ -13,7 +13,13 @@ export const MUSHAF_PAGE_SYNC_FIELDS =
 
 /** Default verse fields merged into GET /pages/:page/verses when client omits extras. */
 export const DEFAULT_PAGE_VERSE_FIELDS =
-  'text_uthmani,page_number,juz_number,hizb_number,rub_el_hizb_number';
+  'text_uthmani,chapter_id,verse_number,verse_key,page_number,juz_number,hizb_number,rub_el_hizb_number,sajdah_number,sajdah_type';
+
+/**
+ * Default QF `per_page` for page-verse bodies (matches sync).
+ * Madani pages never exceed this; omitting it risks truncated QF pages.
+ */
+export const DEFAULT_PAGE_VERSE_PER_PAGE = 50;
 
 /** Default words flag when client omits `words` on page verse fetches. */
 export const DEFAULT_PAGE_WORDS = 'true';

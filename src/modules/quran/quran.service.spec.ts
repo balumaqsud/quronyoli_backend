@@ -167,14 +167,18 @@ describe('QuranService', () => {
       },
     ]);
 
-    await expect(service.getPages({})).resolves.toEqual([
-      {
-        page: 1,
-        firstVerse: '1:1',
-        lastVerse: '1:7',
-        verseCount: 2,
-      },
-    ]);
+    await expect(service.getPages({})).resolves.toEqual({
+      pages: [
+        {
+          page: 1,
+          firstVerse: '1:1',
+          lastVerse: '1:7',
+          verseCount: 2,
+        },
+      ],
+      total: 1,
+      totalPages: 1,
+    });
     expect(cache.pagesListKey).toHaveBeenCalledWith(1);
   });
 
@@ -198,7 +202,17 @@ describe('QuranService', () => {
       syncedAt: new Date('2026-08-01T00:00:00.000Z'),
     });
     client.getContent.mockResolvedValue({
-      verses: [{ verse_key: '1:1', text_uthmani: 'بِسْمِ' }],
+      verses: [
+        { verse_key: '1:1', text_uthmani: 'بِسْمِ' },
+        { verse_key: '1:7', text_uthmani: 'صِرَٰط' },
+      ],
+      pagination: {
+        per_page: 50,
+        current_page: 1,
+        next_page: null,
+        total_pages: 1,
+        total_records: 2,
+      },
     });
 
     const result = await service.getPageVerses(1, {});
@@ -222,16 +236,99 @@ describe('QuranService', () => {
         imageWidth: null,
         syncedAt: '2026-08-01T00:00:00.000Z',
       },
-      verses: [{ verse_key: '1:1', text_uthmani: 'بِسْمِ' }],
+      verses: [
+        { verse_key: '1:1', text_uthmani: 'بِسْمِ' },
+        { verse_key: '1:7', text_uthmani: 'صِرَٰط' },
+      ],
+      pagination: {
+        per_page: 50,
+        current_page: 1,
+        next_page: null,
+        total_pages: 1,
+        total_records: 2,
+        complete: true,
+      },
     });
 
     expect(client.getContent).toHaveBeenCalledWith('/verses/by_page/1', {
       mushaf: 1,
       fields:
-        'text_uthmani,page_number,juz_number,hizb_number,rub_el_hizb_number',
+        'text_uthmani,chapter_id,verse_number,verse_key,page_number,juz_number,hizb_number,rub_el_hizb_number,sajdah_number,sajdah_type',
       words: 'true',
+      per_page: 50,
+      page: 1,
     });
     expect(cache.pageVersesKey).toHaveBeenCalled();
+  });
+
+  it('follows QF pagination until page verseCount is complete', async () => {
+    pagesRepository.findActivePage.mockResolvedValue({
+      mushafId: 1,
+      pageNumber: 604,
+      firstVerseKey: '112:1',
+      lastVerseKey: '114:6',
+      verseKeys: Array.from({ length: 15 }, (_, i) => `x:${i + 1}`),
+      surahIds: [112, 113, 114],
+      juzNumber: 30,
+      hizbNumber: 60,
+      rubElHizbNumber: 240,
+      juzNumbers: [30],
+      hizbNumbers: [60],
+      rubElHizbNumbers: [240],
+      verseCount: 15,
+      imageUrl: null,
+      imageWidth: null,
+      syncedAt: new Date('2026-08-01T00:00:00.000Z'),
+    });
+    client.getContent
+      .mockResolvedValueOnce({
+        verses: Array.from({ length: 10 }, (_, i) => ({
+          verse_key: `112:${i + 1}`,
+        })),
+        pagination: {
+          per_page: 10,
+          current_page: 1,
+          next_page: 2,
+          total_pages: 2,
+          total_records: 15,
+        },
+      })
+      .mockResolvedValueOnce({
+        verses: Array.from({ length: 5 }, (_, i) => ({
+          verse_key: `114:${i + 1}`,
+        })),
+        pagination: {
+          per_page: 10,
+          current_page: 2,
+          next_page: null,
+          total_pages: 2,
+          total_records: 15,
+        },
+      });
+
+    const result = (await service.getPageVerses(604, {
+      per_page: 10,
+    })) as { verses: unknown[]; pagination: { complete: boolean } };
+
+    expect(result.verses).toHaveLength(15);
+    expect(result.pagination.complete).toBe(true);
+    expect(client.getContent).toHaveBeenCalledTimes(2);
+    expect(client.getContent).toHaveBeenNthCalledWith(1, '/verses/by_page/604', {
+      mushaf: 1,
+      fields:
+        'text_uthmani,chapter_id,verse_number,verse_key,page_number,juz_number,hizb_number,rub_el_hizb_number,sajdah_number,sajdah_type',
+      words: 'true',
+      per_page: 10,
+      page: 1,
+    });
+    expect(client.getContent).toHaveBeenNthCalledWith(2, '/verses/by_page/604', {
+      mushaf: 1,
+      fields:
+        'text_uthmani,chapter_id,verse_number,verse_key,page_number,juz_number,hizb_number,rub_el_hizb_number,sajdah_number,sajdah_type',
+      words: 'true',
+      per_page: 10,
+      page: 2,
+    });
   });
 
   it('rejects unsupported script names', async () => {

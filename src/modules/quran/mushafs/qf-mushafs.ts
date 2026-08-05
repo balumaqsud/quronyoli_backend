@@ -78,6 +78,7 @@ export const QF_SCRIPT_WHITELIST = [
   'uthmani_simple',
   'imlaei',
   'indopak',
+  'indopak_nastaleeq',
   'code_v1',
   'code_v2',
   'qpc_hafs',

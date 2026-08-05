@@ -137,14 +137,127 @@ export class QfPagesSyncService {
       'Mushaf page sync integrity checks passed',
     );
 
+    const list = pages.map((row) => toMushafPageListItem(row));
     await this.cache.setJson(
       this.cache.pagesListKey(mushafId),
-      pages.map((row) => toMushafPageListItem(row)),
+      {
+        pages: list,
+        total: list.length,
+        totalPages: list.length,
+      },
       this.config.cacheTtl.chaptersSeconds,
     );
 
     return {
       mushafId,
+      pageCountExpected: MADANI_MUSHAF_PAGE_COUNT,
+      verseCountExpected: MADANI_MUSHAF_VERSE_COUNT,
+      verseCountSynced: allVerseKeys.size,
+      pages: {
+        upserted,
+        deactivated,
+        seen: seenPageNumbers.length,
+      },
+    };
+  }
+
+  /**
+   * Clone Madani page coordinates from a synced source mushaf to another id.
+   * Safe for editions that share the standard 604-page Madani layout (1, 4, 5, 19, …).
+   * Avoids a full QF crawl when page boundaries are identical.
+   */
+  async cloneMadaniPagesFrom(
+    sourceMushafId: number,
+    targetMushafId: number,
+  ): Promise<QfPagesSyncResult> {
+    if (sourceMushafId === targetMushafId) {
+      throw new Error('source and target mushaf ids must differ');
+    }
+
+    const sourcePages =
+      await this.repository.findActiveByMushaf(sourceMushafId);
+    if (sourcePages.length !== MADANI_MUSHAF_PAGE_COUNT) {
+      throw new Error(
+        `Source mushaf=${sourceMushafId} has ${sourcePages.length} pages; expected ${MADANI_MUSHAF_PAGE_COUNT}. Run qf:sync-pages first.`,
+      );
+    }
+
+    const seenPageNumbers: number[] = [];
+    const allVerseKeys = new Set<string>();
+    let upserted = 0;
+
+    for (const row of sourcePages) {
+      const payload = {
+        provider: row.provider,
+        mushafId: targetMushafId,
+        pageNumber: row.pageNumber,
+        firstVerseKey: row.firstVerseKey,
+        lastVerseKey: row.lastVerseKey,
+        verseKeys: row.verseKeys,
+        surahIds: row.surahIds,
+        juzNumber: row.juzNumber,
+        hizbNumber: row.hizbNumber,
+        rubElHizbNumber: row.rubElHizbNumber,
+        juzNumbers: row.juzNumbers,
+        hizbNumbers: row.hizbNumbers,
+        rubElHizbNumbers: row.rubElHizbNumbers,
+        verseCount: row.verseCount,
+        imageUrl: row.imageUrl,
+        imageWidth: row.imageWidth,
+        isActive: true,
+        syncedAt: new Date(),
+      };
+
+      for (const key of payload.verseKeys) {
+        allVerseKeys.add(key);
+      }
+
+      await this.repository.upsertPage(payload);
+      seenPageNumbers.push(row.pageNumber);
+      upserted += 1;
+
+      await this.cache.setJson(
+        this.cache.pageMetadataKey(row.pageNumber, targetMushafId),
+        toMushafPageDetail(payload),
+        this.config.cacheTtl.chaptersSeconds,
+      );
+    }
+
+    const deactivated = await this.repository.deactivateMissing(
+      targetMushafId,
+      seenPageNumbers,
+    );
+
+    const pages = await this.repository.findActiveByMushaf(targetMushafId);
+    if (pages.length !== MADANI_MUSHAF_PAGE_COUNT) {
+      throw new Error(
+        `Expected ${MADANI_MUSHAF_PAGE_COUNT} active pages after clone to mushaf=${targetMushafId}, got ${pages.length}`,
+      );
+    }
+
+    const list = pages.map((row) => toMushafPageListItem(row));
+    await this.cache.setJson(
+      this.cache.pagesListKey(targetMushafId),
+      {
+        pages: list,
+        total: list.length,
+        totalPages: list.length,
+      },
+      this.config.cacheTtl.chaptersSeconds,
+    );
+
+    this.logger.info(
+      {
+        sourceMushafId,
+        targetMushafId,
+        pageCount: pages.length,
+        verseCount: allVerseKeys.size,
+      },
+      'Cloned Madani mushaf page metadata',
+    );
+
+    return {
+      mushafId: targetMushafId,
       pageCountExpected: MADANI_MUSHAF_PAGE_COUNT,
       verseCountExpected: MADANI_MUSHAF_VERSE_COUNT,
       verseCountSynced: allVerseKeys.size,
