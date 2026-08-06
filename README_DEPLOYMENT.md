@@ -68,7 +68,7 @@ docker compose -f docker-compose.yml exec api npm run qf:sync-catalog:prod
 docker compose -f docker-compose.yml exec api npm run qf:sync-pages:prod
 ```
 
-Then in the **admin panel**, enable the translations and qaris that should appear in the Mini App. New syncs create resources as inactive and never re-enable ones you disabled. List endpoints (`/quran/translations`, `/quran/audio/recitations`, `/quran/audio/chapter-reciters`) only return `isActive=true` rows.
+Then in the **admin panel**, enable the translations/tafsirs that should appear in the Mini App. New translations/tafsirs sync as inactive; **qaris sync as active**. Sync never re-enables ones you disabled. List endpoints (`/quran/translations`, `/quran/audio/recitations`, `/quran/audio/chapter-reciters`) only return `isActive=true` rows.
 
 ## Backups (cron)
 

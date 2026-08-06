@@ -179,7 +179,9 @@ export class QfCatalogRepository {
               kind: item.kind,
             },
           },
-          create: { ...item, isActive: false },
+          // Qaris auto-enable for Mini App so profile lists match admin catalog.
+          // Translations/tafsirs remain inactive-on-create (admin-gated).
+          create: { ...item, isActive: true },
           update: {
             name: item.name,
             arabicName: item.arabicName,

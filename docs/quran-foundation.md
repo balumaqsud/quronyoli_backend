@@ -71,13 +71,13 @@ Behavior:
 - Upserts `quran_translations`, `quran_tafsirs`, and `quran_reciters` on `(provider, external_id, kind)`.
 - Maps **ayah** `/resources/recitations` with `kind=AYAH` and **chapter** `/resources/chapter_reciters` with `kind=CHAPTER` (separate ID namespaces).
 - Settings: `reciterId` validates ayah rows; `chapterReciterId` validates chapter rows.
-- **New** synced rows are created with `is_active=false` (admin must enable for Mini App pickers).
-- **Existing** rows: metadata/name refresh only — sync does **not** force `is_active=true` (admin enable/disable is preserved).
+- **New** translations/tafsirs are created with `is_active=false` (admin must enable for Mini App pickers). **New** qaris are created with `is_active=true` (auto-enabled for Mini App).
+- **Existing** rows: metadata/name refresh only — sync does **not** overwrite `is_active` on update (admin enable/disable is preserved).
 - Sets `is_active=false` for IDs missing upstream within each kind (never deletes).
 - Mini App list endpoints `GET /quran/translations`, `/quran/audio/recitations`, and `/quran/audio/chapter-reciters` return **only** active local catalog rows (QF-shaped envelopes). Translation/tafsir/audio **bodies** remain QF proxies.
 - Requires working `content` scope. If `search` scope is denied for the client, Search routes fail until Quran.Foundation grants the entitlement — content/catalog sync still works.
 
-**Ops:** After sync, enable the translations and qaris that should appear in the Mini App via the admin panel. Disabled items stay disabled across future syncs.
+**Ops:** After sync, enable the translations/tafsirs that should appear in the Mini App via the admin panel. Qaris appear automatically; disable unwanted ones in admin. Disabled items stay disabled across future syncs.
 
 **Mushaf pages:** `qf:sync-pages` walks `/verses/by_page/1..604` and upserts `mushaf_pages` (verse keys, surah ids, juz/hizb/rub). Verse text is not stored. Verse-level QF `image_url` ayah strips are **not** promoted to page art. Image mushaf **10** (Dar al-Marefa) gets full-page WebP URLs from `QF_TAJWEED_PAGE_IMAGE_BASE` — sync with `--mushaf=10` (do **not** `--clone-from=1`). See [mushaf-pages.md](./mushaf-pages.md).
 

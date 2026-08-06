@@ -123,7 +123,7 @@ describe('QfCatalogRepository', () => {
             kind: 'AYAH',
           },
         },
-        create: expect.objectContaining({ isActive: false }),
+        create: expect.objectContaining({ isActive: true }),
         update: expect.not.objectContaining({ isActive: expect.anything() }),
       }),
     );
@@ -136,7 +136,7 @@ describe('QfCatalogRepository', () => {
             kind: 'CHAPTER',
           },
         },
-        create: expect.objectContaining({ isActive: false }),
+        create: expect.objectContaining({ isActive: true }),
       }),
     );
     const chapterUpdate = quranReciter.upsert.mock.calls[1][0].update;
