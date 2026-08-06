@@ -1,5 +1,11 @@
 import { QURAN_FOUNDATION_PROVIDER } from '../../settings/interfaces/settings.interface';
-import { normalizeQfMediaUrls } from '../utils/qf-media-url.normalizer';
+import {
+  buildTajweedPageImageUrl,
+  isImageMushafId,
+  isLikelyVerseStripImageUrl,
+  TAJWEED_PAGE_IMAGE_WIDTH,
+  type TajweedPageImageConfig,
+} from './qf-page-images';
 
 export type QfPageVerseSnippet = {
   verse_key?: string;
@@ -72,13 +78,17 @@ export function surahIdFromVerseKey(verseKey: string): number | null {
 
 /**
  * Build a mushaf_pages upsert payload from QF verse snippets for one page.
- * Does not store Arabic or translation text — coordinates and optional image meta only.
+ * Does not store Arabic or translation text — coordinates only.
+ *
+ * Never promotes verse-level QF `image_url` (ayah strips ~675×52) to page art.
+ * Image mushafs (Dar al-Marefa / id 10) get full-page URLs via
+ * {@link applyPageImageMeta}.
  */
 export function mapVersesToMushafPage(
   pageNumber: number,
   mushafId: number,
   verses: QfPageVerseSnippet[],
-  audioCdnBase = 'https://audio.qurancdn.com',
+  _audioCdnBase = 'https://audio.qurancdn.com',
 ): MushafPagePayload {
   if (verses.length === 0) {
     throw new Error(`Page ${pageNumber} returned zero verses from QF`);
@@ -89,8 +99,6 @@ export function mapVersesToMushafPage(
   const juzNumbers: number[] = [];
   const hizbNumbers: number[] = [];
   const rubNumbers: number[] = [];
-  let imageUrl: string | null = null;
-  let imageWidth: number | null = null;
 
   for (const verse of verses) {
     const key = verse.verse_key?.trim();
@@ -112,20 +120,6 @@ export function mapVersesToMushafPage(
     }
     if (typeof verse.rub_el_hizb_number === 'number') {
       rubNumbers.push(verse.rub_el_hizb_number);
-    }
-
-    if (
-      imageUrl === null &&
-      typeof verse.image_url === 'string' &&
-      verse.image_url
-    ) {
-      const normalized = normalizeQfMediaUrls(
-        { image_url: verse.image_url },
-        audioCdnBase,
-      ) as { image_url: string };
-      imageUrl = normalized.image_url;
-      imageWidth =
-        typeof verse.image_width === 'number' ? verse.image_width : null;
     }
   }
 
@@ -163,11 +157,41 @@ export function mapVersesToMushafPage(
     hizbNumbers: uniqueSortedInts(hizbNumbers),
     rubElHizbNumbers: uniqueSortedInts(rubNumbers),
     verseCount: verseKeys.length,
-    imageUrl,
-    imageWidth,
+    imageUrl: null,
+    imageWidth: null,
     isActive: true,
     syncedAt: new Date(),
   };
+}
+
+/**
+ * Attach full-page image meta for image mushafs; strip verse-strip URLs otherwise.
+ */
+export function applyPageImageMeta<
+  T extends {
+    mushafId: number;
+    pageNumber: number;
+    imageUrl: string | null;
+    imageWidth: number | null;
+  },
+>(row: T, pageImageConfig?: TajweedPageImageConfig): T {
+  if (isImageMushafId(row.mushafId)) {
+    return {
+      ...row,
+      imageUrl: buildTajweedPageImageUrl(row.pageNumber, pageImageConfig),
+      imageWidth: TAJWEED_PAGE_IMAGE_WIDTH,
+    };
+  }
+
+  if (row.imageUrl && isLikelyVerseStripImageUrl(row.imageUrl)) {
+    return {
+      ...row,
+      imageUrl: null,
+      imageWidth: null,
+    };
+  }
+
+  return row;
 }
 
 export function toMushafPageListItem(row: {
@@ -184,24 +208,37 @@ export function toMushafPageListItem(row: {
   };
 }
 
-export function toMushafPageDetail(row: {
-  mushafId: number;
-  pageNumber: number;
-  firstVerseKey: string;
-  lastVerseKey: string;
-  verseKeys: string[];
-  surahIds: number[];
-  juzNumber: number;
-  hizbNumber: number;
-  rubElHizbNumber: number;
-  juzNumbers: number[];
-  hizbNumbers: number[];
-  rubElHizbNumbers: number[];
-  verseCount: number;
-  imageUrl: string | null;
-  imageWidth: number | null;
-  syncedAt: Date;
-}): MushafPageDetail {
+export function toMushafPageDetail(
+  row: {
+    mushafId: number;
+    pageNumber: number;
+    firstVerseKey: string;
+    lastVerseKey: string;
+    verseKeys: string[];
+    surahIds: number[];
+    juzNumber: number;
+    hizbNumber: number;
+    rubElHizbNumber: number;
+    juzNumbers: number[];
+    hizbNumbers: number[];
+    rubElHizbNumbers: number[];
+    verseCount: number;
+    imageUrl: string | null;
+    imageWidth: number | null;
+    syncedAt: Date;
+  },
+  pageImageConfig?: TajweedPageImageConfig,
+): MushafPageDetail {
+  const withImages = applyPageImageMeta(
+    {
+      mushafId: row.mushafId,
+      pageNumber: row.pageNumber,
+      imageUrl: row.imageUrl,
+      imageWidth: row.imageWidth,
+    },
+    pageImageConfig,
+  );
+
   return {
     pageNumber: row.pageNumber,
     mushafId: row.mushafId,
@@ -216,8 +253,8 @@ export function toMushafPageDetail(row: {
     hizbNumbers: row.hizbNumbers,
     rubElHizbNumbers: row.rubElHizbNumbers,
     verses: row.verseKeys,
-    imageUrl: row.imageUrl,
-    imageWidth: row.imageWidth,
+    imageUrl: withImages.imageUrl,
+    imageWidth: withImages.imageWidth,
     syncedAt: row.syncedAt.toISOString(),
   };
 }

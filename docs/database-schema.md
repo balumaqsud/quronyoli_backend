@@ -124,7 +124,7 @@ Madani (and other) Mushaf **page coordinates only** — no Arabic/translation/au
 | `surah_ids` | Distinct chapter numbers on the page |
 | `juz_number` / `hizb_number` / `rub_el_hizb_number` | From the first verse |
 | `juz_numbers` / `hizb_numbers` / `rub_el_hizb_numbers` | Distinct sets across the page |
-| `image_url` / `image_width` | Optional; first verse image from QF if present |
+| `image_url` / `image_width` | Optional full-page art for image mushafs (id 10 Dar al-Marefa). Verse-level QF ayah-strip URLs are never stored as page art. |
 | Sync | `npm run qf:sync-pages` via `/verses/by_page/{1..604}` |
 
 See [mushaf-pages.md](./mushaf-pages.md).

@@ -58,7 +58,9 @@ CamelCase local DTO:
 - `pageNumber`, `mushafId`, `firstVerseKey`, `lastVerseKey`, `verseCount`
 - `surahIds`, `juzNumber`, `hizbNumber`, `rubElHizb`
 - `verses`: **string keys only** (e.g. `"112:1"`) — not Arabic text
-- optional `imageUrl`
+- `imageUrl` / `imageWidth`: full-page art for **image mushafs only** (mushaf **10** Dar al-Marefa / Uthmani Tajweed Images). Example: `https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp/1.webp` (776×1053 WebP). For glyph/unicode mushafs (1, 2, …) these are `null` — never treat QF verse ayah-strip URLs as page scans.
+
+Book / image mode: `GET /quran/pages/:pageNumber?mushaf=10` (after `npm run qf:sync-pages -- --mushaf=10`; do not clone from mushaf 1 — page breaks differ).
 
 404 = pages not synced → backend needs `npm run qf:sync-pages`.
 
@@ -115,7 +117,7 @@ Returns QF lookup JSON (pass-through). Use to resolve Madani page number.
 | Translations catalog | `GET /quran/translations` | **Local** active catalog |
 | Reciters | `GET /quran/audio/chapter-reciters` | **Local** active catalog |
 | Chapter audio | `GET /quran/audio/chapter-reciters/:id/:chapter` | Live QF |
-| Mushaf picker | `GET /quran/mushafs` | **Static** ids (1,2,3,…,19) |
+| Mushaf picker | `GET /quran/mushafs` | **Static** catalog incl. id **10** (`type: image`, Dar al-Marefa page art) |
 | Tajweed script bulk | `GET /quran/scripts/uthmani_tajweed` | Optional; page verses + `fields=` is enough |
 
 ---
@@ -126,8 +128,9 @@ Returns QF lookup JSON (pass-through). Use to resolve Madani page number.
 2. **Page meta** (`juz`, `surahIds`) comes from `/pages/:n`; verse Arabic from `/pages/:n/verses`.
 3. Responses may be wrapped in the app envelope (`data` / success) — unwrap as today.
 4. Mixed casing: page DTOs = **camelCase**; verse bodies = **snake_case** QF (your mappers already handle both).
-5. Default mushaf id = **1** (QCF V2 Madani). Pass `mushaf=` when settings pick another.
+5. Default mushaf id = **1** (QCF V2 Madani). Pass `mushaf=` when settings pick another. For book page images use **`mushaf=10`** and `page.imageUrl` (handle `<img onError>` — do not show a silent broken `?`).
 6. Empty DB → 404 with message to run sync — show sync/retry UI, not fake Madani tables.
+7. Do **not** use verse-level QF `image_url` (e.g. `91_1.png` ~675×52) as full-page art.
 
 ---
 

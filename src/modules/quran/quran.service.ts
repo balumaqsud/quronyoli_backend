@@ -46,6 +46,7 @@ import {
   MADANI_MUSHAF_PAGE_COUNT,
 } from './pages/qf-pages.constants';
 import {
+  applyPageImageMeta,
   toMushafPageDetail,
   toMushafPageListItem,
 } from './pages/qf-pages.mapper';
@@ -324,23 +325,29 @@ export class QuranService {
     this.assertMadaniPageNumber(pageNumber);
     const mushafId = this.resolveMushafId(query.mushaf);
     const cacheKey = this.cache.pageMetadataKey(pageNumber, mushafId);
+    const pageImageConfig = {
+      baseUrl: this.config.tajweedPageImageBase,
+      extension: this.config.tajweedPageImageExt,
+    };
 
-    return this.cache.getOrSet(
-      cacheKey,
-      this.config.cacheTtl.chaptersSeconds,
-      async () => {
-        const row = await this.pagesRepository.findActivePage(
-          mushafId,
-          pageNumber,
-        );
-        if (!row) {
-          throw new NotFoundException(
-            `Mushaf page ${pageNumber} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
+    return this.cache
+      .getOrSet(
+        cacheKey,
+        this.config.cacheTtl.chaptersSeconds,
+        async () => {
+          const row = await this.pagesRepository.findActivePage(
+            mushafId,
+            pageNumber,
           );
-        }
-        return toMushafPageDetail(row);
-      },
-    );
+          if (!row) {
+            throw new NotFoundException(
+              `Mushaf page ${pageNumber} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
+            );
+          }
+          return toMushafPageDetail(row, pageImageConfig);
+        },
+      )
+      .then((cached) => this.healCachedPageImageMeta(cached, pageImageConfig));
   }
 
   getPageVerses(page: number, query: VersesQueryDto): Promise<unknown> {
@@ -351,31 +358,82 @@ export class QuranService {
     const params = this.verseQueryWithPageDefaults(query);
     params.mushaf = mushafId;
     const cacheKey = this.cache.pageVersesKey(page, mushafId, params);
+    const pageImageConfig = {
+      baseUrl: this.config.tajweedPageImageBase,
+      extension: this.config.tajweedPageImageExt,
+    };
 
-    return this.cache.getOrSet(
-      cacheKey,
-      this.config.cacheTtl.versesSeconds,
-      async () => {
-        const row = await this.pagesRepository.findActivePage(mushafId, page);
-        if (!row) {
-          throw new NotFoundException(
-            `Mushaf page ${page} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
+    return this.cache
+      .getOrSet(
+        cacheKey,
+        this.config.cacheTtl.versesSeconds,
+        async () => {
+          const row = await this.pagesRepository.findActivePage(mushafId, page);
+          if (!row) {
+            throw new NotFoundException(
+              `Mushaf page ${page} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
+            );
+          }
+
+          const { verses, pagination } = await this.fetchCompletePageVerses(
+            page,
+            params,
+            row.verseCount,
           );
-        }
 
-        const { verses, pagination } = await this.fetchCompletePageVerses(
-          page,
-          params,
-          row.verseCount,
-        );
+          return {
+            page: toMushafPageDetail(row, pageImageConfig),
+            verses,
+            pagination,
+          };
+        },
+      )
+      .then((cached) => this.healCachedPageImageMeta(cached, pageImageConfig));
+  }
 
-        return {
-          page: toMushafPageDetail(row),
-          verses,
-          pagination,
-        };
+  /**
+   * Re-apply page image meta on Redis hits so pre-CDN-fix rows stay correct.
+   * Accepts either a bare page DTO (GET /pages/:n) or `{ page, ... }` (verses).
+   */
+  private healCachedPageImageMeta(
+    cached: unknown,
+    pageImageConfig: {
+      baseUrl: string;
+      extension: string;
+    },
+  ): unknown {
+    if (!cached || typeof cached !== 'object') {
+      return cached;
+    }
+
+    const root = cached as Record<string, unknown>;
+    const pageBody =
+      root.page && typeof root.page === 'object'
+        ? (root.page as Record<string, unknown>)
+        : root;
+
+    if (
+      typeof pageBody.mushafId !== 'number' ||
+      typeof pageBody.pageNumber !== 'number'
+    ) {
+      return cached;
+    }
+
+    const fixed = applyPageImageMeta(
+      {
+        mushafId: pageBody.mushafId,
+        pageNumber: pageBody.pageNumber,
+        imageUrl: (pageBody.imageUrl as string | null | undefined) ?? null,
+        imageWidth: (pageBody.imageWidth as number | null | undefined) ?? null,
       },
+      pageImageConfig,
     );
+
+    if (root.page && typeof root.page === 'object') {
+      return { ...root, page: { ...pageBody, ...fixed } };
+    }
+
+    return { ...root, ...fixed };
   }
 
   lookupPages(query: PageLookupQueryDto): Promise<unknown> {

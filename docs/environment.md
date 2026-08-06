@@ -169,6 +169,8 @@ Compose builds `DATABASE_URL` for the `api` service as `postgresql://…@postgre
 | `QF_RATE_LIMIT_WINDOW_SECONDS` | `60` | |
 | `QF_HTTP_MAX_SOCKETS` | `50` | |
 | `QF_AUDIO_CDN_BASE` | `https://audio.qurancdn.com` | Absolute base for relative ayah audio paths |
+| `QF_TAJWEED_PAGE_IMAGE_BASE` | `https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp` | Full-page Dar al-Marefa (mushaf 10) WebP CDN |
+| `QF_TAJWEED_PAGE_IMAGE_EXT` | `webp` | Extension appended as `/{page}.{ext}` |
 | `QF_CACHE_TTL_CHAPTERS_SECONDS` | `86400` | |
 | `QF_CACHE_TTL_VERSES_SECONDS` | `3600` | |
 | `QF_CACHE_TTL_RESOURCES_SECONDS` | `86400` | |

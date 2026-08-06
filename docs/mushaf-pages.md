@@ -30,7 +30,7 @@ Postgres stores page coordinates only:
 - `page_number`, `first_verse_key`, `last_verse_key`, `verse_count`
 - `verse_keys[]`, `surah_ids[]`
 - `juz_number`, `hizb_number`, `rub_el_hizb_number` (+ multi-value arrays when a page spans divisions)
-- optional first-verse `image_url` / `image_width`
+- optional full-page `image_url` / `image_width` for **image mushafs** (id 10 Dar al-Marefa). Verse-level QF `image_url` ayah strips are **not** stored as page art.
 - `created_at` / `updated_at` / `synced_at`
 
 No Arabic, translations, tafsir, or audio blobs.
@@ -84,6 +84,10 @@ npm run qf:sync-pages
 
 # Multiple Madani editions (604-page layout): clone coords from mushaf 1
 npm run qf:sync-pages -- --mushaf=1,4,5,19 --clone-from=1
+
+# Dar al-Marefa / Uthmani Tajweed Images (mushaf 10): full QF crawl — do NOT clone from 1
+# (page breaks differ; page image URLs are attached during sync)
+npm run qf:sync-pages -- --mushaf=10
 
 # production build:
 npm run qf:sync-pages:prod

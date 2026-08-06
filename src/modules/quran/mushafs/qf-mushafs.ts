@@ -2,9 +2,12 @@
 export type MushafResource = {
   id: number;
   name: string;
+  /** Stable preference / book-mode key when present. */
+  key?: string;
   apiField: string;
-  type: 'glyph' | 'unicode';
+  type: 'glyph' | 'unicode' | 'image';
   bestFor: string;
+  pagesCount?: number;
 };
 
 export const QF_MUSHAF_RESOURCES: MushafResource[] = [
@@ -32,6 +35,7 @@ export const QF_MUSHAF_RESOURCES: MushafResource[] = [
   {
     id: 4,
     name: 'Uthmani',
+    key: 'uthmani',
     apiField: 'text_uthmani',
     type: 'unicode',
     bestFor: 'Standard Uthmani text',
@@ -56,6 +60,15 @@ export const QF_MUSHAF_RESOURCES: MushafResource[] = [
     apiField: 'text_indopak',
     type: 'unicode',
     bestFor: 'South Asian users',
+  },
+  {
+    id: 10,
+    name: 'Uthmani Tajweed Images',
+    key: 'uthmani-tajweed-images',
+    apiField: 'img',
+    type: 'image',
+    bestFor: 'Dar al-Marefa full-page Tajweed mushaf images',
+    pagesCount: 604,
   },
   {
     id: 19,

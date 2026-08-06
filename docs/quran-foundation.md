@@ -79,9 +79,9 @@ Behavior:
 
 **Ops:** After sync, enable the translations and qaris that should appear in the Mini App via the admin panel. Disabled items stay disabled across future syncs.
 
-**Mushaf pages:** `qf:sync-pages` walks `/verses/by_page/1..604` with `mushaf=1` and upserts `mushaf_pages` (verse keys, surah ids, juz/hizb/rub, optional verse `image_url`). Verse text is not stored. See [mushaf-pages.md](./mushaf-pages.md).
+**Mushaf pages:** `qf:sync-pages` walks `/verses/by_page/1..604` and upserts `mushaf_pages` (verse keys, surah ids, juz/hizb/rub). Verse text is not stored. Verse-level QF `image_url` ayah strips are **not** promoted to page art. Image mushaf **10** (Dar al-Marefa) gets full-page WebP URLs from `QF_TAJWEED_PAGE_IMAGE_BASE` — sync with `--mushaf=10` (do **not** `--clone-from=1`). See [mushaf-pages.md](./mushaf-pages.md).
 
-Relative ayah audio URLs are absolutized with `QF_AUDIO_CDN_BASE` (default `https://audio.qurancdn.com`). Protocol-relative `image_url` values become `https:`.
+Relative ayah audio URLs are absolutized with `QF_AUDIO_CDN_BASE` (default `https://audio.qurancdn.com`). Protocol-relative verse `image_url` values in live QF verse payloads become `https:` (page metadata does not store those strips).
 
 ## Auth model
 

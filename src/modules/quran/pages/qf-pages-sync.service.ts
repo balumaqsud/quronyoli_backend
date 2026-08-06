@@ -13,11 +13,13 @@ import {
 } from './qf-pages.constants';
 import {
   mapVersesToMushafPage,
+  applyPageImageMeta,
   QfPageVerseSnippet,
   toMushafPageDetail,
   toMushafPageListItem,
 } from './qf-pages.mapper';
 import { MushafPageSyncStats, QfPagesRepository } from './qf-pages.repository';
+import { isImageMushafId } from './qf-page-images';
 
 export type QfPagesSyncResult = {
   mushafId: number;
@@ -66,11 +68,14 @@ export class QfPagesSyncService {
       pageNumber += 1
     ) {
       const verses = await this.fetchAllVersesForPage(pageNumber, mushafId);
-      const payload = mapVersesToMushafPage(
-        pageNumber,
-        mushafId,
-        verses,
-        this.config.audioCdnBase,
+      const payload = applyPageImageMeta(
+        mapVersesToMushafPage(
+          pageNumber,
+          mushafId,
+          verses,
+          this.config.audioCdnBase,
+        ),
+        this.pageImageConfig(),
       );
 
       for (const key of payload.verseKeys) {
@@ -88,7 +93,7 @@ export class QfPagesSyncService {
 
       await this.cache.setJson(
         this.cache.pageMetadataKey(pageNumber, mushafId),
-        toMushafPageDetail(payload),
+        toMushafPageDetail(payload, this.pageImageConfig()),
         this.config.cacheTtl.chaptersSeconds,
       );
 
@@ -174,6 +179,12 @@ export class QfPagesSyncService {
       throw new Error('source and target mushaf ids must differ');
     }
 
+    if (isImageMushafId(targetMushafId)) {
+      throw new Error(
+        `Cannot clone onto image mushaf=${targetMushafId}; run a full QF sync (npm run qf:sync-pages -- --mushaf=${targetMushafId}) so page breaks match Dar al-Marefa.`,
+      );
+    }
+
     const sourcePages =
       await this.repository.findActiveByMushaf(sourceMushafId);
     if (sourcePages.length !== MADANI_MUSHAF_PAGE_COUNT) {
@@ -187,26 +198,29 @@ export class QfPagesSyncService {
     let upserted = 0;
 
     for (const row of sourcePages) {
-      const payload = {
-        provider: row.provider,
-        mushafId: targetMushafId,
-        pageNumber: row.pageNumber,
-        firstVerseKey: row.firstVerseKey,
-        lastVerseKey: row.lastVerseKey,
-        verseKeys: row.verseKeys,
-        surahIds: row.surahIds,
-        juzNumber: row.juzNumber,
-        hizbNumber: row.hizbNumber,
-        rubElHizbNumber: row.rubElHizbNumber,
-        juzNumbers: row.juzNumbers,
-        hizbNumbers: row.hizbNumbers,
-        rubElHizbNumbers: row.rubElHizbNumbers,
-        verseCount: row.verseCount,
-        imageUrl: row.imageUrl,
-        imageWidth: row.imageWidth,
-        isActive: true,
-        syncedAt: new Date(),
-      };
+      const payload = applyPageImageMeta(
+        {
+          provider: row.provider,
+          mushafId: targetMushafId,
+          pageNumber: row.pageNumber,
+          firstVerseKey: row.firstVerseKey,
+          lastVerseKey: row.lastVerseKey,
+          verseKeys: row.verseKeys,
+          surahIds: row.surahIds,
+          juzNumber: row.juzNumber,
+          hizbNumber: row.hizbNumber,
+          rubElHizbNumber: row.rubElHizbNumber,
+          juzNumbers: row.juzNumbers,
+          hizbNumbers: row.hizbNumbers,
+          rubElHizbNumbers: row.rubElHizbNumbers,
+          verseCount: row.verseCount,
+          imageUrl: null,
+          imageWidth: null,
+          isActive: true,
+          syncedAt: new Date(),
+        },
+        this.pageImageConfig(),
+      );
 
       for (const key of payload.verseKeys) {
         allVerseKeys.add(key);
@@ -218,7 +232,7 @@ export class QfPagesSyncService {
 
       await this.cache.setJson(
         this.cache.pageMetadataKey(row.pageNumber, targetMushafId),
-        toMushafPageDetail(payload),
+        toMushafPageDetail(payload, this.pageImageConfig()),
         this.config.cacheTtl.chaptersSeconds,
       );
     }
@@ -298,5 +312,12 @@ export class QfPagesSyncService {
     }
 
     return verses;
+  }
+
+  private pageImageConfig() {
+    return {
+      baseUrl: this.config.tajweedPageImageBase,
+      extension: this.config.tajweedPageImageExt,
+    };
   }
 }

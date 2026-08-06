@@ -133,6 +133,9 @@ export interface QuranFoundationConfig {
   rateLimitWindowSeconds: number;
   httpMaxSockets: number;
   audioCdnBase: string;
+  /** Full-page Dar al-Marefa (mushaf 10) image CDN base (no trailing slash). */
+  tajweedPageImageBase: string;
+  tajweedPageImageExt: string;
   cacheTtl: QuranFoundationCacheTtlConfig;
 }
 
@@ -466,6 +469,10 @@ export default (): AppConfiguration => {
       // Relative ayah audio paths (e.g. Alafasy/mp3/001001.mp3) resolve here.
       audioCdnBase:
         process.env.QF_AUDIO_CDN_BASE ?? 'https://audio.qurancdn.com',
+      tajweedPageImageBase:
+        process.env.QF_TAJWEED_PAGE_IMAGE_BASE ??
+        'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp',
+      tajweedPageImageExt: process.env.QF_TAJWEED_PAGE_IMAGE_EXT ?? 'webp',
       cacheTtl: {
         chaptersSeconds: Number.parseInt(
           process.env.QF_CACHE_TTL_CHAPTERS_SECONDS ?? '86400',

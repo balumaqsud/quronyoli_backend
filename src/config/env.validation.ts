@@ -146,6 +146,14 @@ export const envValidationSchema = Joi.object({
   QF_AUDIO_CDN_BASE: Joi.string()
     .uri({ scheme: ['https'] })
     .default('https://audio.qurancdn.com'),
+  QF_TAJWEED_PAGE_IMAGE_BASE: Joi.string()
+    .uri({ scheme: ['https'] })
+    .default(
+      'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp',
+    ),
+  QF_TAJWEED_PAGE_IMAGE_EXT: Joi.string()
+    .pattern(/^[a-z0-9]+$/i)
+    .default('webp'),
   QF_CACHE_TTL_CHAPTERS_SECONDS: Joi.number().integer().min(1).default(86400),
   QF_CACHE_TTL_VERSES_SECONDS: Joi.number().integer().min(1).default(3600),
   QF_CACHE_TTL_RESOURCES_SECONDS: Joi.number().integer().min(1).default(86400),

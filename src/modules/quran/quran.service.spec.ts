@@ -82,6 +82,9 @@ describe('QuranService', () => {
               if (key === CONFIG_KEYS.QURAN_FOUNDATION) {
                 return {
                   audioCdnBase: 'https://audio.qurancdn.com',
+                  tajweedPageImageBase:
+                    'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp',
+                  tajweedPageImageExt: 'webp',
                   cacheTtl: {
                     chaptersSeconds: 10,
                     versesSeconds: 10,
@@ -143,6 +146,101 @@ describe('QuranService', () => {
     const result = service.getMushafs();
     expect(result.mushafs.some((m) => m.id === 19)).toBe(true);
     expect(result.mushafs.some((m) => m.id === 1)).toBe(true);
+    expect(result.mushafs.some((m) => m.id === 10)).toBe(true);
+  });
+
+  it('heals stale verse-strip imageUrl on GET page cache hits', async () => {
+    cache.getOrSet.mockResolvedValue({
+      pageNumber: 1,
+      mushafId: 1,
+      firstVerseKey: '1:1',
+      lastVerseKey: '1:7',
+      verseCount: 7,
+      surahIds: [1],
+      juzNumber: 1,
+      hizbNumber: 1,
+      rubElHizb: 1,
+      juzNumbers: [1],
+      hizbNumbers: [1],
+      rubElHizbNumbers: [1],
+      verses: ['1:1'],
+      imageUrl: 'https://c22506.r6.cf1.rackcdn.com/1_1.png',
+      imageWidth: 675,
+      syncedAt: '2026-08-01T00:00:00.000Z',
+    });
+
+    await expect(service.getPage(1, {})).resolves.toEqual(
+      expect.objectContaining({
+        imageUrl: null,
+        imageWidth: null,
+      }),
+    );
+  });
+
+  it('heals stale verse-strip imageUrl on GET page verses cache hits', async () => {
+    cache.getOrSet.mockResolvedValue({
+      page: {
+        pageNumber: 1,
+        mushafId: 1,
+        firstVerseKey: '1:1',
+        lastVerseKey: '1:7',
+        verseCount: 7,
+        surahIds: [1],
+        juzNumber: 1,
+        hizbNumber: 1,
+        rubElHizb: 1,
+        juzNumbers: [1],
+        hizbNumbers: [1],
+        rubElHizbNumbers: [1],
+        verses: ['1:1'],
+        imageUrl: 'https://c22506.r6.cf1.rackcdn.com/1_1.png',
+        imageWidth: 675,
+        syncedAt: '2026-08-01T00:00:00.000Z',
+      },
+      verses: [{ verse_key: '1:1' }],
+      pagination: { complete: true },
+    });
+
+    const result = (await service.getPageVerses(1, {})) as {
+      page: { imageUrl: string | null; imageWidth: number | null };
+    };
+
+    expect(result.page.imageUrl).toBeNull();
+    expect(result.page.imageWidth).toBeNull();
+  });
+
+  it('attaches Dar al-Marefa page art for mushaf 10 on verses cache hits', async () => {
+    cache.getOrSet.mockResolvedValue({
+      page: {
+        pageNumber: 1,
+        mushafId: 10,
+        firstVerseKey: '1:1',
+        lastVerseKey: '1:7',
+        verseCount: 7,
+        surahIds: [1],
+        juzNumber: 1,
+        hizbNumber: 1,
+        rubElHizb: 1,
+        juzNumbers: [1],
+        hizbNumbers: [1],
+        rubElHizbNumbers: [1],
+        verses: ['1:1'],
+        imageUrl: null,
+        imageWidth: null,
+        syncedAt: '2026-08-01T00:00:00.000Z',
+      },
+      verses: [{ verse_key: '1:1' }],
+      pagination: { complete: true },
+    });
+
+    const result = (await service.getPageVerses(1, { mushaf: '10' })) as {
+      page: { imageUrl: string | null; imageWidth: number | null };
+    };
+
+    expect(result.page.imageUrl).toBe(
+      'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp/1.webp',
+    );
+    expect(result.page.imageWidth).toBe(776);
   });
 
   it('lists mushaf pages from the local repository', async () => {

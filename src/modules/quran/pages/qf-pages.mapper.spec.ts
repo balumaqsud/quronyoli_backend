@@ -1,9 +1,11 @@
 import {
+  applyPageImageMeta,
   mapVersesToMushafPage,
   surahIdFromVerseKey,
   toMushafPageDetail,
   toMushafPageListItem,
 } from './qf-pages.mapper';
+import { buildTajweedPageImageUrl } from './qf-page-images';
 
 describe('qf-pages.mapper', () => {
   it('parses surah id from verse key', () => {
@@ -12,7 +14,7 @@ describe('qf-pages.mapper', () => {
     expect(surahIdFromVerseKey('bad')).toBeNull();
   });
 
-  it('maps verses to mushaf page metadata without storing text', () => {
+  it('maps verses to mushaf page metadata without storing text or verse images', () => {
     const payload = mapVersesToMushafPage(1, 1, [
       {
         verse_key: '1:1',
@@ -37,9 +39,23 @@ describe('qf-pages.mapper', () => {
     expect(payload.verseKeys).toEqual(['1:1', '1:7']);
     expect(payload.surahIds).toEqual([1]);
     expect(payload.verseCount).toBe(2);
-    expect(payload.imageUrl).toBe('https://cdn.example/1_1.png');
-    expect(payload.imageWidth).toBe(675);
+    expect(payload.imageUrl).toBeNull();
+    expect(payload.imageWidth).toBeNull();
     expect(JSON.stringify(payload)).not.toMatch(/بِسْم/);
+  });
+
+  it('applies Dar al-Marefa full-page image URLs for mushaf 10', () => {
+    const payload = mapVersesToMushafPage(596, 10, [
+      {
+        verse_key: '93:1',
+        juz_number: 30,
+        hizb_number: 60,
+        rub_el_hizb_number: 238,
+      },
+    ]);
+    const withImage = applyPageImageMeta(payload);
+    expect(withImage.imageUrl).toBe(buildTajweedPageImageUrl(596));
+    expect(withImage.imageWidth).toBe(776);
   });
 
   it('collects multi-juz and multi-surah sets', () => {
