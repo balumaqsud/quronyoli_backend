@@ -10,6 +10,7 @@ import {
 } from '../../../common/pagination/offset-pagination.dto';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { AuthRequestContext } from '../../auth/interfaces/auth-request-context.interface';
+import { SessionsRepository } from '../../auth/sessions.repository';
 import { CurrentAdminContext } from '../../../common/decorators/current-admin.decorator';
 import { AdminLogsService } from '../logs/admin-logs.service';
 import {
@@ -26,6 +27,7 @@ export class AdminUsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly adminLogsService: AdminLogsService,
+    private readonly sessionsRepository: SessionsRepository,
   ) {}
 
   async list(query: AdminUsersQueryDto): Promise<OffsetPage<AdminUserListItem>> {
@@ -121,6 +123,8 @@ export class AdminUsersService {
       },
     });
 
+    await this.sessionsRepository.revokeAllForUser(id);
+
     await this.adminLogsService.create({
       adminId: admin.id,
       action: 'BANNED',
@@ -183,6 +187,8 @@ export class AdminUsersService {
         },
       },
     });
+
+    await this.sessionsRepository.revokeAllForUser(id);
 
     await this.adminLogsService.create({
       adminId: admin.id,

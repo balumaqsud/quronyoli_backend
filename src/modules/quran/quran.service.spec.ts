@@ -28,6 +28,7 @@ describe('QuranService', () => {
   };
   let catalogRepository: {
     listActiveTranslations: jest.Mock;
+    listActiveTafsirs: jest.Mock;
     listActiveReciters: jest.Mock;
   };
   let analyticsTracking: jest.Mocked<Pick<AnalyticsTrackingService, 'track'>>;
@@ -55,6 +56,7 @@ describe('QuranService', () => {
     };
     catalogRepository = {
       listActiveTranslations: jest.fn().mockResolvedValue([]),
+      listActiveTafsirs: jest.fn().mockResolvedValue([]),
       listActiveReciters: jest.fn().mockResolvedValue([]),
     };
     analyticsTracking = {
@@ -503,6 +505,8 @@ describe('QuranService', () => {
         authorName: 'Taqi',
         slug: null,
         languageCode: 'uz',
+        isDefault: true,
+        sortOrder: 0,
         metadata: { id: 85, name: 'Mufti Taqi', language_name: 'uzbek' },
       },
     ]);
@@ -513,6 +517,8 @@ describe('QuranService', () => {
           id: 85,
           name: 'Mufti Taqi',
           language_name: 'uzbek',
+          is_default: true,
+          sort_order: 0,
         }),
       ],
     });
@@ -520,6 +526,34 @@ describe('QuranService', () => {
     expect(catalogRepository.listActiveTranslations).toHaveBeenCalledWith({
       languageCode: 'uz',
     });
+    expect(client.getContent).not.toHaveBeenCalled();
+  });
+
+  it('lists active tafsirs from local catalog (not QF)', async () => {
+    catalogRepository.listActiveTafsirs.mockResolvedValue([
+      {
+        id: 'uuid-t',
+        externalId: '169',
+        name: 'Ibn Kathir',
+        authorName: null,
+        slug: null,
+        languageCode: 'en',
+        sortOrder: 1,
+        metadata: { id: 169, name: 'Ibn Kathir' },
+      },
+    ]);
+
+    await expect(service.getTafsirs({})).resolves.toEqual({
+      tafsirs: [
+        expect.objectContaining({
+          id: 169,
+          name: 'Ibn Kathir',
+          sort_order: 1,
+        }),
+      ],
+    });
+
+    expect(catalogRepository.listActiveTafsirs).toHaveBeenCalledWith(undefined);
     expect(client.getContent).not.toHaveBeenCalled();
   });
 
@@ -532,12 +566,21 @@ describe('QuranService', () => {
         arabicName: null,
         style: null,
         slug: null,
+        isPopular: true,
+        sortOrder: 2,
         metadata: { id: 7, reciter_name: 'Alafasy', source: 'recitations' },
       },
     ]);
 
     await expect(service.getRecitations({})).resolves.toEqual({
-      recitations: [expect.objectContaining({ id: 7, reciter_name: 'Alafasy' })],
+      recitations: [
+        expect.objectContaining({
+          id: 7,
+          reciter_name: 'Alafasy',
+          is_popular: true,
+          sort_order: 2,
+        }),
+      ],
     });
 
     expect(catalogRepository.listActiveReciters).toHaveBeenCalledWith({
@@ -555,6 +598,8 @@ describe('QuranService', () => {
         arabicName: null,
         style: null,
         slug: null,
+        isPopular: false,
+        sortOrder: 0,
         metadata: {
           id: 7,
           name: 'Alafasy',
@@ -564,7 +609,14 @@ describe('QuranService', () => {
     ]);
 
     await expect(service.getChapterReciters({})).resolves.toEqual({
-      reciters: [expect.objectContaining({ id: 7, name: 'Alafasy' })],
+      reciters: [
+        expect.objectContaining({
+          id: 7,
+          name: 'Alafasy',
+          is_popular: false,
+          sort_order: 0,
+        }),
+      ],
     });
 
     expect(catalogRepository.listActiveReciters).toHaveBeenCalledWith({

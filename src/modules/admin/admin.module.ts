@@ -13,6 +13,8 @@ import { AdminLogsController } from './logs/admin-logs.controller';
 import { AdminLogsService } from './logs/admin-logs.service';
 import { AdminQarisController } from './qaris/admin-qaris.controller';
 import { AdminQarisService } from './qaris/admin-qaris.service';
+import { AdminTafsirsController } from './tafsirs/admin-tafsirs.controller';
+import { AdminTafsirsService } from './tafsirs/admin-tafsirs.service';
 import { AdminTranslationsController } from './translations/admin-translations.controller';
 import { AdminTranslationsService } from './translations/admin-translations.service';
 import { AdminUsersController } from './users/admin-users.controller';
@@ -28,6 +30,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
     AdminUsersController,
     AdminQarisController,
     AdminTranslationsController,
+    AdminTafsirsController,
     AdminAdminsController,
     AdminLogsController,
   ],
@@ -37,6 +40,7 @@ import { RolesGuard } from '../../common/guards/roles.guard';
     AdminUsersService,
     AdminQarisService,
     AdminTranslationsService,
+    AdminTafsirsService,
     AdminAdminsService,
     AdminLogsService,
     AdminGuard,
@@ -52,6 +56,7 @@ export class AdminModule implements NestModule {
         AdminUsersController,
         AdminQarisController,
         AdminTranslationsController,
+        AdminTafsirsController,
         AdminAdminsController,
       );
   }

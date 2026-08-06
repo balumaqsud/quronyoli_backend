@@ -1,5 +1,6 @@
 import {
   QuranReciter,
+  QuranTafsir,
   QuranTranslation,
 } from '../../../generated/prisma';
 
@@ -18,16 +19,23 @@ function resourceId(externalId: string): number | string {
 /**
  * Build a QF-shaped catalog resource from a local row.
  * Prefer stored upstream metadata so Mini App field names stay compatible.
+ * Admin gating fields (is_default / is_popular / sort_order) are always attached.
  */
 export function toQfTranslationResource(
   row: QuranTranslation,
 ): Record<string, unknown> {
   const meta = asRecord(row.metadata);
+  const adminFields = {
+    is_default: row.isDefault,
+    sort_order: row.sortOrder,
+  };
+
   if (meta) {
     const { source: _source, ...rest } = meta;
     return {
       ...rest,
       id: resourceId(row.externalId),
+      ...adminFields,
     };
   }
 
@@ -37,6 +45,34 @@ export function toQfTranslationResource(
     author_name: row.authorName,
     slug: row.slug,
     language_name: row.languageCode,
+    ...adminFields,
+  };
+}
+
+export function toQfTafsirResource(
+  row: QuranTafsir,
+): Record<string, unknown> {
+  const meta = asRecord(row.metadata);
+  const adminFields = {
+    sort_order: row.sortOrder,
+  };
+
+  if (meta) {
+    const { source: _source, ...rest } = meta;
+    return {
+      ...rest,
+      id: resourceId(row.externalId),
+      ...adminFields,
+    };
+  }
+
+  return {
+    id: resourceId(row.externalId),
+    name: row.name,
+    author_name: row.authorName,
+    slug: row.slug,
+    language_name: row.languageCode,
+    ...adminFields,
   };
 }
 
@@ -44,11 +80,17 @@ export function toQfReciterResource(
   row: QuranReciter,
 ): Record<string, unknown> {
   const meta = asRecord(row.metadata);
+  const adminFields = {
+    is_popular: row.isPopular,
+    sort_order: row.sortOrder,
+  };
+
   if (meta) {
     const { source: _source, ...rest } = meta;
     return {
       ...rest,
       id: resourceId(row.externalId),
+      ...adminFields,
     };
   }
 
@@ -59,5 +101,6 @@ export function toQfReciterResource(
     arabic_name: row.arabicName,
     style: row.style,
     slug: row.slug,
+    ...adminFields,
   };
 }

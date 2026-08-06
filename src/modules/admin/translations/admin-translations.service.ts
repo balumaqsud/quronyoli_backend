@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -84,6 +85,7 @@ export class AdminTranslationsService {
         data: {
           ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),
           ...(dto.isDefault !== undefined ? { isDefault: dto.isDefault } : {}),
+          ...(dto.isActive === false ? { isDefault: false } : {}),
           ...(dto.sortOrder !== undefined ? { sortOrder: dto.sortOrder } : {}),
         },
       });
@@ -155,6 +157,8 @@ export class AdminTranslationsService {
     admin: CurrentAdminContext,
     context: AuthRequestContext,
   ): Promise<{ updated: number }> {
+    await this.assertAllIdsExist(dto.ids);
+
     await this.prisma.$transaction(
       dto.ids.map((id, index) =>
         this.prisma.quranTranslation.update({
@@ -205,7 +209,10 @@ export class AdminTranslationsService {
 
     const translation = await this.prisma.quranTranslation.update({
       where: { id },
-      data: { isActive },
+      data: {
+        isActive,
+        ...(isActive ? {} : { isDefault: false }),
+      },
     });
 
     await this.adminLogsService.create({
@@ -219,5 +226,21 @@ export class AdminTranslationsService {
     });
 
     return translation;
+  }
+
+  private async assertAllIdsExist(ids: string[]): Promise<void> {
+    const uniqueIds = [...new Set(ids)];
+    const count = await this.prisma.quranTranslation.count({
+      where: {
+        id: { in: uniqueIds },
+        deletedAt: null,
+      },
+    });
+
+    if (count !== uniqueIds.length) {
+      throw new BadRequestException(
+        'One or more translation IDs were not found',
+      );
+    }
   }
 }

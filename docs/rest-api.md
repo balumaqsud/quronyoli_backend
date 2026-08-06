@@ -215,7 +215,7 @@ All routes require **Bearer** auth and `QuranRateLimitGuard`. Stable catalog GET
 | GET | `/api/v1/quran/translations/:resourceId/by-ayah/:ayahKey` | Translation by ayah |
 | GET | `/api/v1/quran/translations/:resourceId/by-juz/:juz` | Translation by juz |
 | GET | `/api/v1/quran/translations/:resourceId/by-page/:page` | Translation by page |
-| GET | `/api/v1/quran/tafsirs` | Tafsir resources |
+| GET | `/api/v1/quran/tafsirs` | Active tafsir resources from local catalog (admin `isActive`) |
 | GET | `/api/v1/quran/tafsirs/:tafsirId/info` | Tafsir info |
 | GET | `/api/v1/quran/tafsirs/:resourceId/by-surah/:chapter` | Tafsir by surah |
 | GET | `/api/v1/quran/tafsirs/:resourceId/by-ayah/:ayahKey` | Tafsir by ayah |

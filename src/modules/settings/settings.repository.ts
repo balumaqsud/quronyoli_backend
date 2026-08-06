@@ -37,6 +37,7 @@ const tafsirSelect = {
   authorName: true,
   slug: true,
   isActive: true,
+  sortOrder: true,
   deletedAt: true,
   createdAt: true,
   updatedAt: true,
@@ -155,6 +156,18 @@ export class SettingsRepository {
     });
   }
 
+  async findDefaultActiveTranslation(): Promise<QuranTranslation | null> {
+    return await this.prisma.quranTranslation.findFirst({
+      where: {
+        provider: QURAN_FOUNDATION_PROVIDER,
+        isActive: true,
+        isDefault: true,
+        deletedAt: null,
+      },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    });
+  }
+
   async findFirstActiveTranslationByLanguage(
     languageCode: string,
   ): Promise<QuranTranslation | null> {
@@ -165,7 +178,11 @@ export class SettingsRepository {
         isActive: true,
         deletedAt: null,
       },
-      orderBy: { externalId: 'asc' },
+      orderBy: [
+        { isDefault: 'desc' },
+        { sortOrder: 'asc' },
+        { externalId: 'asc' },
+      ],
     });
   }
 
@@ -179,7 +196,7 @@ export class SettingsRepository {
         isActive: true,
         deletedAt: null,
       },
-      orderBy: { externalId: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { externalId: 'asc' }],
     });
   }
 }

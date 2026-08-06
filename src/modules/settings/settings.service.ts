@@ -237,7 +237,7 @@ export class SettingsService {
 
   /**
    * Resolve QF resource external IDs for Telegram bot cards.
-   * Prefer user defaults; else first active uz translation/tafsir; else en; else null.
+   * Prefer user defaults; else admin default translation; else first active uz/en.
    */
   async getBotContentPrefs(userId: string): Promise<{
     timezone: string;
@@ -248,6 +248,7 @@ export class SettingsService {
     const settings = await this.settingsRepository.upsertDefaults(userId);
     const translation =
       settings.defaultTranslation ??
+      (await this.settingsRepository.findDefaultActiveTranslation()) ??
       (await this.settingsRepository.findFirstActiveTranslationByLanguage(
         'uz',
       )) ??

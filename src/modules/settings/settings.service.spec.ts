@@ -18,6 +18,9 @@ describe('SettingsService', () => {
       | 'findActiveTafsirByExternalId'
       | 'findActiveReciterByExternalId'
       | 'findActiveChapterReciterByExternalId'
+      | 'findDefaultActiveTranslation'
+      | 'findFirstActiveTranslationByLanguage'
+      | 'findFirstActiveTafsirByLanguage'
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
@@ -53,6 +56,9 @@ describe('SettingsService', () => {
       findActiveTafsirByExternalId: jest.fn(),
       findActiveReciterByExternalId: jest.fn(),
       findActiveChapterReciterByExternalId: jest.fn(),
+      findDefaultActiveTranslation: jest.fn(),
+      findFirstActiveTranslationByLanguage: jest.fn(),
+      findFirstActiveTafsirByLanguage: jest.fn(),
     };
     usersService = {
       getActiveByIdOrThrow: jest.fn().mockResolvedValue({ id: 'user-1' }),
@@ -236,5 +242,37 @@ describe('SettingsService', () => {
     await expect(service.getForUser('missing')).rejects.toBeInstanceOf(
       UnauthorizedException,
     );
+  });
+
+  it('prefers admin default translation for bot content prefs', async () => {
+    repository.findDefaultActiveTranslation.mockResolvedValue({
+      id: 'uuid-default',
+      provider: 'quran.foundation',
+      externalId: '85',
+      languageCode: 'uz',
+      name: 'Default Uz',
+      authorName: null,
+      slug: null,
+      isActive: true,
+      isDefault: true,
+      sortOrder: 0,
+      metadata: null,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    repository.findFirstActiveTafsirByLanguage.mockResolvedValue(null);
+
+    await expect(service.getBotContentPrefs('user-1')).resolves.toEqual({
+      timezone: 'Asia/Tashkent',
+      translationExternalId: '85',
+      tafsirExternalId: null,
+      reciterExternalId: null,
+    });
+
+    expect(repository.findDefaultActiveTranslation).toHaveBeenCalled();
+    expect(
+      repository.findFirstActiveTranslationByLanguage,
+    ).not.toHaveBeenCalled();
   });
 });

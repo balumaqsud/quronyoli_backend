@@ -104,7 +104,7 @@ Missing upstream IDs are soft-deactivated with `is_active=false` (rows are kept 
 Unique on `(provider, external_id)`. Soft-deletable via `deletedAt`. Source: QF `/resources/translations`.
 
 ### `QuranTafsir` (`quran_tafsirs`)
-Same identity pattern as translations. Source: QF `/resources/tafsirs`.
+Same identity pattern as translations. Source: QF `/resources/tafsirs`. Includes admin `is_active` and `sort_order` (reorder via admin API).
 
 ### `QuranReciter` (`quran_reciters`)
 Same identity pattern; optional style/arabic name. Source: QF `/resources/recitations` (ayah) and `/resources/chapter_reciters` (chapter), distinguished by `kind`.

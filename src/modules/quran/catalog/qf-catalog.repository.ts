@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   QuranReciter,
   QuranReciterKind,
+  QuranTafsir,
   QuranTranslation,
 } from '../../../generated/prisma';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
@@ -33,6 +34,25 @@ export class QfCatalogRepository {
           ? { languageCode: options.languageCode }
           : {}),
       },
+      orderBy: [
+        { isDefault: 'desc' },
+        { sortOrder: 'asc' },
+        { name: 'asc' },
+      ],
+    });
+  }
+
+  async listActiveTafsirs(options?: {
+    languageCode?: string;
+  }): Promise<QuranTafsir[]> {
+    return this.prisma.quranTafsir.findMany({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        ...(options?.languageCode
+          ? { languageCode: options.languageCode }
+          : {}),
+      },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
   }
@@ -46,7 +66,11 @@ export class QfCatalogRepository {
         isActive: true,
         deletedAt: null,
       },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      orderBy: [
+        { isPopular: 'desc' },
+        { sortOrder: 'asc' },
+        { name: 'asc' },
+      ],
     });
   }
 
@@ -128,7 +152,7 @@ export class QfCatalogRepository {
             slug: item.slug,
             deletedAt: null,
             metadata: item.metadata,
-            // Preserve admin-controlled: isActive
+            // Preserve admin-controlled: isActive, sortOrder
           },
         });
       }

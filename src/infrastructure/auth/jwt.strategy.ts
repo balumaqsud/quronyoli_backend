@@ -4,6 +4,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { JwtConfig } from '../../config/configuration';
 import { CONFIG_KEYS } from '../../common/constants';
+import { PrismaService } from '../database/prisma.service';
 import {
   AuthenticatedUser,
   JwtPayload,
@@ -11,7 +12,10 @@ import {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {
     const jwtConfig = configService.getOrThrow<JwtConfig>(CONFIG_KEYS.JWT);
 
     super({
@@ -21,9 +25,29 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  validate(payload: JwtPayload): AuthenticatedUser {
+  async validate(payload: JwtPayload): Promise<AuthenticatedUser> {
     if (payload.typ !== 'access' || !payload.sub || !payload.sid) {
       throw new UnauthorizedException('Invalid access token');
+    }
+
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: payload.sub,
+        isActive: true,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        isBanned: true,
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+
+    if (user.isBanned) {
+      throw new UnauthorizedException('User is banned');
     }
 
     return {

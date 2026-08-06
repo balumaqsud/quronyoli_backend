@@ -17,6 +17,7 @@ describe('QfCatalogRepository', () => {
       fn(tx),
     ),
     quranTranslation: { findMany },
+    quranTafsir: { findMany: jest.fn() },
     quranReciter: { findMany },
   } as unknown as PrismaService;
 
@@ -175,6 +176,30 @@ describe('QfCatalogRepository', () => {
         deletedAt: null,
         languageCode: 'uz',
       },
+      orderBy: [
+        { isDefault: 'desc' },
+        { sortOrder: 'asc' },
+        { name: 'asc' },
+      ],
+    });
+  });
+
+  it('lists active tafsirs with optional language filter', async () => {
+    const tafsirFindMany = (prisma as unknown as {
+      quranTafsir: { findMany: jest.Mock };
+    }).quranTafsir.findMany;
+    tafsirFindMany.mockResolvedValueOnce([{ id: 'tf1' }]);
+
+    await expect(
+      repository.listActiveTafsirs({ languageCode: 'en' }),
+    ).resolves.toEqual([{ id: 'tf1' }]);
+
+    expect(tafsirFindMany).toHaveBeenCalledWith({
+      where: {
+        isActive: true,
+        deletedAt: null,
+        languageCode: 'en',
+      },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
   });
@@ -194,7 +219,11 @@ describe('QfCatalogRepository', () => {
         isActive: true,
         deletedAt: null,
       },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      orderBy: [
+        { isPopular: 'desc' },
+        { sortOrder: 'asc' },
+        { name: 'asc' },
+      ],
     });
   });
 });

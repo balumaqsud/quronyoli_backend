@@ -13,6 +13,7 @@ import { formatLocalDate } from '../reading/utils/reading-date.utils';
 import { QuranCacheService } from './cache/quran-cache.service';
 import {
   toQfReciterResource,
+  toQfTafsirResource,
   toQfTranslationResource,
 } from './catalog/qf-catalog-list.mapper';
 import { mapLanguageNameToCode } from './catalog/qf-catalog.mapper';
@@ -638,13 +639,14 @@ export class QuranService {
     );
   }
 
-  getTafsirs(query: LanguageQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'resources',
-      '/resources/tafsirs',
-      this.pick(query, ['language']),
-      this.config.cacheTtl.resourcesSeconds,
+  async getTafsirs(query: LanguageQueryDto): Promise<unknown> {
+    const languageCode = this.resolveCatalogLanguageFilter(query.language);
+    const rows = await this.catalogRepository.listActiveTafsirs(
+      languageCode ? { languageCode } : undefined,
     );
+    return {
+      tafsirs: rows.map(toQfTafsirResource),
+    };
   }
 
   getTafsirInfo(tafsirId: number): Promise<unknown> {

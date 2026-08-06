@@ -21,6 +21,7 @@ describe('UsersService', () => {
     isPremium: false,
     allowsWriteToPm: false,
     isActive: true,
+    isBanned: false,
     lastLoginAt: new Date('2026-01-01T00:00:00.000Z'),
     deletedAt: null,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),

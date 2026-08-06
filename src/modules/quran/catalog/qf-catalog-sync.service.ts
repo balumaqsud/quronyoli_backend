@@ -73,6 +73,17 @@ export class QfCatalogSyncService {
     return stats;
   }
 
+  async syncTafsirsOnly(): Promise<CatalogSyncStats> {
+    const tafsirs = await this.fetchTafsirs();
+    if (tafsirs.length === 0) {
+      throw new Error('QF tafsir sync refused: empty resource list');
+    }
+
+    const stats = await this.repository.syncTafsirs(tafsirs);
+    this.logger.info({ stats }, 'Quran.Foundation tafsirs sync completed');
+    return stats;
+  }
+
   async syncRecitersOnly(): Promise<{
     reciters: CatalogSyncStats;
     chapterReciters: CatalogSyncStats;
