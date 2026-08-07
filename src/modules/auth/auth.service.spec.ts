@@ -163,6 +163,12 @@ describe('AuthService', () => {
       startParam: null,
     });
 
+    expect(usersService.upsertFromTelegram).toHaveBeenCalledWith(
+      expect.objectContaining({
+        telegramId: '42',
+        allowsWriteToPm: undefined,
+      }),
+    );
     expect(sessionsRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: 'user-1',
@@ -174,6 +180,48 @@ describe('AuthService', () => {
     expect(authCookieService.setRefreshToken).toHaveBeenCalledWith(
       response,
       'refresh-token',
+    );
+  });
+
+  it('passes through explicit allows_write_to_pm from initData', async () => {
+    telegramVerifier.verify.mockReturnValue({
+      user: {
+        id: 42,
+        first_name: 'Ali',
+        allows_write_to_pm: true,
+      },
+      authDate: new Date(),
+    });
+    usersService.upsertFromTelegram.mockResolvedValue({
+      ...user,
+      allowsWriteToPm: true,
+    });
+    usersService.toResponse.mockReturnValue(userResponse);
+    tokenService.generateTokenPair.mockResolvedValue({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+    });
+    sessionsRepository.create.mockResolvedValue({
+      id: 'session-1',
+      userId: 'user-1',
+      refreshTokenHash: 'hash',
+      expiresAt: new Date(),
+      revokedAt: null,
+      ipAddress: null,
+      userAgent: null,
+      lastUsedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await service.loginWithTelegram(
+      'init-data',
+      { ipAddress: '127.0.0.1', userAgent: 'jest' },
+      response as unknown as Response,
+    );
+
+    expect(usersService.upsertFromTelegram).toHaveBeenCalledWith(
+      expect.objectContaining({ allowsWriteToPm: true }),
     );
   });
 

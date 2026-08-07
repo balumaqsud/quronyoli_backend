@@ -53,7 +53,7 @@ export class AdminAuthService {
       languageCode: telegramUser.language_code,
       photoUrl: telegramUser.photo_url,
       isPremium: telegramUser.is_premium ?? false,
-      allowsWriteToPm: telegramUser.allows_write_to_pm ?? false,
+      allowsWriteToPm: telegramUser.allows_write_to_pm,
     });
 
     if (user.isBanned) {

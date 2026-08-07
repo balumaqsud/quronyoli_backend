@@ -6,7 +6,8 @@ export interface UpsertTelegramUserInput {
   languageCode?: string;
   photoUrl?: string;
   isPremium: boolean;
-  allowsWriteToPm: boolean;
+  /** Omit to preserve existing value on update; explicit false clears. */
+  allowsWriteToPm?: boolean;
 }
 
 export interface UserResponseDto {

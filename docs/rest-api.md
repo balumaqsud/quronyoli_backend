@@ -167,7 +167,7 @@ Cursor payload is an encoded `{ at, id }` pair (`src/common/pagination`). Invali
 | PUT | `/api/v1/notifications/reminders/daily` | Bearer | Upsert daily reminder preference |
 | DELETE | `/api/v1/notifications/reminders/daily` | Bearer | Disable / remove preference |
 
-Daily reminder preference responses include `allowsWriteToPm` so the client can prompt the user to open the bot when Telegram PM writes are blocked. Inbox copy and Telegram reminder text are Uzbek.
+Daily reminder preference responses include `allowsWriteToPm` so the client can prompt the user to open the bot when Telegram PM writes are blocked. Mini App login does not clear write access unless Telegram sends an explicit `allows_write_to_pm: false`; bot `/start` grants it. Inbox copy and Telegram reminder text are Uzbek.
 
 ### Analytics — `/api/v1/analytics`
 

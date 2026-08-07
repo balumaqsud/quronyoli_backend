@@ -38,6 +38,12 @@ export class UsersRepository {
   }
 
   async upsertFromTelegram(input: UpsertTelegramUserInput): Promise<User> {
+    const existing = await this.findByTelegramId(input.telegramId);
+    const allowsWriteToPm =
+      input.allowsWriteToPm === undefined
+        ? (existing?.allowsWriteToPm ?? false)
+        : input.allowsWriteToPm;
+
     return await this.prisma.user.upsert({
       where: { telegramId: input.telegramId },
       create: {
@@ -48,7 +54,7 @@ export class UsersRepository {
         languageCode: input.languageCode,
         photoUrl: input.photoUrl,
         isPremium: input.isPremium,
-        allowsWriteToPm: input.allowsWriteToPm,
+        allowsWriteToPm: input.allowsWriteToPm ?? false,
         lastLoginAt: new Date(),
       },
       update: {
@@ -58,7 +64,7 @@ export class UsersRepository {
         languageCode: input.languageCode,
         photoUrl: input.photoUrl,
         isPremium: input.isPremium,
-        allowsWriteToPm: input.allowsWriteToPm,
+        allowsWriteToPm,
         lastLoginAt: new Date(),
         isActive: true,
         deletedAt: null,

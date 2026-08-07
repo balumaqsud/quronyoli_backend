@@ -93,7 +93,12 @@ describe('TelegramBotService', () => {
   it('sends welcome with web_app and Main Mini App fallback for /start', async () => {
     await service.handleStartCommand({ ...baseMessage, text: '/start' });
 
-    expect(usersService.upsertFromTelegram).toHaveBeenCalled();
+    expect(usersService.upsertFromTelegram).toHaveBeenCalledWith(
+      expect.objectContaining({
+        telegramId: '42',
+        allowsWriteToPm: true,
+      }),
+    );
     const payload = sendMessage.mock.calls[0]?.[0];
     expect(payload?.text).toContain("Quron Yo'liga xush kelibsiz");
     const markup = payload?.replyMarkup as {
