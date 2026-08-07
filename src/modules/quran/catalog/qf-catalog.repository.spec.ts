@@ -31,13 +31,55 @@ describe('QfCatalogRepository', () => {
     findMany.mockResolvedValue([]);
   });
 
-  it('creates translations inactive and omits isActive on update', async () => {
+  it('creates curated translations active and omits isActive on update', async () => {
     const stats = await repository.syncTranslations([
       {
         provider: 'quran.foundation',
-        externalId: '20',
+        externalId: '55',
+        languageCode: 'uz',
+        name: 'MSM Yusuf',
+        authorName: null,
+        slug: null,
+        isActive: false,
+        deletedAt: null,
+        metadata: {},
+      },
+    ]);
+
+    expect(upsert).toHaveBeenCalledTimes(1);
+    const call = upsert.mock.calls[0][0];
+    expect(call.create).toMatchObject({
+      externalId: '55',
+      isActive: true,
+    });
+    expect(call.update).not.toHaveProperty('isActive');
+    expect(updateMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        provider: 'quran.foundation',
+        externalId: { in: expect.arrayContaining(['55']) },
+        deletedAt: null,
+        isActive: false,
+      },
+      data: { isActive: true },
+    });
+    expect(updateMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        provider: 'quran.foundation',
+        isActive: true,
+        externalId: { notIn: ['55'] },
+      },
+      data: { isActive: false },
+    });
+    expect(stats).toEqual({ upserted: 1, deactivated: 1, seen: 1 });
+  });
+
+  it('creates non-curated translations inactive and omits isActive on update', async () => {
+    const stats = await repository.syncTranslations([
+      {
+        provider: 'quran.foundation',
+        externalId: '999',
         languageCode: 'en',
-        name: 'Saheeh',
+        name: 'Other',
         authorName: null,
         slug: null,
         isActive: true,
@@ -49,20 +91,29 @@ describe('QfCatalogRepository', () => {
     expect(upsert).toHaveBeenCalledTimes(1);
     const call = upsert.mock.calls[0][0];
     expect(call.create).toMatchObject({
-      externalId: '20',
+      externalId: '999',
       isActive: false,
     });
     expect(call.update).not.toHaveProperty('isActive');
     expect(call.update).toMatchObject({
       languageCode: 'en',
-      name: 'Saheeh',
+      name: 'Other',
       deletedAt: null,
     });
-    expect(updateMany).toHaveBeenCalledWith({
+    expect(updateMany).toHaveBeenNthCalledWith(1, {
+      where: {
+        provider: 'quran.foundation',
+        externalId: { in: expect.arrayContaining(['55']) },
+        deletedAt: null,
+        isActive: false,
+      },
+      data: { isActive: true },
+    });
+    expect(updateMany).toHaveBeenNthCalledWith(2, {
       where: {
         provider: 'quran.foundation',
         isActive: true,
-        externalId: { notIn: ['20'] },
+        externalId: { notIn: ['999'] },
       },
       data: { isActive: false },
     });

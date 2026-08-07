@@ -20,6 +20,11 @@ import {
   UpdateAdminTranslationDto,
 } from './dto/admin-translations.dto';
 
+/** Admin list/detail payload: Prisma row + QF resource id alias for the Mini App UI. */
+export type AdminTranslationView = QuranTranslation & {
+  resourceId: string;
+};
+
 @Injectable()
 export class AdminTranslationsService {
   constructor(
@@ -30,7 +35,7 @@ export class AdminTranslationsService {
 
   async list(
     query: AdminTranslationsQueryDto,
-  ): Promise<OffsetPage<QuranTranslation>> {
+  ): Promise<OffsetPage<AdminTranslationView>> {
     const offset = resolveOffset(query.page, query.limit);
     const where = {
       deletedAt: null as null,
@@ -49,10 +54,15 @@ export class AdminTranslationsService {
       this.prisma.quranTranslation.count({ where }),
     ]);
 
-    return toOffsetPage(items, total, offset.page, offset.limit);
+    return toOffsetPage(
+      items.map((item) => this.toAdminTranslation(item)),
+      total,
+      offset.page,
+      offset.limit,
+    );
   }
 
-  async getById(id: string): Promise<QuranTranslation> {
+  async getById(id: string): Promise<AdminTranslationView> {
     const translation = await this.prisma.quranTranslation.findFirst({
       where: { id, deletedAt: null },
     });
@@ -61,7 +71,7 @@ export class AdminTranslationsService {
       throw new NotFoundException('Translation not found');
     }
 
-    return translation;
+    return this.toAdminTranslation(translation);
   }
 
   async update(
@@ -69,7 +79,7 @@ export class AdminTranslationsService {
     dto: UpdateAdminTranslationDto,
     admin: CurrentAdminContext,
     context: AuthRequestContext,
-  ): Promise<QuranTranslation> {
+  ): Promise<AdminTranslationView> {
     await this.getById(id);
 
     const translation = await this.prisma.$transaction(async (tx) => {
@@ -101,14 +111,14 @@ export class AdminTranslationsService {
       userAgent: context.userAgent,
     });
 
-    return translation;
+    return this.toAdminTranslation(translation);
   }
 
   async enable(
     id: string,
     admin: CurrentAdminContext,
     context: AuthRequestContext,
-  ): Promise<QuranTranslation> {
+  ): Promise<AdminTranslationView> {
     return this.setActive(id, true, admin, context, 'Enabled Translation');
   }
 
@@ -116,7 +126,7 @@ export class AdminTranslationsService {
     id: string,
     admin: CurrentAdminContext,
     context: AuthRequestContext,
-  ): Promise<QuranTranslation> {
+  ): Promise<AdminTranslationView> {
     return this.setActive(id, false, admin, context, 'Disabled Translation');
   }
 
@@ -124,7 +134,7 @@ export class AdminTranslationsService {
     id: string,
     admin: CurrentAdminContext,
     context: AuthRequestContext,
-  ): Promise<QuranTranslation> {
+  ): Promise<AdminTranslationView> {
     await this.getById(id);
 
     const translation = await this.prisma.$transaction(async (tx) => {
@@ -149,7 +159,7 @@ export class AdminTranslationsService {
       userAgent: context.userAgent,
     });
 
-    return translation;
+    return this.toAdminTranslation(translation);
   }
 
   async reorder(
@@ -204,7 +214,7 @@ export class AdminTranslationsService {
     admin: CurrentAdminContext,
     context: AuthRequestContext,
     description: string,
-  ): Promise<QuranTranslation> {
+  ): Promise<AdminTranslationView> {
     await this.getById(id);
 
     const translation = await this.prisma.quranTranslation.update({
@@ -225,7 +235,14 @@ export class AdminTranslationsService {
       userAgent: context.userAgent,
     });
 
-    return translation;
+    return this.toAdminTranslation(translation);
+  }
+
+  private toAdminTranslation(row: QuranTranslation): AdminTranslationView {
+    return {
+      ...row,
+      resourceId: row.externalId,
+    };
   }
 
   private async assertAllIdsExist(ids: string[]): Promise<void> {

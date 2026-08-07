@@ -12,6 +12,7 @@ import {
   CatalogTafsirPayload,
   CatalogTranslationPayload,
 } from './qf-catalog.mapper';
+import { isCuratedTranslationExternalId, CURATED_TRANSLATION_EXTERNAL_IDS } from './curated-translations';
 
 export type CatalogSyncStats = {
   upserted: number;
@@ -81,6 +82,7 @@ export class QfCatalogRepository {
 
     return this.prisma.$transaction(async (tx) => {
       for (const item of items) {
+        const createActive = isCuratedTranslationExternalId(item.externalId);
         await tx.quranTranslation.upsert({
           where: {
             provider_externalId: {
@@ -88,8 +90,10 @@ export class QfCatalogRepository {
               externalId: item.externalId,
             },
           },
-          // New rows start disabled until an admin enables them for the Mini App.
-          create: { ...item, isActive: false },
+          // Curated Mini App defaults (e.g. MSM Yusuf / 55) start active.
+          // All other editions stay disabled until an admin enables them.
+          // Updates never overwrite admin-controlled isActive / isDefault / sortOrder.
+          create: { ...item, isActive: createActive },
           update: {
             languageCode: item.languageCode,
             name: item.name,
@@ -97,10 +101,21 @@ export class QfCatalogRepository {
             slug: item.slug,
             deletedAt: null,
             metadata: item.metadata,
-            // Preserve admin-controlled: isActive, isDefault, sortOrder
           },
         });
       }
+
+      // Heal already-synced curated rows that were created inactive before this rule.
+      // Product defaults (MSM Yusuf, etc.) stay available on the public catalog.
+      await tx.quranTranslation.updateMany({
+        where: {
+          provider: QURAN_FOUNDATION_PROVIDER,
+          externalId: { in: [...CURATED_TRANSLATION_EXTERNAL_IDS] },
+          deletedAt: null,
+          isActive: false,
+        },
+        data: { isActive: true },
+      });
 
       const deactivated =
         seenIds.length === 0

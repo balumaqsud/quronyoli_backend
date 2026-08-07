@@ -24,6 +24,7 @@ describe('AdminTranslationsService', () => {
 
   const translation = {
     id: '11111111-1111-4111-8111-111111111111',
+    externalId: '55',
     isActive: true,
     isDefault: true,
     sortOrder: 0,
@@ -80,11 +81,27 @@ describe('AdminTranslationsService', () => {
     ).resolves.toMatchObject({
       isActive: false,
       isDefault: false,
+      resourceId: '55',
     });
 
     expect(prisma.quranTranslation.update).toHaveBeenCalledWith({
       where: { id: translation.id },
       data: { isActive: false, isDefault: false },
+    });
+  });
+
+  it('exposes QF externalId as resourceId on list/detail', async () => {
+    prisma.quranTranslation.findMany.mockResolvedValue([translation]);
+    prisma.quranTranslation.count.mockResolvedValue(1);
+    prisma.quranTranslation.findFirst.mockResolvedValue(translation);
+
+    await expect(service.list({ page: 1, limit: 20 })).resolves.toMatchObject({
+      items: [{ id: translation.id, resourceId: '55', externalId: '55' }],
+      meta: { total: 1, page: 1, limit: 20 },
+    });
+    await expect(service.getById(translation.id)).resolves.toMatchObject({
+      resourceId: '55',
+      externalId: '55',
     });
   });
 
