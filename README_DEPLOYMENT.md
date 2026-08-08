@@ -5,7 +5,7 @@ Deploy the API with Docker Compose + Caddy (HTTPS).
 ## Prerequisites
 
 - Ubuntu 24.04 server (root or sudo)
-- DNS A/AAAA for your API host pointing at the VPS (required for Telegram webhooks / Caddy TLS)
+- DNS A/AAAA for your API host pointing at the VPS (required for Telegram webhooks / Caddy TLS), **or** use free `YOUR_IP.sslip.io` — see [docs/sslip-caddy-redeploy.md](docs/sslip-caddy-redeploy.md)
 - A ready `.env` with production secrets (upload via scp; scripts never invent Telegram/QF tokens)
 
 ## First deploy (one command)
