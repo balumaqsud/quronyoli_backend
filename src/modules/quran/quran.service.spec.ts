@@ -87,6 +87,8 @@ describe('QuranService', () => {
                   tajweedPageImageBase:
                     'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp',
                   tajweedPageImageExt: 'webp',
+                  madina1405PageImageBase: '',
+                  madina1405PageImageExt: 'webp',
                   cacheTtl: {
                     chaptersSeconds: 10,
                     versesSeconds: 10,
@@ -149,6 +151,10 @@ describe('QuranService', () => {
     expect(result.mushafs.some((m) => m.id === 19)).toBe(true);
     expect(result.mushafs.some((m) => m.id === 1)).toBe(true);
     expect(result.mushafs.some((m) => m.id === 10)).toBe(true);
+    expect(result.mushafs.some((m) => m.id === 1405)).toBe(true);
+    const standard = result.mushafs.filter((m) => m.isStandard);
+    expect(standard).toHaveLength(1);
+    expect(standard[0]?.id).toBe(10);
   });
 
   it('heals stale verse-strip imageUrl on GET page cache hits', async () => {

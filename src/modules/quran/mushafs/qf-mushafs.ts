@@ -8,6 +8,8 @@ export type MushafResource = {
   type: 'glyph' | 'unicode' | 'image';
   bestFor: string;
   pagesCount?: number;
+  /** FE book-mode default when true (at most one entry). */
+  isStandard?: boolean;
 };
 
 export const QF_MUSHAF_RESOURCES: MushafResource[] = [
@@ -69,6 +71,17 @@ export const QF_MUSHAF_RESOURCES: MushafResource[] = [
     type: 'image',
     bestFor: 'Dar al-Marefa full-page Tajweed mushaf images',
     pagesCount: 604,
+    isStandard: true,
+  },
+  {
+    id: 1405,
+    name: 'Hafs, classic Medina, 1405 AH',
+    key: 'madina-1405',
+    apiField: 'img',
+    type: 'image',
+    bestFor: 'Classic King Fahd Madani print (1405 AH)',
+    pagesCount: 604,
+    isStandard: false,
   },
   {
     id: 19,

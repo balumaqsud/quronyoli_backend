@@ -58,6 +58,33 @@ describe('qf-pages.mapper', () => {
     expect(withImage.imageWidth).toBe(776);
   });
 
+  it('leaves mushaf 1405 imageUrl null without a configured base', () => {
+    const payload = mapVersesToMushafPage(1, 1405, [
+      {
+        verse_key: '1:1',
+        juz_number: 1,
+        hizb_number: 1,
+        rub_el_hizb_number: 1,
+      },
+    ]);
+    const withoutBase = applyPageImageMeta(payload);
+    expect(withoutBase.imageUrl).toBeNull();
+    expect(withoutBase.imageWidth).toBeNull();
+
+    const withBase = applyPageImageMeta(payload, {
+      bases: {
+        1405: {
+          baseUrl: 'https://api.example/uploads/mushaf/1405',
+          extension: 'webp',
+        },
+      },
+    });
+    expect(withBase.imageUrl).toBe(
+      'https://api.example/uploads/mushaf/1405/1.webp',
+    );
+    expect(withBase.imageWidth).toBe(1024);
+  });
+
   it('collects multi-juz and multi-surah sets', () => {
     const payload = mapVersesToMushafPage(2, 1, [
       {

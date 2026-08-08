@@ -4,8 +4,9 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import { json, urlencoded } from 'express';
+import { json, static as expressStatic, urlencoded } from 'express';
 import { mkdirSync } from 'fs';
+import { join } from 'path';
 import helmet from 'helmet';
 import { Logger as PinoNestLogger } from 'nestjs-pino';
 import { AppModule } from './app.module';
@@ -27,17 +28,29 @@ async function bootstrap(): Promise<void> {
   const isProduction = appConfig.nodeEnv === 'production';
 
   mkdirSync(appConfig.uploadsDir, { recursive: true });
+  mkdirSync(join(appConfig.uploadsDir, 'mushaf', '1405'), { recursive: true });
   mkdirSync(appConfig.logDir, { recursive: true });
 
   const expressApp = app.getHttpAdapter().getInstance() as {
     set: (key: string, value: unknown) => void;
     disable: (key: string) => void;
+    use: (...args: unknown[]) => void;
   };
   expressApp.disable('x-powered-by');
 
   if (appConfig.trustProxy) {
     expressApp.set('trust proxy', 1);
   }
+
+  // Public mushaf page images (e.g. /uploads/mushaf/1405/1.webp) — outside /api.
+  expressApp.use(
+    '/uploads',
+    expressStatic(appConfig.uploadsDir, {
+      index: false,
+      fallthrough: true,
+      maxAge: isProduction ? '7d' : 0,
+    }),
+  );
 
   app.use(
     helmet({

@@ -326,10 +326,7 @@ export class QuranService {
     this.assertMadaniPageNumber(pageNumber);
     const mushafId = this.resolveMushafId(query.mushaf);
     const cacheKey = this.cache.pageMetadataKey(pageNumber, mushafId);
-    const pageImageConfig = {
-      baseUrl: this.config.tajweedPageImageBase,
-      extension: this.config.tajweedPageImageExt,
-    };
+    const pageImageConfig = this.pageImageSources();
 
     return this.cache
       .getOrSet(
@@ -359,10 +356,7 @@ export class QuranService {
     const params = this.verseQueryWithPageDefaults(query);
     params.mushaf = mushafId;
     const cacheKey = this.cache.pageVersesKey(page, mushafId, params);
-    const pageImageConfig = {
-      baseUrl: this.config.tajweedPageImageBase,
-      extension: this.config.tajweedPageImageExt,
-    };
+    const pageImageConfig = this.pageImageSources();
 
     return this.cache
       .getOrSet(
@@ -399,8 +393,9 @@ export class QuranService {
   private healCachedPageImageMeta(
     cached: unknown,
     pageImageConfig: {
-      baseUrl: string;
-      extension: string;
+      bases: Partial<
+        Record<number, { baseUrl: string; extension: string; width?: number }>
+      >;
     },
   ): unknown {
     if (!cached || typeof cached !== 'object') {
@@ -981,6 +976,29 @@ export class QuranService {
       }
     }
     return [...parts].join(',');
+  }
+
+  private pageImageSources(): {
+    bases: Partial<
+      Record<number, { baseUrl: string; extension: string; width?: number }>
+    >;
+  } {
+    const bases: Record<
+      number,
+      { baseUrl: string; extension: string; width?: number }
+    > = {
+      10: {
+        baseUrl: this.config.tajweedPageImageBase,
+        extension: this.config.tajweedPageImageExt,
+      },
+    };
+    if (this.config.madina1405PageImageBase) {
+      bases[1405] = {
+        baseUrl: this.config.madina1405PageImageBase,
+        extension: this.config.madina1405PageImageExt,
+      };
+    }
+    return { bases };
   }
 
   private resolveMushafId(mushaf?: number): number {

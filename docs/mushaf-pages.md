@@ -30,7 +30,7 @@ Postgres stores page coordinates only:
 - `page_number`, `first_verse_key`, `last_verse_key`, `verse_count`
 - `verse_keys[]`, `surah_ids[]`
 - `juz_number`, `hizb_number`, `rub_el_hizb_number` (+ multi-value arrays when a page spans divisions)
-- optional full-page `image_url` / `image_width` for **image mushafs** (id 10 Dar al-Marefa). Verse-level QF `image_url` ayah strips are **not** stored as page art.
+- optional full-page `image_url` / `image_width` for **image mushafs** (id **10** Dar al-Marefa; id **1405** classic Medina when `QF_MUSHAF_1405_IMAGE_BASE` is set). Verse-level QF `image_url` ayah strips are **not** stored as page art.
 - `created_at` / `updated_at` / `synced_at`
 
 No Arabic, translations, tafsir, or audio blobs.
@@ -89,12 +89,17 @@ npm run qf:sync-pages -- --mushaf=1,4,5,19 --clone-from=1
 # (page breaks differ; page image URLs are attached during sync)
 npm run qf:sync-pages -- --mushaf=10
 
+# Classic Medina 1405 (image edition): clone Madani layout from mushaf 1, then host WebPs
+# under uploads/mushaf/1405/ and set QF_MUSHAF_1405_IMAGE_BASE=https://<host>/uploads/mushaf/1405
+npm run qf:sync-pages -- --mushaf=1405 --clone-from=1
+
 # production build:
 npm run qf:sync-pages:prod
 npm run qf:sync-pages:prod -- --mushaf=4,5,19 --clone-from=1
+npm run qf:sync-pages:prod -- --mushaf=1405 --clone-from=1
 ```
 
-Page serving is **per mushaf id**. Frontend Settings editions (QCF V2, QPC Hafs, Uthmani, QCF V4 Tajweed) each need synced rows or `GET /pages?mushaf=N` returns **404**. Editions that share the Madani 604 layout can use `--clone-from=1` instead of a full QF crawl.
+Page serving is **per mushaf id**. Frontend Settings editions (QCF V2, QPC Hafs, Uthmani, QCF V4 Tajweed) each need synced rows or `GET /pages?mushaf=N` returns **404**. Editions that share the Madani 604 layout can use `--clone-from=1` instead of a full QF crawl. Image mushaf **10** cannot be cloned (own layout); image mushaf **1405** may clone from 1. Static files are served at `GET /uploads/...` (e.g. `/uploads/mushaf/1405/1.webp`).
 
 After sync:
 

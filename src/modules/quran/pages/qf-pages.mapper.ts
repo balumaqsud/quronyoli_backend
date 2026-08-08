@@ -1,11 +1,30 @@
 import { QURAN_FOUNDATION_PROVIDER } from '../../settings/interfaces/settings.interface';
 import {
-  buildTajweedPageImageUrl,
-  isImageMushafId,
+  buildPageImageUrl,
+  getImageMushafEntry,
   isLikelyVerseStripImageUrl,
-  TAJWEED_PAGE_IMAGE_WIDTH,
+  resolvePageImageUrlConfig,
+  type PageImageSourcesConfig,
+  type PageImageUrlConfig,
   type TajweedPageImageConfig,
 } from './qf-page-images';
+
+/** Accept legacy single tajweed config or multi-mushaf sources. */
+function toPageImageSources(
+  config?: PageImageSourcesConfig | PageImageUrlConfig | TajweedPageImageConfig,
+): PageImageSourcesConfig | undefined {
+  if (!config) {
+    return undefined;
+  }
+  if ('bases' in config) {
+    return config;
+  }
+  return {
+    bases: {
+      10: config,
+    },
+  };
+}
 
 export type QfPageVerseSnippet = {
   verse_key?: string;
@@ -166,6 +185,8 @@ export function mapVersesToMushafPage(
 
 /**
  * Attach full-page image meta for image mushafs; strip verse-strip URLs otherwise.
+ * Mushaf 10 uses Dar al-Marefa defaults when config omitted.
+ * Mushaf 1405 needs a non-empty base in sources; otherwise imageUrl is null.
  */
 export function applyPageImageMeta<
   T extends {
@@ -174,12 +195,27 @@ export function applyPageImageMeta<
     imageUrl: string | null;
     imageWidth: number | null;
   },
->(row: T, pageImageConfig?: TajweedPageImageConfig): T {
-  if (isImageMushafId(row.mushafId)) {
+>(
+  row: T,
+  pageImageConfig?: PageImageSourcesConfig | PageImageUrlConfig | TajweedPageImageConfig,
+): T {
+  const entry = getImageMushafEntry(row.mushafId);
+  if (entry) {
+    const resolved = resolvePageImageUrlConfig(
+      row.mushafId,
+      toPageImageSources(pageImageConfig),
+    );
+    if (!resolved) {
+      return {
+        ...row,
+        imageUrl: null,
+        imageWidth: null,
+      };
+    }
     return {
       ...row,
-      imageUrl: buildTajweedPageImageUrl(row.pageNumber, pageImageConfig),
-      imageWidth: TAJWEED_PAGE_IMAGE_WIDTH,
+      imageUrl: buildPageImageUrl(row.pageNumber, resolved),
+      imageWidth: resolved.width ?? entry.defaultWidth,
     };
   }
 
@@ -227,7 +263,7 @@ export function toMushafPageDetail(
     imageWidth: number | null;
     syncedAt: Date;
   },
-  pageImageConfig?: TajweedPageImageConfig,
+  pageImageConfig?: PageImageSourcesConfig | PageImageUrlConfig | TajweedPageImageConfig,
 ): MushafPageDetail {
   const withImages = applyPageImageMeta(
     {

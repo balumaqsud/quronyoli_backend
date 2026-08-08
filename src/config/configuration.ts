@@ -136,6 +136,9 @@ export interface QuranFoundationConfig {
   /** Full-page Dar al-Marefa (mushaf 10) image CDN base (no trailing slash). */
   tajweedPageImageBase: string;
   tajweedPageImageExt: string;
+  /** Classic Medina 1405 page images base; empty disables imageUrl for mushaf 1405. */
+  madina1405PageImageBase: string;
+  madina1405PageImageExt: string;
   cacheTtl: QuranFoundationCacheTtlConfig;
 }
 
@@ -473,6 +476,11 @@ export default (): AppConfiguration => {
         process.env.QF_TAJWEED_PAGE_IMAGE_BASE ??
         'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp',
       tajweedPageImageExt: process.env.QF_TAJWEED_PAGE_IMAGE_EXT ?? 'webp',
+      madina1405PageImageBase: (
+        process.env.QF_MUSHAF_1405_IMAGE_BASE ?? ''
+      ).trim(),
+      madina1405PageImageExt:
+        process.env.QF_MUSHAF_1405_IMAGE_EXT ?? 'webp',
       cacheTtl: {
         chaptersSeconds: Number.parseInt(
           process.env.QF_CACHE_TTL_CHAPTERS_SECONDS ?? '86400',

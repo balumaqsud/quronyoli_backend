@@ -19,7 +19,7 @@ import {
   toMushafPageListItem,
 } from './qf-pages.mapper';
 import { MushafPageSyncStats, QfPagesRepository } from './qf-pages.repository';
-import { isImageMushafId } from './qf-page-images';
+import { mushafNeedsOwnLayoutSync } from './qf-page-images';
 
 export type QfPagesSyncResult = {
   mushafId: number;
@@ -179,9 +179,9 @@ export class QfPagesSyncService {
       throw new Error('source and target mushaf ids must differ');
     }
 
-    if (isImageMushafId(targetMushafId)) {
+    if (mushafNeedsOwnLayoutSync(targetMushafId)) {
       throw new Error(
-        `Cannot clone onto image mushaf=${targetMushafId}; run a full QF sync (npm run qf:sync-pages -- --mushaf=${targetMushafId}) so page breaks match Dar al-Marefa.`,
+        `Cannot clone onto image mushaf=${targetMushafId}; run a full QF sync (npm run qf:sync-pages -- --mushaf=${targetMushafId}) so page breaks match the printed edition.`,
       );
     }
 
@@ -315,9 +315,18 @@ export class QfPagesSyncService {
   }
 
   private pageImageConfig() {
-    return {
-      baseUrl: this.config.tajweedPageImageBase,
-      extension: this.config.tajweedPageImageExt,
+    const bases: Record<number, { baseUrl: string; extension: string }> = {
+      10: {
+        baseUrl: this.config.tajweedPageImageBase,
+        extension: this.config.tajweedPageImageExt,
+      },
     };
+    if (this.config.madina1405PageImageBase) {
+      bases[1405] = {
+        baseUrl: this.config.madina1405PageImageBase,
+        extension: this.config.madina1405PageImageExt,
+      };
+    }
+    return { bases };
   }
 }

@@ -154,6 +154,15 @@ export const envValidationSchema = Joi.object({
   QF_TAJWEED_PAGE_IMAGE_EXT: Joi.string()
     .pattern(/^[a-z0-9]+$/i)
     .default('webp'),
+  QF_MUSHAF_1405_IMAGE_BASE: Joi.alternatives()
+    .try(
+      Joi.string().valid(''),
+      Joi.string().uri({ scheme: ['http', 'https'] }),
+    )
+    .default(''),
+  QF_MUSHAF_1405_IMAGE_EXT: Joi.string()
+    .pattern(/^[a-z0-9]+$/i)
+    .default('webp'),
   QF_CACHE_TTL_CHAPTERS_SECONDS: Joi.number().integer().min(1).default(86400),
   QF_CACHE_TTL_VERSES_SECONDS: Joi.number().integer().min(1).default(3600),
   QF_CACHE_TTL_RESOURCES_SECONDS: Joi.number().integer().min(1).default(86400),
