@@ -1,30 +1,55 @@
 # Deployment (Ubuntu 24.04)
 
-Deploy the API with Docker Compose only.
+Deploy the API with Docker Compose + Caddy (HTTPS).
 
 ## Prerequisites
 
-- Ubuntu 24.04 server
-- Docker Engine + Docker Compose v2
-- DNS / reverse proxy with HTTPS (required for Telegram webhooks)
-- Secrets for Telegram Bot + Quran.Foundation OAuth
+- Ubuntu 24.04 server (root or sudo)
+- DNS A/AAAA for your API host pointing at the VPS (required for Telegram webhooks / Caddy TLS)
+- A ready `.env` with production secrets (upload via scp; scripts never invent Telegram/QF tokens)
 
-## One-command deploy
+## First deploy (one command)
+
+On your laptop, prepare and upload `.env`:
 
 ```bash
-git clone <repo-url> quron-yoli_backend
-cd quron-yoli_backend
-cp .env.production .env
-# Edit .env — replace every REPLACE_* value
-docker compose -f docker-compose.yml up -d --build
+# from your machine (example)
+scp .env root@YOUR_VPS:/opt/quronyoli/quronyoli_backend/.env
 ```
+
+On the server:
+
+```bash
+cd /opt/quronyoli/quronyoli_backend   # or your clone path
+./scripts/deploy.sh
+# or: npm run deploy:prod
+```
+
+What `deploy.sh` does:
+
+1. Installs Docker Engine + Compose v2 if missing  
+2. Validates `.env` (fails closed on placeholders / short secrets)  
+3. `docker compose -f docker-compose.yml up -d --build`  
+4. Waits for `/api/v1/health/ready`  
+5. Installs/configures Caddy for `DOMAIN` (from `DOMAIN=...` or host of `TELEGRAM_WEBHOOK_URL`)  
+6. Optionally runs QF sync when `RUN_QF_SYNC=1`
+
+| Env | Effect |
+| --- | --- |
+| `DOMAIN=api.example.com` | Override Caddy hostname |
+| `SKIP_CADDY=1` | Docker stack only (no TLS proxy) |
+| `SKIP_DOCKER_INSTALL=1` | Assume Docker already installed |
+| `RUN_QF_SYNC=1` | After healthy: catalog + pages sync inside `api` |
+| `HEALTH_ATTEMPTS` / `HEALTH_INTERVAL_SEC` | Readiness wait tuning |
+
+Manual equivalent (without scripts): copy `.env`, then `docker compose -f docker-compose.yml up -d --build`.
 
 ## One-command update (keep DB data)
 
 After the first deploy, every time `main` has new backend code (including new Prisma migrations / tables):
 
 ```bash
-cd /opt/quron-yoli_backend   # or your install path
+cd /opt/quronyoli/quronyoli_backend
 ./scripts/update.sh
 # or: npm run update:prod
 ```
@@ -49,6 +74,8 @@ Verify:
 ```bash
 curl -sS http://127.0.0.1:3000/api/health
 curl -sS http://127.0.0.1:3000/api/v1/health/ready
+# with Caddy:
+curl -sS https://YOUR_DOMAIN/api/v1/health/ready
 ```
 
 ## What happens automatically
@@ -61,7 +88,7 @@ curl -sS http://127.0.0.1:3000/api/v1/health/ready
 
 ## After first boot (catalog data)
 
-Quran catalog/pages are **not** auto-synced (external API). When ready:
+Quran catalog/pages are **not** auto-synced unless you pass `RUN_QF_SYNC=1` to `deploy.sh`. When ready:
 
 ```bash
 docker compose -f docker-compose.yml exec api npm run qf:sync-catalog:prod
@@ -74,7 +101,7 @@ Then in the **admin panel**, enable the translations/tafsirs that should appear 
 
 ```bash
 # Daily 02:00 UTC
-0 2 * * * cd /opt/quron-yoli_backend && ./scripts/backup.sh >> logs/backup.log 2>&1
+0 2 * * * cd /opt/quronyoli/quronyoli_backend && ./scripts/backup.sh >> logs/backup.log 2>&1
 ```
 
 Restore (destructive — requires confirmation):
@@ -85,16 +112,19 @@ CONFIRM_RESTORE=yes ./scripts/restore.sh backups/<timestamp>
 
 ## Reverse proxy tips
 
-- Terminate TLS at nginx/Caddy/Traefik  
-- Proxy to `127.0.0.1:3000`  
-- Set `TRUST_PROXY=true` (already in `.env.production`)  
+- First deploy configures **Caddy** by default (`./scripts/setup-caddy.sh`)
+- Terminate TLS at Caddy; proxy to `127.0.0.1:3000`
+- Set `TRUST_PROXY=true` (already in `.env.production`)
 - Point `TELEGRAM_WEBHOOK_URL` at `https://<public-host>/api/v1/telegram/webhook`
+- DNS must already point at the VPS before Caddy can obtain certificates
 
 ## Production vs local Compose
 
 | Mode | Command |
 | --- | --- |
-| Production | `docker compose -f docker-compose.yml up -d` |
+| Production first boot | `./scripts/deploy.sh` |
+| Production update | `./scripts/update.sh` |
+| Production (manual) | `docker compose -f docker-compose.yml up -d` |
 | Local (+ published DB/Redis ports) | `docker compose up -d` |
 | Local + pgAdmin / Redis Insight | `docker compose --profile dev up -d` |
 

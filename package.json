@@ -30,6 +30,7 @@
     "prisma:seed": "prisma db seed",
     "backup": "bash scripts/backup.sh",
     "restore": "bash scripts/restore.sh",
+    "deploy:prod": "bash scripts/deploy.sh",
     "update:prod": "bash scripts/update.sh",
     "qf:discover": "ts-node --transpile-only scripts/qf-discovery-sample.ts",
     "qf:sync-catalog": "ts-node --transpile-only src/commands/qf-sync-catalog.ts",

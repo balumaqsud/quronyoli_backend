@@ -12,44 +12,17 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT_DIR"
+# shellcheck source=lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 
-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yml}"
-COMPOSE_BIN="${COMPOSE_BIN:-docker compose -f ${COMPOSE_FILE}}"
-HEALTH_ATTEMPTS="${HEALTH_ATTEMPTS:-60}"
-HEALTH_INTERVAL_SEC="${HEALTH_INTERVAL_SEC:-2}"
+qy_init_root
+qy_refuse_destructive_args "update" "$@"
+qy_require_compose_file "update"
+qy_require_env_file "update"
+qy_load_env
+
 SKIP_BACKUP="${SKIP_BACKUP:-0}"
 SKIP_GIT_PULL="${SKIP_GIT_PULL:-0}"
-
-# Refuse accidental destructive volume flags if passed through to this script.
-for arg in "$@"; do
-  case "$arg" in
-    -v | --volumes | --rmi | prune)
-      echo "[update] Refusing destructive argument: ${arg}" >&2
-      echo "[update] This script never removes volumes or images via down -v / prune." >&2
-      exit 1
-      ;;
-  esac
-done
-
-if [[ ! -f "$COMPOSE_FILE" ]]; then
-  echo "[update] Missing ${COMPOSE_FILE} in ${ROOT_DIR}" >&2
-  exit 1
-fi
-
-if [[ ! -f .env ]]; then
-  echo "[update] Missing .env — copy from .env.production and fill secrets first." >&2
-  exit 1
-fi
-
-# shellcheck disable=SC1091
-set -a
-source .env
-set +a
-
-PORT="${PORT:-3000}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${PORT}/api/v1/health/ready}"
 
 echo "[update] Repo: ${ROOT_DIR}"
 echo "[update] Compose: ${COMPOSE_BIN}"
@@ -82,19 +55,7 @@ echo "[update] Rebuilding and starting stack (volumes preserved)..."
 # Intentionally no -v / down -v: named volumes postgres_data / redis_data stay intact.
 ${COMPOSE_BIN} up -d --build
 
-echo "[update] Waiting for API readiness at ${HEALTH_URL}..."
-ATTEMPT=0
-until curl -fsS "$HEALTH_URL" >/dev/null 2>&1; do
-  ATTEMPT=$((ATTEMPT + 1))
-  if [[ "$ATTEMPT" -ge "$HEALTH_ATTEMPTS" ]]; then
-    echo "[update] API did not become ready after ${HEALTH_ATTEMPTS} attempts." >&2
-    echo "[update] Recent api logs:" >&2
-    ${COMPOSE_BIN} logs --tail=80 api >&2 || true
-    exit 1
-  fi
-  sleep "$HEALTH_INTERVAL_SEC"
-done
-echo "[update] API is ready"
+qy_wait_for_health "update"
 
 echo "[update] Container status:"
 ${COMPOSE_BIN} ps

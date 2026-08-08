@@ -4,15 +4,24 @@ Operational guide for building, migrating, running, and rolling back the API. Ha
 
 Ubuntu one-pager: [README_DEPLOYMENT.md](../README_DEPLOYMENT.md).
 
-## Recommended: Ubuntu + Compose
+## Recommended: Ubuntu + Compose (one-command)
 
 ```bash
 git clone <repo-url> quron-yoli_backend
 cd quron-yoli_backend
-cp .env.production .env
-# Fill REPLACE_* secrets (REDIS_PASSWORD required, min 16 chars)
-docker compose -f docker-compose.yml up -d --build
+# Upload a ready .env (scp). Scripts never invent Telegram/QF secrets.
+./scripts/deploy.sh
+# or: npm run deploy:prod
 ```
+
+`deploy.sh` installs Docker if needed, validates `.env`, runs `docker compose -f docker-compose.yml up -d --build`, waits for readiness, and configures Caddy HTTPS for `DOMAIN` (or the host from `TELEGRAM_WEBHOOK_URL`).
+
+| Env | Effect |
+| --- | --- |
+| `DOMAIN=api.example.com` | Caddy hostname override |
+| `SKIP_CADDY=1` | Skip TLS reverse proxy |
+| `SKIP_DOCKER_INSTALL=1` | Assume Docker already present |
+| `RUN_QF_SYNC=1` | Run catalog + pages sync after healthy |
 
 `-f docker-compose.yml` skips the local override so Postgres/Redis ports stay unpublished.
 
@@ -185,10 +194,10 @@ The sync upserts QF `/resources/translations`, `/resources/tafsirs`, and `/resou
 
 ## Rollout checklist
 
-1. Apply config secrets in the secret store / env.
-2. Prefer `./scripts/update.sh` (or `npm run update:prod`) so backup + pull + rebuild keep volumes. Manual equivalent: `docker compose -f docker-compose.yml up -d --build` (never `-v`).
+1. Apply config secrets in the secret store / env (upload ready `.env` to the server).
+2. First boot: `./scripts/deploy.sh` (or `npm run deploy:prod`). Later: prefer `./scripts/update.sh` (or `npm run update:prod`) so backup + pull + rebuild keep volumes. Manual equivalent: `docker compose -f docker-compose.yml up -d --build` (never `-v`).
 3. Confirm migrate succeeds (container logs or explicit `prisma migrate deploy`).
-4. Run `qf:sync-catalog:prod` (and pages if needed) so settings catalogs are populated, then **enable** desired translations/tafsirs in admin (those sync inactive; lists are admin-gated). New qaris sync as active; disable in admin if you want to hide them from the Mini App.
+4. Run `qf:sync-catalog:prod` (and pages if needed) — or first-boot with `RUN_QF_SYNC=1` — so settings catalogs are populated, then **enable** desired translations/tafsirs in admin (those sync inactive; lists are admin-gated). New qaris sync as active; disable in admin if you want to hide them from the Mini App.
 5. Wait for readiness (`/api/v1/health/ready` or `/api/health`).
 6. Smoke: auth telegram (staging), health, one Quran GET, reminder preference if used.
 7. Watch error rate and slow-request logs.

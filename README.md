@@ -28,12 +28,12 @@ Production NestJS backend for the **Quron Yo'li** Telegram Mini App: Telegram Mi
 ### Production (Ubuntu)
 
 ```bash
-cp .env.production .env
-# Fill REPLACE_* secrets
-docker compose -f docker-compose.yml up -d --build
+# Upload a ready .env to the repo root on the server, then:
+./scripts/deploy.sh
+# or: npm run deploy:prod
 ```
 
-See [README_DEPLOYMENT.md](README_DEPLOYMENT.md) and [README_DOCKER.md](README_DOCKER.md).
+Later updates: `./scripts/update.sh`. See [README_DEPLOYMENT.md](README_DEPLOYMENT.md) and [README_DOCKER.md](README_DOCKER.md).
 
 ### Local development
 

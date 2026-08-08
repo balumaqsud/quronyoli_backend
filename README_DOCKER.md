@@ -9,12 +9,12 @@ See also: [docs/docker.md](docs/docker.md) for deeper troubleshooting.
 ### Production (Ubuntu server)
 
 ```bash
-cp .env.production .env
-# Fill all REPLACE_* secrets; REDIS_PASSWORD is required
-docker compose -f docker-compose.yml up -d --build
+# Upload a ready .env first (REDIS_PASSWORD required, min 16 chars), then:
+./scripts/deploy.sh
+# or: npm run deploy:prod
 ```
 
-Using `-f docker-compose.yml` skips [`docker-compose.override.yml`](docker-compose.override.yml) so Postgres and Redis stay **internal-only** (not published to the host).
+`deploy.sh` installs Docker if needed, validates `.env`, builds the stack with `-f docker-compose.yml` (skips [`docker-compose.override.yml`](docker-compose.override.yml) so Postgres/Redis stay **internal-only**), waits for health, and configures Caddy HTTPS.
 
 ### Update production (keep data)
 

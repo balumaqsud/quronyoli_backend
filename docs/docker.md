@@ -52,7 +52,14 @@ Interval 30s, timeout 5s, start period 60s, 3 retries.
 | `redis` | `redis:7-alpine` | **none** | Password + AOF + protected-mode; volume `redis_data` |
 | `api` | Build `Dockerfile` | `PORT` only (default 3000) | Nest API; bind mounts `./uploads`, `./logs` |
 
-Deploy production without the override:
+Deploy production (preferred one-command):
+
+```bash
+./scripts/deploy.sh
+# or: npm run deploy:prod
+```
+
+Manual Compose without the override:
 
 ```bash
 docker compose -f docker-compose.yml up -d --build
