@@ -63,9 +63,31 @@ What it does:
 2. `git pull --ff-only`
 3. Auto-configures Classic Medina 1405 env when 604 WebPs are present
 4. `docker compose -f docker-compose.yml up -d --build` — **volumes are never removed**
-5. Waits for `/api/v1/health/ready`
-6. Entrypoint runs `prisma migrate deploy` (additive; creates new tables without wiping rows)
-7. Runs `./scripts/ensure-qf-data.sh` to heal missing mushaf page rows (incl. 1405 when configured)
+5. Asserts database `POSTGRES_DB` still exists (fails closed if wiped)
+6. Waits for `/api/v1/health/ready`
+7. Re-syncs Caddy to `.env` `PORT` + asserts `https://DOMAIN/api/v1/health/ready`
+8. Entrypoint runs `prisma migrate deploy` (additive; creates new tables without wiping rows)
+9. Runs `./scripts/ensure-qf-data.sh` to heal missing mushaf page rows (incl. 1405 when configured)
+
+### Ops command map
+
+| Goal | Command | Touches Postgres data? |
+| --- | --- | --- |
+| First install | `./scripts/deploy.sh` | No wipe (creates DB on first volume init) |
+| Code + new tables/columns | `./scripts/update.sh` | **No** — additive migrate only |
+| Restart API only | `./scripts/restart-api.sh` | **No** (postgres/redis left alone) |
+| Recreate all containers | `./scripts/restart-stack.sh` | **No** — volumes kept |
+| Diagnose outage | `./scripts/doctor.sh` | Read-only |
+| Restore missing/empty DB | `CONFIRM_RESTORE=yes ./scripts/repair-db.sh [backup-dir]` | Restores from dump |
+
+```bash
+# API-only (partial): rebuild api, leave DB running
+./scripts/restart-api.sh
+REBUILD=0 ./scripts/restart-api.sh   # restart without rebuild
+
+# Full container recreate (total restart, data stays)
+./scripts/restart-stack.sh
+```
 
 ### Hard rules (data safety)
 
@@ -73,6 +95,32 @@ What it does:
 - Never `prisma migrate reset` or `db push --force-reset` on production
 - Do not change `POSTGRES_USER` / `POSTGRES_DB` after first boot
 - Schema changes: run `npm run prisma:migrate:dev` in development, commit `prisma/migrations/`, merge to main, then `./scripts/update.sh` on the server
+
+### Caddy / PORT drift (HTTPS 502)
+
+VPS: **`189.74.96.28`** · public host: **`189.74.96.28.sslip.io`** · API: **`.env` `PORT=3000`**.
+
+`update.sh` / `restart-api.sh` / `restart-stack.sh` re-write Caddy to `127.0.0.1:${PORT}` from `.env` and fail if public HTTPS is down. Never leave a stale shell `PORT=3001` — Caddy ignores it and always uses `.env`.
+
+```bash
+curl -sS https://189.74.96.28.sslip.io/api/v1/health/ready
+DOMAIN=189.74.96.28.sslip.io ./scripts/setup-caddy.sh   # manual fix
+./scripts/doctor.sh
+```
+
+### DB missing / Prisma P1003 runbook
+
+Symptoms: readiness 503 with `database: down`, logs `database "quron_yoli" does not exist`, Mini App login errors, or `curl` connection reset while API crash-loops.
+
+```bash
+./scripts/doctor.sh
+CONFIRM_RESTORE=yes ./scripts/repair-db.sh backups/20260809T090949Z
+# or latest under backups/:
+CONFIRM_RESTORE=yes ./scripts/repair-db.sh
+curl -sS http://127.0.0.1:3000/api/v1/health/ready
+```
+
+`repair-db.sh` creates the database if missing, restores the dump, restarts the API, and runs `ensure-qf-data.sh`.
 
 Verify:
 
@@ -136,15 +184,19 @@ Restore (destructive — requires confirmation):
 
 ```bash
 CONFIRM_RESTORE=yes ./scripts/restore.sh backups/<timestamp>
+# Preferred full recovery (create DB if missing + restart API + ensure-qf):
+CONFIRM_RESTORE=yes ./scripts/repair-db.sh backups/<timestamp>
+./scripts/doctor.sh
 ```
 
 ## Reverse proxy tips
 
-- First deploy configures **Caddy** by default (`./scripts/setup-caddy.sh`)
-- Terminate TLS at Caddy; proxy to `127.0.0.1:3000`
+- First deploy and every **update/restart** re-sync Caddy to `.env` `PORT` (default `3000`)
+- Terminate TLS at Caddy; proxy to `127.0.0.1:3000` (never a stale `:3001`)
 - Set `TRUST_PROXY=true` (already in `.env.production`)
-- Point `TELEGRAM_WEBHOOK_URL` at `https://<public-host>/api/v1/telegram/webhook`
-- DNS must already point at the VPS before Caddy can obtain certificates
+- Point `TELEGRAM_WEBHOOK_URL` at `https://189.74.96.28.sslip.io/api/v1/telegram/webhook`
+- Public health: `https://189.74.96.28.sslip.io/api/v1/health/ready`
+- See [docs/sslip-caddy-redeploy.md](docs/sslip-caddy-redeploy.md)
 
 ## Production vs local Compose
 
@@ -152,6 +204,10 @@ CONFIRM_RESTORE=yes ./scripts/restore.sh backups/<timestamp>
 | --- | --- |
 | Production first boot | `./scripts/deploy.sh` |
 | Production update | `./scripts/update.sh` |
+| Restart API only | `./scripts/restart-api.sh` |
+| Recreate stack (keep volumes) | `./scripts/restart-stack.sh` |
+| Diagnose | `./scripts/doctor.sh` |
+| Repair DB from backup | `CONFIRM_RESTORE=yes ./scripts/repair-db.sh [backup-dir]` |
 | Production (manual) | `docker compose -f docker-compose.yml up -d` |
 | Local (+ published DB/Redis ports) | `docker compose up -d` |
 | Local + pgAdmin / Redis Insight | `docker compose --profile dev up -d` |

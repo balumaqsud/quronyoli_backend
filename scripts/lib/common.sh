@@ -50,8 +50,248 @@ qy_load_env() {
   # shellcheck source=/dev/null
   source .env
   set +a
-  PORT="${PORT:-3000}"
+  # Always prefer .env PORT over a stale shell export (e.g. leftover PORT=3001).
+  PORT="$(qy_env_port)"
+  export PORT
   HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${PORT}/api/v1/health/ready}"
+  LIVE_URL="${LIVE_URL:-http://127.0.0.1:${PORT}/api/v1/health/live}"
+  POSTGRES_SERVICE="${POSTGRES_SERVICE:-postgres}"
+  POSTGRES_USER="${POSTGRES_USER:-postgres}"
+  POSTGRES_DB="${POSTGRES_DB:-quron_yoli}"
+  POSTGRES_VOLUME_NAME="${POSTGRES_VOLUME_NAME:-quron-yoli_postgres_data}"
+  REDIS_VOLUME_NAME="${REDIS_VOLUME_NAME:-quron-yoli_redis_data}"
+}
+
+# Read PORT from .env only (ignore polluted shell exports like PORT=3001).
+qy_env_port() {
+  local env_port=""
+  if [[ -f .env ]]; then
+    env_port="$(
+      grep -E '^[[:space:]]*PORT=' .env \
+        | tail -1 \
+        | cut -d= -f2- \
+        | tr -d '[:space:]"'"'"'' \
+        || true
+    )"
+  fi
+  if [[ -n "$env_port" && "$env_port" =~ ^[0-9]+$ ]]; then
+    printf '%s' "$env_port"
+    return 0
+  fi
+  printf '3000'
+}
+
+# DOMAIN env override, else host from TELEGRAM_WEBHOOK_URL.
+qy_resolve_domain() {
+  local host
+  host="$(printf '%s' "${DOMAIN:-}" | tr -d '[:space:]')"
+  if [[ -n "$host" ]]; then
+    printf '%s' "$host"
+    return 0
+  fi
+  qy_domain_from_webhook_url || true
+}
+
+# Re-write Caddy reverse_proxy to match .env PORT + DOMAIN (unless SKIP_CADDY=1).
+qy_sync_caddy() {
+  local label="${1:-script}"
+  local domain port
+
+  if [[ "${SKIP_CADDY:-0}" == "1" ]]; then
+    echo "[${label}] Skipping Caddy sync (SKIP_CADDY=1)"
+    return 0
+  fi
+
+  port="$(qy_env_port)"
+  domain="$(qy_resolve_domain || true)"
+  export PORT="$port"
+  export DOMAIN="$domain"
+
+  if [[ -z "$domain" ]]; then
+    echo "[${label}] WARN: DOMAIN unset and TELEGRAM_WEBHOOK_URL host unknown — skipping Caddy." >&2
+    echo "[${label}] Set DOMAIN=189.74.96.28.sslip.io or TELEGRAM_WEBHOOK_URL, or use SKIP_CADDY=1." >&2
+    return 0
+  fi
+
+  if [[ "$(uname -s)" != "Linux" ]]; then
+    echo "[${label}] WARN: Caddy sync skipped (not Linux)." >&2
+    return 0
+  fi
+
+  if [[ "${EUID}" -ne 0 ]]; then
+    echo "[${label}] WARN: not root — cannot rewrite /etc/caddy/Caddyfile." >&2
+    echo "[${label}] Re-run as root: DOMAIN=${domain} ./scripts/setup-caddy.sh" >&2
+    return 0
+  fi
+
+  echo "[${label}] Syncing Caddy (${domain} -> 127.0.0.1:${port})..."
+  DOMAIN="$domain" PORT="$port" bash "${ROOT_DIR}/scripts/setup-caddy.sh"
+}
+
+# Fail closed if Caddyfile upstream or public HTTPS health is wrong.
+qy_assert_caddy_https() {
+  local label="${1:-script}"
+  local port domain upstream caddyfile https_url attempt max_attempts
+  local soft="${QY_CADDY_HTTPS_SOFT:-0}"
+
+  if [[ "${SKIP_CADDY:-0}" == "1" ]]; then
+    echo "[${label}] Skipping Caddy HTTPS assert (SKIP_CADDY=1)"
+    return 0
+  fi
+
+  port="$(qy_env_port)"
+  domain="$(qy_resolve_domain || true)"
+  upstream="127.0.0.1:${port}"
+  caddyfile="${CADDYFILE:-/etc/caddy/Caddyfile}"
+
+  if [[ -z "$domain" ]]; then
+    echo "[${label}] WARN: no DOMAIN — cannot assert public HTTPS." >&2
+    return 0
+  fi
+
+  if [[ ! -f "$caddyfile" ]]; then
+    echo "[${label}] ERROR: missing ${caddyfile} — run DOMAIN=${domain} ./scripts/setup-caddy.sh" >&2
+    if [[ "$soft" == "1" ]]; then
+      return 0
+    fi
+    return 1
+  fi
+
+  if ! grep -qF "reverse_proxy ${upstream}" "$caddyfile"; then
+    echo "[${label}] ERROR: ${caddyfile} upstream mismatch (want reverse_proxy ${upstream})." >&2
+    echo "[${label}] Stale PORT (e.g. 3001) causes https://${domain} 502 while localhost:${port} works." >&2
+    echo "[${label}] Fix: DOMAIN=${domain} ./scripts/setup-caddy.sh" >&2
+    if [[ "$soft" == "1" ]]; then
+      return 0
+    fi
+    return 1
+  fi
+  echo "[${label}] Caddyfile upstream OK (${upstream})"
+
+  https_url="https://${domain}/api/v1/health/ready"
+  max_attempts="${CADDY_HTTPS_ATTEMPTS:-15}"
+  echo "[${label}] Checking public HTTPS ${https_url}..."
+  attempt=0
+  until curl -fsS "$https_url" >/dev/null 2>&1; do
+    attempt=$((attempt + 1))
+    if [[ "$attempt" -ge "$max_attempts" ]]; then
+      echo "[${label}] ERROR: public HTTPS not ready after ${max_attempts} attempts." >&2
+      echo "[${label}] Check: ufw allow 80,443; DOMAIN=${domain}; systemctl status caddy; journalctl -u caddy -n 50" >&2
+      if [[ "$soft" == "1" ]]; then
+        return 0
+      fi
+      return 1
+    fi
+    sleep 2
+  done
+  echo "[${label}] Public HTTPS ready: ${https_url}"
+}
+
+# Returns 0 if database POSTGRES_DB exists (postgres container must be running).
+qy_database_exists() {
+  local db="${1:-${POSTGRES_DB:-quron_yoli}}"
+  local user="${POSTGRES_USER:-postgres}"
+  local service="${POSTGRES_SERVICE:-postgres}"
+  local result
+  result="$(${COMPOSE_BIN} exec -T "$service" \
+    psql -U "$user" -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='${db}'" 2>/dev/null \
+    | tr -d '[:space:]' || true)"
+  [[ "$result" == "1" ]]
+}
+
+# CREATE DATABASE if missing (connects to maintenance DB "postgres").
+qy_ensure_database() {
+  local label="${1:-script}"
+  local db="${POSTGRES_DB:-quron_yoli}"
+  local user="${POSTGRES_USER:-postgres}"
+  local service="${POSTGRES_SERVICE:-postgres}"
+
+  if ! ${COMPOSE_BIN} ps --status running -q "$service" 2>/dev/null | grep -q .; then
+    echo "[${label}] Postgres service '${service}' is not running." >&2
+    return 1
+  fi
+
+  if qy_database_exists "$db"; then
+    echo "[${label}] Database '${db}' already exists"
+    return 0
+  fi
+
+  echo "[${label}] Database '${db}' missing — creating..."
+  ${COMPOSE_BIN} exec -T "$service" \
+    psql -U "$user" -d postgres -v ON_ERROR_STOP=1 \
+    -c "CREATE DATABASE \"${db}\" OWNER \"${user}\";"
+  echo "[${label}] Database '${db}' created"
+}
+
+# Approximate host size of a Docker named volume (bytes as integer string, or empty).
+qy_volume_size_bytes() {
+  local name="$1"
+  local mount
+  mount="$(docker volume inspect "$name" --format '{{ .Mountpoint }}' 2>/dev/null || true)"
+  if [[ -z "$mount" || ! -d "$mount" ]]; then
+    printf ''
+    return 0
+  fi
+  if command -v du >/dev/null 2>&1; then
+    du -sb "$mount" 2>/dev/null | awk '{print $1}' || printf ''
+  else
+    printf ''
+  fi
+}
+
+# Fail closed if app DB is missing after stack start (empty/wiped volume).
+# Set QY_POSTGRES_SANITY_SOFT=1 to warn instead of exit.
+qy_assert_postgres_data_sane() {
+  local label="${1:-script}"
+  local db="${POSTGRES_DB:-quron_yoli}"
+  local vol="${POSTGRES_VOLUME_NAME:-quron-yoli_postgres_data}"
+  local soft="${QY_POSTGRES_SANITY_SOFT:-0}"
+  local size_bytes
+  local min_bytes="${QY_POSTGRES_VOLUME_MIN_BYTES:-1048576}" # 1 MiB
+
+  if ! ${COMPOSE_BIN} ps --status running -q "${POSTGRES_SERVICE:-postgres}" 2>/dev/null | grep -q .; then
+    echo "[${label}] ERROR: Postgres is not running — cannot verify data." >&2
+    if [[ "$soft" == "1" ]]; then
+      return 0
+    fi
+    return 1
+  fi
+
+  size_bytes="$(qy_volume_size_bytes "$vol")"
+  if [[ -n "$size_bytes" && "$size_bytes" =~ ^[0-9]+$ && "$size_bytes" -lt "$min_bytes" ]]; then
+    echo "[${label}] WARN: volume '${vol}' looks empty/tiny (${size_bytes} bytes; expect >= ${min_bytes})." >&2
+  fi
+
+  if qy_database_exists "$db"; then
+    echo "[${label}] Postgres sanity OK — database '${db}' exists"
+    return 0
+  fi
+
+  echo "[${label}] ERROR: database '${db}' does not exist (Prisma P1003 / readiness will fail)." >&2
+  echo "[${label}] Next: ./scripts/doctor.sh then CONFIRM_RESTORE=yes ./scripts/repair-db.sh [backup-dir]" >&2
+  if [[ "$soft" == "1" ]]; then
+    return 0
+  fi
+  return 1
+}
+
+qy_list_recent_backups() {
+  local root="${BACKUP_ROOT:-${ROOT_DIR}/backups}"
+  local limit="${1:-5}"
+  if [[ ! -d "$root" ]]; then
+    return 0
+  fi
+  ls -1dt "${root}"/*/ 2>/dev/null | head -n "$limit" || true
+}
+
+qy_latest_backup_dir() {
+  local root="${BACKUP_ROOT:-${ROOT_DIR}/backups}"
+  local dir
+  dir="$(ls -1dt "${root}"/*/ 2>/dev/null | head -n1 || true)"
+  if [[ -n "$dir" ]]; then
+    # strip trailing slash
+    printf '%s' "${dir%/}"
+  fi
 }
 
 # Bind mounts ./uploads and ./logs into the api container (USER nestjs, uid 100).

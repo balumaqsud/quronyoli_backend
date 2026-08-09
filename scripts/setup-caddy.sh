@@ -3,9 +3,10 @@
 #
 # Usage:
 #   DOMAIN=api.example.com ./scripts/setup-caddy.sh
-#   PORT=3000 DOMAIN=api.example.com ./scripts/setup-caddy.sh
+#   DOMAIN=189.74.96.28.sslip.io ./scripts/setup-caddy.sh
 #
-# DNS A/AAAA for DOMAIN must already point at this host.
+# PORT always comes from .env (never a stale shell export like PORT=3001).
+# DNS A/AAAA for DOMAIN must already point at this host (sslip.io needs no extra DNS).
 
 set -euo pipefail
 
@@ -15,32 +16,26 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 qy_init_root
 
 LABEL="setup-caddy"
-PORT="${PORT:-3000}"
 
-# Prefer PORT from .env over a stale shell export (e.g. leftover PORT=3001).
 if [[ -f .env ]]; then
   qy_load_env
-  env_port="$(
-    grep -E '^[[:space:]]*PORT=' .env \
-      | tail -1 \
-      | cut -d= -f2- \
-      | tr -d '[:space:]"'"'"'' \
-      || true
-  )"
-  if [[ -n "${env_port}" ]]; then
-    PORT="${env_port}"
-  else
-    PORT="${PORT:-3000}"
-  fi
 fi
 
-DOMAIN="${DOMAIN:-}"
-if [[ -z "$DOMAIN" ]]; then
-  DOMAIN="$(qy_domain_from_webhook_url || true)"
+# Single source of truth: .env PORT (ignores polluted shell PORT=3001).
+PORT="$(qy_env_port)"
+export PORT
+
+if [[ ! "$PORT" =~ ^[0-9]+$ ]]; then
+  echo "[${LABEL}] ERROR: invalid PORT from .env: '${PORT}'" >&2
+  exit 1
 fi
+
+DOMAIN="$(qy_resolve_domain || true)"
+export DOMAIN
 
 if [[ -z "$DOMAIN" ]]; then
   echo "[${LABEL}] DOMAIN is required (export DOMAIN=... or set TELEGRAM_WEBHOOK_URL in .env)." >&2
+  echo "[${LABEL}] Example: DOMAIN=189.74.96.28.sslip.io ./scripts/setup-caddy.sh" >&2
   exit 1
 fi
 
@@ -94,6 +89,35 @@ caddy validate --config "$CADDYFILE"
 systemctl enable --now caddy
 systemctl reload caddy
 
+# Upstream must answer before HTTPS through Caddy can succeed.
+LIVE_URL="http://127.0.0.1:${PORT}/api/v1/health/live"
+HTTPS_URL="https://${DOMAIN}/api/v1/health/ready"
+echo "[${LABEL}] Waiting for local upstream ${LIVE_URL}..."
+attempt=0
+until curl -fsS "$LIVE_URL" >/dev/null 2>&1; do
+  attempt=$((attempt + 1))
+  if [[ "$attempt" -ge 30 ]]; then
+    echo "[${LABEL}] ERROR: API not listening on ${UPSTREAM} — Caddy will 502." >&2
+    echo "[${LABEL}] Fix PORT in .env (expected ${PORT}) and restart API, then re-run this script." >&2
+    exit 1
+  fi
+  sleep 1
+done
+echo "[${LABEL}] Local upstream is up"
+
+echo "[${LABEL}] Waiting for public HTTPS ${HTTPS_URL}..."
+attempt=0
+until curl -fsS "$HTTPS_URL" >/dev/null 2>&1; do
+  attempt=$((attempt + 1))
+  if [[ "$attempt" -ge 30 ]]; then
+    echo "[${LABEL}] ERROR: https://${DOMAIN} not ready after ~30s." >&2
+    echo "[${LABEL}] Check: ufw allow 80/tcp && ufw allow 443/tcp; DOMAIN spelling; journalctl -u caddy -n 50" >&2
+    echo "[${LABEL}] Cert may still be issuing — retry: systemctl reload caddy && curl -sS ${HTTPS_URL}" >&2
+    exit 1
+  fi
+  sleep 1
+done
+
 echo "[${LABEL}] Caddy is serving https://${DOMAIN}/"
-echo "[${LABEL}] Ensure DNS A/AAAA for ${DOMAIN} points at this host (script cannot create DNS)."
-echo "[${LABEL}] Health (after TLS): https://${DOMAIN}/api/v1/health/ready"
+echo "[${LABEL}] Upstream: ${UPSTREAM} (from .env PORT — not shell)"
+echo "[${LABEL}] Health: ${HTTPS_URL}"

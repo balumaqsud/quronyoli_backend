@@ -76,6 +76,12 @@ Project name is pinned as `quron-yoli` so volume names do not depend on the chec
 
 Rebuilds the API, runs additive `prisma migrate deploy` on start, and **never** runs `down -v`. See [deployment.md](./deployment.md).
 
+| Goal | Command |
+| --- | --- |
+| API only | `./scripts/restart-api.sh` |
+| Recreate stack (keep volumes) | `./scripts/restart-stack.sh` |
+| Diagnose / P1003 | `./scripts/doctor.sh` then `CONFIRM_RESTORE=yes ./scripts/repair-db.sh` |
+
 ### Local override: [`docker-compose.override.yml`](../docker-compose.override.yml)
 
 Auto-merged for plain `docker compose up`:

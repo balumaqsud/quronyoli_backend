@@ -37,12 +37,37 @@ Use this after the first install whenever `main` has new API code or Prisma migr
 # or: npm run update:prod
 ```
 
-Flow: optional backup → `git pull --ff-only` → `docker compose -f docker-compose.yml up -d --build` → wait for readiness. Named volumes `quron-yoli_postgres_data` / `quron-yoli_redis_data` are **never** removed. New tables/columns apply via `prisma migrate deploy` in the API entrypoint.
+Flow: optional backup → `git pull --ff-only` → `docker compose -f docker-compose.yml up -d --build` → assert `POSTGRES_DB` exists → wait for readiness → **re-sync Caddy to `.env` PORT** → assert public HTTPS. Named volumes `quron-yoli_postgres_data` / `quron-yoli_redis_data` are **never** removed. New tables/columns apply via `prisma migrate deploy` in the API entrypoint.
 
 | Env | Effect |
 | --- | --- |
 | `SKIP_BACKUP=1` | Skip pre-update backup |
 | `SKIP_GIT_PULL=1` | Rebuild current tree without pulling |
+| `SKIP_QF_ENSURE=1` | Skip mushaf/catalog ensure after update |
+| `SKIP_CADDY=1` | Skip Caddy rewrite + HTTPS assert |
+
+### Restart variants (no git pull)
+
+| Goal | Command | Notes |
+| --- | --- | --- |
+| API only (partial) | `./scripts/restart-api.sh` | `--no-deps` rebuild; postgres/redis untouched; re-syncs Caddy. `REBUILD=0` = restart only |
+| All containers (total) | `./scripts/restart-stack.sh` | `--force-recreate`, **no** `-v`; optional pre-backup; re-syncs Caddy |
+| Diagnose | `./scripts/doctor.sh` | Compose, DB, volumes, **Caddy upstream + HTTPS**, backups |
+| Repair missing DB | `CONFIRM_RESTORE=yes ./scripts/repair-db.sh [dir]` | `CREATE DATABASE` if needed + restore + restart API + ensure-qf |
+
+Postgres stays up during `update.sh` / `restart-api.sh`. The API has a short recreate window; this is not blue/green zero-downtime.
+
+### Caddy / PORT drift (HTTPS 502 while localhost works)
+
+Canonical VPS: host **`189.74.96.28`**, HTTPS name **`189.74.96.28.sslip.io`**, upstream **`127.0.0.1:3000`** from `.env` `PORT`. A stale shell `export PORT=3001` used to leave Caddy pointing at the wrong port; scripts now always read PORT from `.env` and rewrite `/etc/caddy/Caddyfile` on deploy/update/restart.
+
+```bash
+./scripts/doctor.sh
+DOMAIN=189.74.96.28.sslip.io ./scripts/setup-caddy.sh
+curl -sS https://189.74.96.28.sslip.io/api/v1/health/ready
+```
+
+See [sslip-caddy-redeploy.md](./sslip-caddy-redeploy.md).
 
 ### Dev → server schema workflow
 
@@ -60,6 +85,17 @@ git commit && merge to main
 - `docker compose down -v` (deletes Postgres/Redis data)
 - `prisma migrate reset` / `db push --force-reset`
 - Changing `POSTGRES_USER` or `POSTGRES_DB` after the volume was first initialized
+
+### DB missing / P1003 (empty volume)
+
+If readiness shows `database: down` and logs say `database "quron_yoli" does not exist`, the named volume was wiped/reattached empty or the DB was never created for that volume. `ensure-qf-data.sh` cannot fix this.
+
+```bash
+./scripts/doctor.sh
+CONFIRM_RESTORE=yes ./scripts/repair-db.sh backups/<timestamp>
+# or latest: CONFIRM_RESTORE=yes ./scripts/repair-db.sh
+curl -sS http://127.0.0.1:3000/api/v1/health/ready
+```
 
 ## Build / migrate / start
 
@@ -112,6 +148,9 @@ Orchestrators should use **live** for restart decisions and **ready** for load-b
 # Cron: 0 2 * * * cd /opt/quron-yoli_backend && ./scripts/backup.sh >> logs/backup.log 2>&1
 
 CONFIRM_RESTORE=yes ./scripts/restore.sh backups/<timestamp>
+# Preferred full recovery (create DB if missing + restart API + ensure-qf):
+CONFIRM_RESTORE=yes ./scripts/repair-db.sh backups/<timestamp>
+./scripts/doctor.sh
 ```
 
 ## `TRUST_PROXY`

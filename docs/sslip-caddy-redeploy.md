@@ -1,8 +1,6 @@
 # Redeploy: sslip.io + Caddy (no custom domain)
 
-Use a free hostname `YOUR_IP.sslip.io` so Caddy can issue Let's Encrypt HTTPS for Telegram webhooks.
-
-Replace **`YOUR_IP`** everywhere with your VPS public IPv4 (example: `203.0.113.10` → `203.0.113.10.sslip.io`).
+Use free hostname **`189.74.96.28.sslip.io`** so Caddy can issue Let's Encrypt HTTPS for Telegram webhooks on VPS **`189.74.96.28`**.
 
 Repo: `https://github.com/balumaqsud/quronyoli_backend.git`
 
@@ -10,21 +8,13 @@ Repo: `https://github.com/balumaqsud/quronyoli_backend.git`
 
 ## 0. On your Mac — finish `.env`
 
-Local [`.env`](../.env) and [`.env.production`](../.env.production) already use:
+Production webhook host must be:
 
 ```bash
-TELEGRAM_WEBHOOK_URL=https://YOUR_IP.sslip.io/api/v1/telegram/webhook
+TELEGRAM_WEBHOOK_URL=https://189.74.96.28.sslip.io/api/v1/telegram/webhook
 TELEGRAM_WEBHOOK_AUTO_REGISTER=true
 TRUST_PROXY=true
-```
-
-Set the real IP (one shot):
-
-```bash
-cd ~/Desktop/quron-yoli_backend
-export VPS_IP=YOUR_IP   # e.g. export VPS_IP=203.0.113.10
-perl -i -pe "s|https://YOUR_IP\\.sslip\\.io|https://${VPS_IP}.sslip.io|g; s|https://[0-9.]+\\.sslip\\.io|https://${VPS_IP}.sslip.io|g" .env
-grep '^TELEGRAM_WEBHOOK_URL=' .env
+PORT=3000
 ```
 
 Confirm secrets are real (no `REPLACE_*`), especially `REDIS_PASSWORD` (≥16 chars), JWT secrets, Telegram, QF.
@@ -52,8 +42,7 @@ chmod +x scripts/*.sh
 ## 2. On your Mac — upload `.env`
 
 ```bash
-export VPS_IP=YOUR_IP
-scp ~/Desktop/quron-yoli_backend/.env root@${VPS_IP}:/opt/quronyoli/quronyoli_backend/.env
+scp ~/Desktop/quron-yoli_backend/.env root@189.74.96.28:/opt/quronyoli/quronyoli_backend/.env
 ```
 
 (If SSH user is not `root`, change user/path accordingly.)
@@ -64,29 +53,40 @@ scp ~/Desktop/quron-yoli_backend/.env root@${VPS_IP}:/opt/quronyoli/quronyoli_ba
 
 ```bash
 cd /opt/quronyoli/quronyoli_backend
-export VPS_IP=YOUR_IP
-DOMAIN=${VPS_IP}.sslip.io RUN_QF_SYNC=1 ./scripts/deploy.sh
+DOMAIN=189.74.96.28.sslip.io RUN_QF_SYNC=1 ./scripts/deploy.sh
 ```
 
-What this does: install Docker if needed → validate `.env` → Compose up → health wait → Caddy for `${VPS_IP}.sslip.io` → optional QF sync.
+What this does: install Docker if needed → validate `.env` → Compose up → health wait → Caddy for `189.74.96.28.sslip.io` → verify HTTPS → optional QF sync.
+
+Caddy upstream is always **`.env` `PORT`** (default `3000`). A stale shell `PORT=3001` cannot redirect the proxy.
 
 ---
 
 ## 4. Verify
 
 ```bash
-export VPS_IP=YOUR_IP
 curl -sS http://127.0.0.1:3000/api/v1/health/ready
-curl -sS https://${VPS_IP}.sslip.io/api/v1/health/ready
+curl -sS https://189.74.96.28.sslip.io/api/v1/health/ready
+./scripts/doctor.sh
 ```
 
 ---
 
-## 5. Later updates
+## 5. Later updates / restarts
 
 ```bash
 cd /opt/quronyoli/quronyoli_backend
-./scripts/update.sh
+./scripts/update.sh          # pull + rebuild + re-sync Caddy to .env PORT + HTTPS check
+./scripts/restart-api.sh     # API only; re-syncs Caddy
+./scripts/restart-stack.sh   # recreate containers; keep volumes; re-syncs Caddy
+```
+
+`SKIP_CADDY=1` skips Caddy rewrite/HTTPS assert when needed.
+
+Manual Caddy fix:
+
+```bash
+DOMAIN=189.74.96.28.sslip.io ./scripts/setup-caddy.sh
 ```
 
 ---
@@ -95,7 +95,9 @@ cd /opt/quronyoli/quronyoli_backend
 
 | Issue | Fix |
 | --- | --- |
-| Caddy TLS fails | Ports 80/443 open; hostname is exactly `IP.sslip.io`; wait ~1 min and `sudo systemctl reload caddy` |
-| `validate-env` fails | Remove `REPLACE_*` / `YOUR_IP` leftovers; set strong `REDIS_PASSWORD` |
+| Caddy TLS fails | Ports 80/443 open; hostname is exactly `189.74.96.28.sslip.io`; wait ~1 min and `sudo systemctl reload caddy` |
+| HTTPS 502 but localhost:3000 OK | Stale Caddy upstream (often `:3001`). Run `DOMAIN=189.74.96.28.sslip.io ./scripts/setup-caddy.sh` or `./scripts/restart-api.sh` as root |
+| `validate-env` fails | Remove `REPLACE_*` leftovers; set strong `REDIS_PASSWORD` |
 | Webhook not receiving | `TELEGRAM_WEBHOOK_AUTO_REGISTER=true`; check `https://api.telegram.org/bot<TOKEN>/getWebhookInfo` |
 | Wrong compose ports | Always use `docker compose -f docker-compose.yml` (deploy script does) |
+| Diagnose | `./scripts/doctor.sh` |

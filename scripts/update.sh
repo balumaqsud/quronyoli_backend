@@ -29,9 +29,13 @@ echo "[update] Compose: ${COMPOSE_BIN}"
 
 if [[ "$SKIP_BACKUP" != "1" ]]; then
   if ${COMPOSE_BIN} ps --status running -q postgres 2>/dev/null | grep -q .; then
-    echo "[update] Pre-update backup..."
-    export COMPOSE_BIN
-    bash "${ROOT_DIR}/scripts/backup.sh"
+    if qy_database_exists "${POSTGRES_DB}"; then
+      echo "[update] Pre-update backup..."
+      export COMPOSE_BIN
+      bash "${ROOT_DIR}/scripts/backup.sh"
+    else
+      echo "[update] Skipping backup — database '${POSTGRES_DB}' missing (use ./scripts/repair-db.sh)"
+    fi
   else
     echo "[update] Postgres not running yet — skipping backup (first boot or stopped stack)"
   fi
@@ -56,6 +60,8 @@ if [[ -z "$DOMAIN" ]]; then
   DOMAIN="$(qy_domain_from_webhook_url || true)"
 fi
 export DOMAIN
+PORT="$(qy_env_port)"
+export PORT
 
 qy_prepare_runtime_dirs "update"
 qy_ensure_mushaf_1405_env "update"
@@ -64,7 +70,15 @@ echo "[update] Rebuilding and starting stack (volumes preserved)..."
 # Intentionally no -v / down -v: named volumes postgres_data / redis_data stay intact.
 ${COMPOSE_BIN} up -d --build
 
+qy_assert_postgres_data_sane "update" || {
+  echo "[update] Refusing to treat update as successful — repair the database first." >&2
+  exit 1
+}
+
 qy_wait_for_health "update"
+
+qy_sync_caddy "update"
+qy_assert_caddy_https "update" || exit 1
 
 SKIP_QF_ENSURE="${SKIP_QF_ENSURE:-0}"
 if [[ "$SKIP_QF_ENSURE" == "1" ]]; then

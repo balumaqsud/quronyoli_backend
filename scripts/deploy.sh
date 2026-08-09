@@ -57,6 +57,8 @@ if [[ -z "$DOMAIN" ]]; then
   DOMAIN="$(qy_domain_from_webhook_url || true)"
 fi
 export DOMAIN
+# Force PORT from .env so Compose publish + Caddy never follow a stale PORT=3001 shell export.
+PORT="$(qy_env_port)"
 export PORT
 
 qy_prepare_runtime_dirs "$LABEL"
@@ -67,15 +69,9 @@ ${COMPOSE_BIN} up -d --build
 
 qy_wait_for_health "deploy"
 
-if [[ "$SKIP_CADDY" != "1" ]]; then
-  if [[ -z "${DOMAIN:-}" ]]; then
-    echo "[${LABEL}] WARN: DOMAIN unset and TELEGRAM_WEBHOOK_URL host unknown — skipping Caddy." >&2
-    echo "[${LABEL}] Re-run with DOMAIN=your.host or set TELEGRAM_WEBHOOK_URL, or use SKIP_CADDY=1." >&2
-  else
-    bash "${ROOT_DIR}/scripts/setup-caddy.sh"
-  fi
-else
-  echo "[${LABEL}] Skipping Caddy (SKIP_CADDY=1)"
+qy_sync_caddy "$LABEL"
+if [[ "${SKIP_CADDY:-0}" != "1" && -n "$(qy_resolve_domain || true)" ]]; then
+  qy_assert_caddy_https "$LABEL" || exit 1
 fi
 
 if [[ "$SKIP_QF_ENSURE" == "1" ]]; then
@@ -91,7 +87,8 @@ ${COMPOSE_BIN} ps
 
 echo "[${LABEL}] Done."
 echo "[${LABEL}] Local health: ${HEALTH_URL}"
-if [[ -n "${DOMAIN:-}" && "$SKIP_CADDY" != "1" ]]; then
+DOMAIN="$(qy_resolve_domain || true)"
+if [[ -n "${DOMAIN:-}" && "${SKIP_CADDY:-0}" != "1" ]]; then
   echo "[${LABEL}] Public health: https://${DOMAIN}/api/v1/health/ready"
 fi
 echo "[${LABEL}] Manual QF sync anytime: ./scripts/sync-qf.sh"
