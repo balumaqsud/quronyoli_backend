@@ -11,7 +11,9 @@
 #   DOMAIN=api.example.com ./scripts/deploy.sh
 #   SKIP_CADDY=1 ./scripts/deploy.sh
 #   SKIP_DOCKER_INSTALL=1 ./scripts/deploy.sh
-#   RUN_QF_SYNC=1 ./scripts/deploy.sh
+#   RUN_QF_SYNC=1 ./scripts/deploy.sh          # force full QF sync (even if pages exist)
+#   FORCE_QF_SYNC=1 ./scripts/deploy.sh        # same as RUN_QF_SYNC=1
+#   SKIP_QF_ENSURE=1 ./scripts/deploy.sh       # skip ensure-qf-data (not recommended)
 #
 # Day-2 updates: ./scripts/update.sh
 
@@ -27,7 +29,12 @@ qy_require_compose_file "deploy"
 LABEL="deploy"
 SKIP_DOCKER_INSTALL="${SKIP_DOCKER_INSTALL:-0}"
 SKIP_CADDY="${SKIP_CADDY:-0}"
+SKIP_QF_ENSURE="${SKIP_QF_ENSURE:-0}"
 RUN_QF_SYNC="${RUN_QF_SYNC:-0}"
+FORCE_QF_SYNC="${FORCE_QF_SYNC:-0}"
+if [[ "$RUN_QF_SYNC" == "1" ]]; then
+  FORCE_QF_SYNC=1
+fi
 
 echo "[${LABEL}] Repo: ${ROOT_DIR}"
 
@@ -70,11 +77,12 @@ else
   echo "[${LABEL}] Skipping Caddy (SKIP_CADDY=1)"
 fi
 
-if [[ "$RUN_QF_SYNC" == "1" ]]; then
-  echo "[${LABEL}] Running Quran.Foundation catalog + pages sync..."
-  ${COMPOSE_BIN} exec -T api npm run qf:sync-catalog:prod
-  ${COMPOSE_BIN} exec -T api npm run qf:sync-pages:prod
-  echo "[${LABEL}] QF sync finished. Enable translations/tafsirs in admin as needed."
+if [[ "$SKIP_QF_ENSURE" == "1" ]]; then
+  echo "[${LABEL}] Skipping QF ensure (SKIP_QF_ENSURE=1)"
+else
+  echo "[${LABEL}] Ensuring Quran catalog + mushaf pages (incl. mushaf=10 for reading mode)..."
+  FORCE_QF_SYNC="$FORCE_QF_SYNC" RUN_QF_SYNC="$RUN_QF_SYNC" \
+    bash "${ROOT_DIR}/scripts/ensure-qf-data.sh"
 fi
 
 echo "[${LABEL}] Container status:"
@@ -85,4 +93,5 @@ echo "[${LABEL}] Local health: ${HEALTH_URL}"
 if [[ -n "${DOMAIN:-}" && "$SKIP_CADDY" != "1" ]]; then
   echo "[${LABEL}] Public health: https://${DOMAIN}/api/v1/health/ready"
 fi
+echo "[${LABEL}] Manual QF sync anytime: ./scripts/sync-qf.sh"
 echo "[${LABEL}] Later updates: ./scripts/update.sh"

@@ -32,6 +32,7 @@
     "restore": "bash scripts/restore.sh",
     "deploy:prod": "bash scripts/deploy.sh",
     "update:prod": "bash scripts/update.sh",
+    "sync:qf": "bash scripts/sync-qf.sh",
     "qf:discover": "ts-node --transpile-only scripts/qf-discovery-sample.ts",
     "qf:sync-catalog": "ts-node --transpile-only src/commands/qf-sync-catalog.ts",
     "qf:sync-catalog:prod": "node dist/commands/qf-sync-catalog.js",

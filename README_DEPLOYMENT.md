@@ -32,17 +32,18 @@ What `deploy.sh` does:
 3. `docker compose -f docker-compose.yml up -d --build`  
 4. Waits for `/api/v1/health/ready`  
 5. Installs/configures Caddy for `DOMAIN` (from `DOMAIN=...` or host of `TELEGRAM_WEBHOOK_URL`)  
-6. Optionally runs QF sync when `RUN_QF_SYNC=1`
+6. Runs `./scripts/ensure-qf-data.sh` — syncs catalog + mushaf pages if mushaf **1** or **10** lack 604 active rows (book/reading mode needs **10**)
 
 | Env | Effect |
 | --- | --- |
 | `DOMAIN=api.example.com` | Override Caddy hostname |
 | `SKIP_CADDY=1` | Docker stack only (no TLS proxy) |
 | `SKIP_DOCKER_INSTALL=1` | Assume Docker already installed |
-| `RUN_QF_SYNC=1` | After healthy: catalog + pages sync inside `api` |
+| `SKIP_QF_ENSURE=1` | Skip catalog/pages ensure (not recommended) |
+| `RUN_QF_SYNC=1` / `FORCE_QF_SYNC=1` | Force full QF sync even when pages already exist |
 | `HEALTH_ATTEMPTS` / `HEALTH_INTERVAL_SEC` | Readiness wait tuning |
 
-Manual equivalent (without scripts): copy `.env`, then `docker compose -f docker-compose.yml up -d --build`.
+Manual equivalent (without scripts): copy `.env`, then `docker compose -f docker-compose.yml up -d --build`, then `./scripts/sync-qf.sh`.
 
 ## One-command update (keep DB data)
 
@@ -86,13 +87,26 @@ curl -sS https://YOUR_DOMAIN/api/v1/health/ready
 4. Idempotent seed runs (no-op if data exists)  
 5. NestJS starts in `NODE_ENV=production`
 
-## After first boot (catalog data)
+## After first boot (catalog + reading pages)
 
-Quran catalog/pages are **not** auto-synced unless you pass `RUN_QF_SYNC=1` to `deploy.sh`. When ready:
+`deploy.sh` already calls `ensure-qf-data.sh`, which syncs when mushaf **1** or **10** are incomplete. Reading/book mode uses mushaf **`10`** (`isStandard`); text editions use **1** (and clones **4,5,19**).
+
+Manual / force sync anytime:
+
+```bash
+./scripts/sync-qf.sh
+# or: npm run sync:qf
+# force even if counts look complete:
+FORCE_QF_SYNC=1 ./scripts/ensure-qf-data.sh
+```
+
+Equivalent Compose commands:
 
 ```bash
 docker compose -f docker-compose.yml exec api npm run qf:sync-catalog:prod
-docker compose -f docker-compose.yml exec api npm run qf:sync-pages:prod
+docker compose -f docker-compose.yml exec api npm run qf:sync-pages:prod -- --mushaf=1
+docker compose -f docker-compose.yml exec api npm run qf:sync-pages:prod -- --mushaf=4,5,19 --clone-from=1
+docker compose -f docker-compose.yml exec api npm run qf:sync-pages:prod -- --mushaf=10
 ```
 
 Then in the **admin panel**, enable the translations/tafsirs that should appear in the Mini App. New translations/tafsirs sync as inactive; **qaris sync as active**. Sync never re-enables ones you disabled. List endpoints (`/quran/translations`, `/quran/audio/recitations`, `/quran/audio/chapter-reciters`) only return `isActive=true` rows.
