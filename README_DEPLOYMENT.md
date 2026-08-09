@@ -195,7 +195,7 @@ CONFIRM_RESTORE=yes ./scripts/repair-db.sh backups/<timestamp>
 
 - First deploy and every **update/restart** re-sync Caddy to `.env` `PORT` (default `3000`)
 - Terminate TLS at Caddy; proxy to `127.0.0.1:3000` (never a stale `:3001`)
-- Set `TRUST_PROXY=true` (already in `.env.production`)
+- Set `TRUST_PROXY=true` in the server `.env`
 - Point `TELEGRAM_WEBHOOK_URL` at `https://189.74.96.28.sslip.io/api/v1/telegram/webhook`
 - Public health: `https://189.74.96.28.sslip.io/api/v1/health/ready`
 - See [docs/sslip-caddy-redeploy.md](docs/sslip-caddy-redeploy.md)

@@ -38,7 +38,7 @@ Later updates: `./scripts/update.sh`. Ops cheat sheet: [docs/ops-runbook.md](doc
 ### Local development
 
 ```bash
-cp .env.development .env
+cp .env.example .env
 # Fill required secrets (Telegram, QF, JWT, REDIS_PASSWORD)
 npm install
 npx prisma generate
@@ -59,7 +59,7 @@ npm run start:dev
 Full-stack Compose (API + Postgres + Redis):
 
 ```bash
-cp .env.development .env
+cp .env.example .env
 docker compose up --build -d
 docker compose --profile dev up -d   # optional: pgAdmin + Redis Insight
 ```

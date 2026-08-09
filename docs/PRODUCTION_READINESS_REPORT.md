@@ -45,8 +45,8 @@
 | --- | --- |
 | `docker-compose.override.yml` | Local ports + pgAdmin / Redis Insight (`dev` profile) |
 | `docker/entrypoint.sh` | Wait → migrate deploy → seed → start |
-| `.env.production` | Production template |
-| `.env.development` | Local template |
+| `.env.example` | Committed placeholder template (no real secrets) |
+| `.env` | Local/server secrets only — **gitignored** |
 | `src/config/logger.streams.ts` | Pino-roll destinations |
 | `src/modules/health/health-alias.controller.ts` | `GET /api/health` |
 | `prisma/seed.cjs` | Idempotent empty-DB check (no wipe) |
@@ -66,7 +66,7 @@
 - Redis **password required**, AOF + protected-mode
 - Production Joi requires `REDIS_PASSWORD` (≥16 chars)
 - `X-Powered-By` disabled
-- Secure cookie defaults in `.env.production` (`Secure`, `SameSite=none`, partitioned)
+- Secure cookie defaults in production `.env` (`Secure`, `SameSite=none`, partitioned)
 - Swagger off by default in production template
 - Existing: Helmet, HSTS (prod), CORS whitelist, ValidationPipe, body limits, throttling, Pino redaction
 

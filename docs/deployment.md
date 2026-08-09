@@ -104,7 +104,7 @@ curl -sS http://127.0.0.1:3000/api/v1/health/ready
 ### Local / VM (Node process)
 
 ```bash
-cp .env.development .env   # or .env.example
+cp .env.example .env
 npm ci
 npx prisma generate
 npm run build
@@ -125,7 +125,7 @@ docker run --env-file .env -p 3000:3000 quron-yoli-api
 ### Compose (local)
 
 ```bash
-cp .env.development .env
+cp .env.example .env
 docker compose up --build -d
 docker compose --profile dev up -d   # pgAdmin + Redis Insight
 ```
@@ -162,7 +162,7 @@ Set `TRUST_PROXY=true` when the app sits behind nginx, Cloudflare, ALB, etc. Thi
 - Client IP for throttling and auth context comes from `X-Forwarded-For`
 - Secure cookies behave correctly when TLS terminates upstream
 
-Leave `false` for direct local binding. `.env.production` defaults to `true`.
+Leave `false` for direct local binding. Production `.env` should set `TRUST_PROXY=true`.
 
 ## Cookies
 

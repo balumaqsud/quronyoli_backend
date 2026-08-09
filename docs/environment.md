@@ -1,6 +1,7 @@
 # Environment
 
-Canonical templates: [`.env.example`](../.env.example), [`.env.development`](../.env.development), [`.env.production`](../.env.production).  
+Canonical committed template: [`.env.example`](../.env.example) only.  
+Copy to a local **`.env`** (gitignored) and fill real secrets — never commit `.env`, `.env.production`, or `.env.development`.  
 Validation: `src/config/env.validation.ts` (Joi).  
 Typed loading: `src/config/configuration.ts`.
 

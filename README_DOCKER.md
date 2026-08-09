@@ -28,7 +28,7 @@ Pulls latest code, rebuilds, applies Prisma migrations additively, **never** del
 ### Local development
 
 ```bash
-cp .env.development .env
+cp .env.example .env
 # Fill Telegram / QF secrets
 docker compose up -d --build
 # Optional admin UIs:

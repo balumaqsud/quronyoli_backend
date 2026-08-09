@@ -35,12 +35,10 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
-# dotenv environment variable files
+# dotenv environment variable files (never commit secrets)
 .env
 .env.*
 !.env.example
-!.env.production
-!.env.development
 
 # Runtime persistence (keep directory placeholders)
 uploads/*
