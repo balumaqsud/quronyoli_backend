@@ -37,10 +37,10 @@ export interface QfWord {
 }
 
 export interface QfVerseTranslation {
-  resourceId: number;
+  resourceId: number | string;
   resourceName?: string;
   text: string;
-  id?: number;
+  id?: number | string;
 }
 
 export interface QfVerseTafsir {

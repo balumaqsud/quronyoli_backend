@@ -52,7 +52,20 @@ import {
   toMushafPageListItem,
 } from './pages/qf-pages.mapper';
 import { QfPagesRepository } from './pages/qf-pages.repository';
+import {
+  collectChapterIdsFromVersesPayload,
+  mergeEncIntoVersesPayload,
+} from './quranenc/merge-enc-translations';
+import { NormalizedEncTranslationRow } from './quranenc/quranenc.mapper';
+import {
+  isQuranEncTranslationKey,
+  QURANENC_KYRGYZ_HAKIMOV_META,
+  QuranEncTranslationKey,
+} from './quranenc/quranenc.constants';
+import { QuranEncTranslationService } from './quranenc/quranenc.translation.service';
+import { splitTranslationIds } from './quranenc/split-translation-ids';
 import { normalizeQfMediaUrls } from './utils/qf-media-url.normalizer';
+import { QURANENC_PROVIDER } from '../settings/interfaces/settings.interface';
 
 @Injectable()
 export class QuranService {
@@ -66,6 +79,7 @@ export class QuranService {
     private readonly readingService: ReadingService,
     private readonly pagesRepository: QfPagesRepository,
     private readonly catalogRepository: QfCatalogRepository,
+    private readonly quranEncTranslations: QuranEncTranslationService,
   ) {
     this.config = this.configService.getOrThrow<QuranFoundationConfig>(
       CONFIG_KEYS.QURAN_FOUNDATION,
@@ -100,22 +114,16 @@ export class QuranService {
   }
 
   getAyahsBySurah(chapter: number, query: VersesQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'verses',
+    return this.cachedVersesWithOptionalEnc(
       `/verses/by_chapter/${chapter}`,
-      this.verseQuery(query),
-      this.config.cacheTtl.versesSeconds,
-      true,
+      query,
     );
   }
 
   getAyahByKey(verseKey: string, query: VersesQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'verses',
+    return this.cachedVersesWithOptionalEnc(
       `/verses/by_key/${encodeURIComponent(verseKey)}`,
-      this.verseQuery(query),
-      this.config.cacheTtl.versesSeconds,
-      true,
+      query,
     );
   }
 
@@ -175,13 +183,7 @@ export class QuranService {
   }
 
   getAyahsByJuz(juz: number, query: VersesQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'verses',
-      `/verses/by_juz/${juz}`,
-      this.verseQuery(query),
-      this.config.cacheTtl.versesSeconds,
-      true,
-    );
+    return this.cachedVersesWithOptionalEnc(`/verses/by_juz/${juz}`, query);
   }
 
   getAyahsByPage(page: number, query: VersesQueryDto): Promise<unknown> {
@@ -190,52 +192,28 @@ export class QuranService {
   }
 
   getAyahsByHizb(hizb: number, query: VersesQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'verses',
-      `/verses/by_hizb/${hizb}`,
-      this.verseQuery(query),
-      this.config.cacheTtl.versesSeconds,
-      true,
-    );
+    return this.cachedVersesWithOptionalEnc(`/verses/by_hizb/${hizb}`, query);
   }
 
   getAyahsByRub(rub: number, query: VersesQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'verses',
-      `/verses/by_rub/${rub}`,
-      this.verseQuery(query),
-      this.config.cacheTtl.versesSeconds,
-      true,
-    );
+    return this.cachedVersesWithOptionalEnc(`/verses/by_rub/${rub}`, query);
   }
 
   getAyahsByRubElHizb(rub: number, query: VersesQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'verses',
+    return this.cachedVersesWithOptionalEnc(
       `/verses/by_rub_el_hizb/${rub}`,
-      this.verseQuery(query),
-      this.config.cacheTtl.versesSeconds,
-      true,
+      query,
     );
   }
 
   getAyahsByRuku(ruku: number, query: VersesQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'verses',
-      `/verses/by_ruku/${ruku}`,
-      this.verseQuery(query),
-      this.config.cacheTtl.versesSeconds,
-      true,
-    );
+    return this.cachedVersesWithOptionalEnc(`/verses/by_ruku/${ruku}`, query);
   }
 
   getAyahsByManzil(manzil: number, query: VersesQueryDto): Promise<unknown> {
-    return this.cachedContent(
-      'verses',
+    return this.cachedVersesWithOptionalEnc(
       `/verses/by_manzil/${manzil}`,
-      this.verseQuery(query),
-      this.config.cacheTtl.versesSeconds,
-      true,
+      query,
     );
   }
 
@@ -265,10 +243,8 @@ export class QuranService {
     const mushafId = this.resolveMushafId(query.mushaf);
     const cacheKey = this.cache.pagesListKey(mushafId);
 
-    return this.cache.getOrSet(
-      cacheKey,
-      this.config.cacheTtl.chaptersSeconds,
-      async () => {
+    return this.cache
+      .getOrSet(cacheKey, this.config.cacheTtl.chaptersSeconds, async () => {
         const pages = await this.pagesRepository.findActiveByMushaf(mushafId);
         if (pages.length === 0) {
           throw new NotFoundException(
@@ -282,8 +258,8 @@ export class QuranService {
           total,
           totalPages: total,
         };
-      },
-    ).then((cached) => this.normalizePagesListPayload(cached));
+      })
+      .then((cached) => this.normalizePagesListPayload(cached));
   }
 
   /** Accept legacy cached bare arrays from older sync warmers. */
@@ -329,22 +305,18 @@ export class QuranService {
     const pageImageConfig = this.pageImageSources();
 
     return this.cache
-      .getOrSet(
-        cacheKey,
-        this.config.cacheTtl.chaptersSeconds,
-        async () => {
-          const row = await this.pagesRepository.findActivePage(
-            mushafId,
-            pageNumber,
+      .getOrSet(cacheKey, this.config.cacheTtl.chaptersSeconds, async () => {
+        const row = await this.pagesRepository.findActivePage(
+          mushafId,
+          pageNumber,
+        );
+        if (!row) {
+          throw new NotFoundException(
+            `Mushaf page ${pageNumber} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
           );
-          if (!row) {
-            throw new NotFoundException(
-              `Mushaf page ${pageNumber} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
-            );
-          }
-          return toMushafPageDetail(row, pageImageConfig);
-        },
-      )
+        }
+        return toMushafPageDetail(row, pageImageConfig);
+      })
       .then((cached) => this.healCachedPageImageMeta(cached, pageImageConfig));
   }
 
@@ -353,36 +325,51 @@ export class QuranService {
     const mushafId = this.resolveMushafId(
       query.mushaf !== undefined ? Number(query.mushaf) : undefined,
     );
-    const params = this.verseQueryWithPageDefaults(query);
+    const { qfTranslations, encKeys } = splitTranslationIds(query.translations);
+    const params = this.verseQueryWithPageDefaults({
+      ...query,
+      translations: qfTranslations || undefined,
+    });
     params.mushaf = mushafId;
-    const cacheKey = this.cache.pageVersesKey(page, mushafId, params);
+    // Include Enc keys in the digest so mixed QF+Enc variants do not collide.
+    const cacheParams: QuranQueryParams = {
+      ...params,
+      ...(encKeys.length > 0 ? { _enc: encKeys.join(',') } : {}),
+    };
+    const cacheKey = this.cache.pageVersesKey(page, mushafId, cacheParams);
     const pageImageConfig = this.pageImageSources();
 
     return this.cache
-      .getOrSet(
-        cacheKey,
-        this.config.cacheTtl.versesSeconds,
-        async () => {
-          const row = await this.pagesRepository.findActivePage(mushafId, page);
-          if (!row) {
-            throw new NotFoundException(
-              `Mushaf page ${page} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
-            );
-          }
-
-          const { verses, pagination } = await this.fetchCompletePageVerses(
-            page,
-            params,
-            row.verseCount,
+      .getOrSet(cacheKey, this.config.cacheTtl.versesSeconds, async () => {
+        const row = await this.pagesRepository.findActivePage(mushafId, page);
+        if (!row) {
+          throw new NotFoundException(
+            `Mushaf page ${page} (mushaf=${mushafId}) not found. Run npm run qf:sync-pages.`,
           );
+        }
 
-          return {
-            page: toMushafPageDetail(row, pageImageConfig),
-            verses,
-            pagination,
-          };
-        },
-      )
+        const { verses, pagination } = await this.fetchCompletePageVerses(
+          page,
+          params,
+          row.verseCount,
+        );
+
+        const mergedVerses = await this.mergeEncIntoPayload(
+          { verses },
+          encKeys,
+        );
+
+        return {
+          page: toMushafPageDetail(row, pageImageConfig),
+          verses:
+            mergedVerses &&
+            typeof mergedVerses === 'object' &&
+            Array.isArray((mergedVerses as { verses?: unknown[] }).verses)
+              ? (mergedVerses as { verses: unknown[] }).verses
+              : verses,
+          pagination,
+        };
+      })
       .then((cached) => this.healCachedPageImageMeta(cached, pageImageConfig));
   }
 
@@ -591,7 +578,16 @@ export class QuranService {
     };
   }
 
-  getTranslationInfo(translationId: number): Promise<unknown> {
+  async getTranslationInfo(translationId: string): Promise<unknown> {
+    if (isQuranEncTranslationKey(translationId)) {
+      await this.assertActiveEncTranslation(translationId);
+      return this.getQuranEncTranslationInfo(translationId);
+    }
+    if (!/^\d+$/.test(translationId)) {
+      throw new BadRequestException(
+        `Unknown translation resource: ${translationId}`,
+      );
+    }
     return this.cachedContent(
       'resources',
       `/resources/translations/${translationId}/info`,
@@ -600,11 +596,31 @@ export class QuranService {
     );
   }
 
-  getTranslationBySurah(
-    resourceId: number,
+  async getTranslationBySurah(
+    resourceId: string,
     chapter: number,
     query: PaginationQueryDto,
   ): Promise<unknown> {
+    if (isQuranEncTranslationKey(resourceId)) {
+      await this.assertActiveEncTranslation(resourceId);
+      const translations = await this.quranEncTranslations.getSurahNormalized(
+        resourceId,
+        chapter,
+      );
+      return {
+        translations,
+        meta: {
+          translationName: QURANENC_KYRGYZ_HAKIMOV_META.name,
+          authorName: QURANENC_KYRGYZ_HAKIMOV_META.translator,
+          filters: { chapter_number: chapter },
+        },
+      };
+    }
+    if (!/^\d+$/.test(resourceId)) {
+      throw new BadRequestException(
+        `Unknown translation resource: ${resourceId}`,
+      );
+    }
     return this.cachedContent(
       'verses',
       `/translations/${resourceId}/by_chapter/${chapter}`,
@@ -613,7 +629,37 @@ export class QuranService {
     );
   }
 
-  getTranslationByAyah(resourceId: number, ayahKey: string): Promise<unknown> {
+  async getTranslationByAyah(
+    resourceId: string,
+    ayahKey: string,
+  ): Promise<unknown> {
+    if (isQuranEncTranslationKey(resourceId)) {
+      await this.assertActiveEncTranslation(resourceId);
+      const match = /^(\d+):(\d+)$/.exec(ayahKey.trim());
+      if (!match) {
+        throw new BadRequestException(`Invalid ayah key: ${ayahKey}`);
+      }
+      const surah = Number(match[1]);
+      const ayah = Number(match[2]);
+      const row = await this.quranEncTranslations.getAyahNormalized(
+        resourceId,
+        surah,
+        ayah,
+      );
+      return {
+        translations: [row],
+        meta: {
+          translationName: QURANENC_KYRGYZ_HAKIMOV_META.name,
+          authorName: QURANENC_KYRGYZ_HAKIMOV_META.translator,
+          filters: { verse_key: ayahKey },
+        },
+      };
+    }
+    if (!/^\d+$/.test(resourceId)) {
+      throw new BadRequestException(
+        `Unknown translation resource: ${resourceId}`,
+      );
+    }
     return this.cachedContent(
       'verses',
       `/translations/${resourceId}/by_ayah/${encodeURIComponent(ayahKey)}`,
@@ -622,11 +668,24 @@ export class QuranService {
     );
   }
 
-  getTranslationByJuz(
-    resourceId: number,
+  async getTranslationByJuz(
+    resourceId: string,
     juz: number,
     query: PaginationQueryDto,
   ): Promise<unknown> {
+    if (isQuranEncTranslationKey(resourceId)) {
+      await this.assertActiveEncTranslation(resourceId);
+      return this.getEncTranslationForQfScope(
+        resourceId,
+        `/verses/by_juz/${juz}`,
+        this.pick(query, ['language', 'page', 'per_page']),
+      );
+    }
+    if (!/^\d+$/.test(resourceId)) {
+      throw new BadRequestException(
+        `Unknown translation resource: ${resourceId}`,
+      );
+    }
     return this.cachedContent(
       'verses',
       `/translations/${resourceId}/by_juz/${juz}`,
@@ -635,11 +694,24 @@ export class QuranService {
     );
   }
 
-  getTranslationByPage(
-    resourceId: number,
+  async getTranslationByPage(
+    resourceId: string,
     page: number,
     query: PaginationQueryDto,
   ): Promise<unknown> {
+    if (isQuranEncTranslationKey(resourceId)) {
+      await this.assertActiveEncTranslation(resourceId);
+      return this.getEncTranslationForQfScope(
+        resourceId,
+        `/verses/by_page/${page}`,
+        this.pick(query, ['language', 'page', 'per_page']),
+      );
+    }
+    if (!/^\d+$/.test(resourceId)) {
+      throw new BadRequestException(
+        `Unknown translation resource: ${resourceId}`,
+      );
+    }
     return this.cachedContent(
       'verses',
       `/translations/${resourceId}/by_page/${page}`,
@@ -715,7 +787,8 @@ export class QuranService {
     );
   }
 
-  async getRecitations(_query: LanguageQueryDto): Promise<unknown> {
+  async getRecitations(query: LanguageQueryDto): Promise<unknown> {
+    void query;
     const rows = await this.catalogRepository.listActiveReciters({
       kind: 'AYAH',
     });
@@ -724,7 +797,8 @@ export class QuranService {
     };
   }
 
-  async getChapterReciters(_query: LanguageQueryDto): Promise<unknown> {
+  async getChapterReciters(query: LanguageQueryDto): Promise<unknown> {
+    void query;
     const rows = await this.catalogRepository.listActiveReciters({
       kind: 'CHAPTER',
     });
@@ -801,6 +875,17 @@ export class QuranService {
       'exact_matches_only',
     ]);
 
+    // Search is QF-only: drop QuranEnc keys so accidental FE reuse of reader
+    // ids cannot break upstream search.
+    if (typeof params.translation_ids === 'string') {
+      const { qfTranslations } = splitTranslationIds(params.translation_ids);
+      if (qfTranslations) {
+        params.translation_ids = qfTranslations;
+      } else {
+        delete params.translation_ids;
+      }
+    }
+
     const cacheKey = this.cache.buildKey('search', '/search', params);
     const result = await this.cache.getOrSet(
       cacheKey,
@@ -835,6 +920,200 @@ export class QuranService {
       }
       return normalizeQfMediaUrls(payload, this.config.audioCdnBase);
     });
+  }
+
+  /**
+   * Fetch QF verses with only numeric translation ids, then soft-merge
+   * allowlisted QuranEnc translations onto each verse.
+   */
+  private async cachedVersesWithOptionalEnc(
+    path: string,
+    query: VersesQueryDto,
+  ): Promise<unknown> {
+    const { qfTranslations, encKeys } = splitTranslationIds(query.translations);
+    const qfQuery = this.verseQuery({
+      ...query,
+      translations: qfTranslations || undefined,
+    });
+
+    if (encKeys.length === 0) {
+      return this.cachedContent(
+        'verses',
+        path,
+        qfQuery,
+        this.config.cacheTtl.versesSeconds,
+        true,
+      );
+    }
+
+    const mergeCacheKey = this.cache.buildKey('verses', path, {
+      ...qfQuery,
+      _enc: encKeys.join(','),
+    });
+
+    return this.cache.getOrSet(
+      mergeCacheKey,
+      this.config.cacheTtl.versesSeconds,
+      async () => {
+        const qfPayload = await this.cachedContent(
+          'verses',
+          path,
+          qfQuery,
+          this.config.cacheTtl.versesSeconds,
+          true,
+        );
+        return this.mergeEncIntoPayload(qfPayload, encKeys);
+      },
+    );
+  }
+
+  private async mergeEncIntoPayload(
+    payload: unknown,
+    encKeys: string[],
+  ): Promise<unknown> {
+    if (encKeys.length === 0) {
+      return payload;
+    }
+
+    const chapters = collectChapterIdsFromVersesPayload(payload);
+    if (chapters.length === 0) {
+      return payload;
+    }
+
+    const activeEncKeys = await this.filterActiveEncKeys(encKeys);
+    if (activeEncKeys.length === 0) {
+      return payload;
+    }
+
+    const encByChapter = new Map<
+      number,
+      Map<number, NormalizedEncTranslationRow>
+    >();
+
+    for (const key of activeEncKeys) {
+      for (const chapter of chapters) {
+        const map = await this.quranEncTranslations.tryGetSurahMap(
+          key,
+          chapter,
+        );
+        if (!map) {
+          continue;
+        }
+        const existing: Map<number, NormalizedEncTranslationRow> =
+          encByChapter.get(chapter) ??
+          new Map<number, NormalizedEncTranslationRow>();
+        for (const [ayah, row] of map) {
+          existing.set(ayah, row);
+        }
+        encByChapter.set(chapter, existing);
+      }
+    }
+
+    return mergeEncIntoVersesPayload(payload, encByChapter);
+  }
+
+  /**
+   * Keep only allowlisted Enc keys that are active in the local catalog.
+   * Inactive/admin-disabled editions are omitted (verse merge soft-fail).
+   */
+  private async filterActiveEncKeys(
+    encKeys: string[],
+  ): Promise<QuranEncTranslationKey[]> {
+    const active: QuranEncTranslationKey[] = [];
+    for (const key of encKeys) {
+      if (!isQuranEncTranslationKey(key)) {
+        continue;
+      }
+      const row =
+        await this.catalogRepository.findActiveTranslationByExternalId(key, {
+          provider: QURANENC_PROVIDER,
+        });
+      if (row) {
+        active.push(key);
+      }
+    }
+    return active;
+  }
+
+  private async assertActiveEncTranslation(
+    key: QuranEncTranslationKey,
+  ): Promise<void> {
+    const row = await this.catalogRepository.findActiveTranslationByExternalId(
+      key,
+      { provider: QURANENC_PROVIDER },
+    );
+    if (!row) {
+      throw new NotFoundException(
+        `Translation resource not found or inactive: ${key}`,
+      );
+    }
+  }
+
+  private async getEncTranslationForQfScope(
+    key: QuranEncTranslationKey,
+    path: string,
+    query: QuranQueryParams,
+  ): Promise<unknown> {
+    const payload = await this.cachedContent(
+      'verses',
+      path,
+      { ...query, translations: undefined },
+      this.config.cacheTtl.versesSeconds,
+      true,
+    );
+    const chapters = collectChapterIdsFromVersesPayload(payload);
+    const translations: NormalizedEncTranslationRow[] = [];
+
+    for (const chapter of chapters) {
+      const rows = await this.quranEncTranslations.getSurahNormalized(
+        key,
+        chapter,
+      );
+      const needed = new Set<number>();
+      const root = payload as { verses?: unknown[] };
+      if (Array.isArray(root.verses)) {
+        for (const verse of root.verses) {
+          if (!verse || typeof verse !== 'object') {
+            continue;
+          }
+          const v = verse as Record<string, unknown>;
+          const chapterId = Number(v.chapter_id ?? v.chapterId);
+          const verseNumber = Number(v.verse_number ?? v.verseNumber);
+          if (chapterId === chapter && Number.isFinite(verseNumber)) {
+            needed.add(verseNumber);
+          }
+        }
+      }
+      for (const row of rows) {
+        if (needed.size === 0 || needed.has(row.verse_number)) {
+          translations.push(row);
+        }
+      }
+    }
+
+    return {
+      translations,
+      meta: {
+        translationName: QURANENC_KYRGYZ_HAKIMOV_META.name,
+        authorName: QURANENC_KYRGYZ_HAKIMOV_META.translator,
+        provider: QURANENC_PROVIDER,
+      },
+    };
+  }
+
+  private getQuranEncTranslationInfo(key: QuranEncTranslationKey): unknown {
+    return {
+      translation: {
+        id: key,
+        name: QURANENC_KYRGYZ_HAKIMOV_META.name,
+        author_name: QURANENC_KYRGYZ_HAKIMOV_META.translator,
+        language_name: QURANENC_KYRGYZ_HAKIMOV_META.languageName,
+        slug: key,
+        provider: QURANENC_PROVIDER,
+        attribution: QURANENC_KYRGYZ_HAKIMOV_META.attribution,
+        source: 'quranenc',
+      },
+    };
   }
 
   private verseQuery(query: VersesQueryDto): QuranQueryParams {

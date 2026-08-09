@@ -65,9 +65,23 @@ Present in Content API (`language_name: kazakh|tajik`). Stored as ISO `kk` / `tg
 | 223 | tg | Pioneers of Translation Center | Pioneers of Translation Center | yes |
 | 74 | tg | Tajik | AbdolMohammad Ayati | yes |
 
-### Kyrgyz (`ky`) / Turkmen (`tk`)
+### Kyrgyz (`ky`) — QuranEnc
 
-**Not** in `GET /resources/translations` or `/resources/languages` on the Content API (as of 2026-08). Quran.com mobile may still list offline packs (e.g. Shamsuddin Hakimov Kyrgyz). Backend maps names/aliases for future use; sync cannot invent these editions.
+Not in Quran Foundation Content API. Backend seeds catalog metadata and fetches bodies from QuranEnc:
+
+| Field | Value |
+| --- | --- |
+| Provider | `quranenc` |
+| External / resource id | `kyrgyz_hakimov` (string) |
+| Translator | Shamsuddin Hakimov |
+| Name | Kyrgyz — Shamsuddin Hakimov |
+| Source | https://quranenc.com/en/browse/kyrgyz_hakimov |
+
+Use `GET /quran/translations?language=ky` and `translations=kyrgyz_hakimov` on verse endpoints. Do not claim this edition is from Quran Foundation.
+
+### Turkmen (`tk`)
+
+**Not** in `GET /resources/translations` or `/resources/languages` on the Content API (as of 2026-08). Out of scope until a licensed source is added.
 
 ### Arabic
 

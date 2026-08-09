@@ -154,9 +154,7 @@ export const envValidationSchema = Joi.object({
     .default('https://audio.qurancdn.com'),
   QF_TAJWEED_PAGE_IMAGE_BASE: Joi.string()
     .uri({ scheme: ['https'] })
-    .default(
-      'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp',
-    ),
+    .default('https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp'),
   QF_TAJWEED_PAGE_IMAGE_EXT: Joi.string()
     .pattern(/^[a-z0-9]+$/i)
     .default('webp'),
@@ -174,6 +172,12 @@ export const envValidationSchema = Joi.object({
   QF_CACHE_TTL_RESOURCES_SECONDS: Joi.number().integer().min(1).default(86400),
   QF_CACHE_TTL_SEARCH_SECONDS: Joi.number().integer().min(1).default(300),
   QF_CACHE_TTL_AUDIO_SECONDS: Joi.number().integer().min(1).default(3600),
+  QURANENC_API_BASE_URL: Joi.string()
+    .uri({ scheme: ['http', 'https'] })
+    .default('https://quranenc.com/api/v1'),
+  QURANENC_TIMEOUT_MS: Joi.number().integer().min(1000).default(15000),
+  QURANENC_MAX_RETRIES: Joi.number().integer().min(0).max(5).default(2),
+  QURANENC_RETRY_BASE_DELAY_MS: Joi.number().integer().min(50).default(250),
 
   LOG_LEVEL: Joi.string()
     .valid('fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent')

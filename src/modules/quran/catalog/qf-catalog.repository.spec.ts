@@ -242,6 +242,27 @@ describe('QfCatalogRepository', () => {
     });
   });
 
+  it('finds active translation by externalId with optional provider', async () => {
+    const findFirst = jest.fn().mockResolvedValue({ id: 'ky-row' });
+    (prisma as unknown as { quranTranslation: { findFirst: jest.Mock } })
+      .quranTranslation.findFirst = findFirst;
+
+    await expect(
+      repository.findActiveTranslationByExternalId('kyrgyz_hakimov', {
+        provider: 'quranenc',
+      }),
+    ).resolves.toEqual({ id: 'ky-row' });
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        externalId: 'kyrgyz_hakimov',
+        isActive: true,
+        deletedAt: null,
+        provider: 'quranenc',
+      },
+    });
+  });
+
   it('lists active tafsirs with optional language filter', async () => {
     const tafsirFindMany = (prisma as unknown as {
       quranTafsir: { findMany: jest.Mock };

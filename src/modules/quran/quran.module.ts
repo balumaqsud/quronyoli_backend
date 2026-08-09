@@ -13,6 +13,8 @@ import { QuranFoundationTokenService } from './client/quran-foundation-token.ser
 import { QuranFoundationErrorMapper } from './errors/quran-foundation.error-mapper';
 import { QuranRateLimitGuard } from './guards/quran-rate-limit.guard';
 import { QfPagesRepository } from './pages/qf-pages.repository';
+import { QuranEncClient } from './quranenc/quranenc.client';
+import { QuranEncTranslationService } from './quranenc/quranenc.translation.service';
 import { QuranController } from './quran.controller';
 import { QuranService } from './quran.service';
 
@@ -45,6 +47,8 @@ import { QuranService } from './quran.service';
     QfPagesRepository,
     QfCatalogRepository,
     QfCatalogSyncService,
+    QuranEncClient,
+    QuranEncTranslationService,
   ],
   exports: [QuranService, QURAN_FOUNDATION_CLIENT, QfCatalogSyncService],
 })

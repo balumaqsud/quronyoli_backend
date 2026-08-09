@@ -144,6 +144,13 @@ export interface QuranFoundationConfig {
   cacheTtl: QuranFoundationCacheTtlConfig;
 }
 
+export interface QuranEncConfig {
+  apiBaseUrl: string;
+  timeoutMs: number;
+  maxRetries: number;
+  retryBaseDelayMs: number;
+}
+
 export interface SuperAdminConfig {
   telegramId?: string;
   username?: string;
@@ -162,6 +169,7 @@ export interface AppConfiguration {
   throttle: ThrottleConfig;
   authCookie: AuthCookieConfig;
   quranFoundation: QuranFoundationConfig;
+  quranEnc: QuranEncConfig;
   superAdmin: SuperAdminConfig;
 }
 
@@ -276,7 +284,9 @@ const resolveMadina1405PageImageBase = (): string => {
   if (explicit) {
     return explicit.replace(/\/+$/, '');
   }
-  const origin = (process.env.PUBLIC_API_ORIGIN ?? '').trim().replace(/\/+$/, '');
+  const origin = (process.env.PUBLIC_API_ORIGIN ?? '')
+    .trim()
+    .replace(/\/+$/, '');
   if (origin) {
     return `${origin}/uploads/mushaf/1405`;
   }
@@ -496,8 +506,7 @@ export default (): AppConfiguration => {
         'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp',
       tajweedPageImageExt: process.env.QF_TAJWEED_PAGE_IMAGE_EXT ?? 'webp',
       madina1405PageImageBase: resolveMadina1405PageImageBase(),
-      madina1405PageImageExt:
-        process.env.QF_MUSHAF_1405_IMAGE_EXT ?? 'webp',
+      madina1405PageImageExt: process.env.QF_MUSHAF_1405_IMAGE_EXT ?? 'webp',
       cacheTtl: {
         chaptersSeconds: Number.parseInt(
           process.env.QF_CACHE_TTL_CHAPTERS_SECONDS ?? '86400',
@@ -520,6 +529,19 @@ export default (): AppConfiguration => {
           10,
         ),
       },
+    },
+    quranEnc: {
+      apiBaseUrl:
+        process.env.QURANENC_API_BASE_URL ?? 'https://quranenc.com/api/v1',
+      timeoutMs: Number.parseInt(
+        process.env.QURANENC_TIMEOUT_MS ?? '15000',
+        10,
+      ),
+      maxRetries: Number.parseInt(process.env.QURANENC_MAX_RETRIES ?? '2', 10),
+      retryBaseDelayMs: Number.parseInt(
+        process.env.QURANENC_RETRY_BASE_DELAY_MS ?? '250',
+        10,
+      ),
     },
     superAdmin: {
       telegramId: process.env.SUPER_ADMIN_TELEGRAM_ID || undefined,

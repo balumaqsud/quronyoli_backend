@@ -362,7 +362,7 @@ export class QuranController {
   @HttpCache('private-short')
   @ApiOperation({ summary: 'Get translation resource info' })
   getTranslationInfo(
-    @Param('translationId', ParseIntPipe) translationId: number,
+    @Param('translationId') translationId: string,
   ): Promise<unknown> {
     return this.quranService.getTranslationInfo(translationId);
   }
@@ -370,7 +370,7 @@ export class QuranController {
   @Get('translations/:resourceId/by-surah/:chapter')
   @ApiOperation({ summary: 'Get translation content by surah' })
   getTranslationBySurah(
-    @Param('resourceId', ParseIntPipe) resourceId: number,
+    @Param('resourceId') resourceId: string,
     @Param('chapter', ParseIntPipe) chapter: number,
     @Query() query: PaginationQueryDto,
   ): Promise<unknown> {
@@ -380,7 +380,7 @@ export class QuranController {
   @Get('translations/:resourceId/by-ayah/:ayahKey')
   @ApiOperation({ summary: 'Get translation content by ayah key' })
   getTranslationByAyah(
-    @Param('resourceId', ParseIntPipe) resourceId: number,
+    @Param('resourceId') resourceId: string,
     @Param('ayahKey') ayahKey: string,
   ): Promise<unknown> {
     return this.quranService.getTranslationByAyah(resourceId, ayahKey);
@@ -389,7 +389,7 @@ export class QuranController {
   @Get('translations/:resourceId/by-juz/:juz')
   @ApiOperation({ summary: 'Get translation content by juz' })
   getTranslationByJuz(
-    @Param('resourceId', ParseIntPipe) resourceId: number,
+    @Param('resourceId') resourceId: string,
     @Param('juz', ParseIntPipe) juz: number,
     @Query() query: PaginationQueryDto,
   ): Promise<unknown> {
@@ -399,7 +399,7 @@ export class QuranController {
   @Get('translations/:resourceId/by-page/:page')
   @ApiOperation({ summary: 'Get translation content by page' })
   getTranslationByPage(
-    @Param('resourceId', ParseIntPipe) resourceId: number,
+    @Param('resourceId') resourceId: string,
     @Param('page', ParseIntPipe) page: number,
     @Query() query: PaginationQueryDto,
   ): Promise<unknown> {

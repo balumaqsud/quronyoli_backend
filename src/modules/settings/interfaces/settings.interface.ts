@@ -8,6 +8,7 @@ import {
 import { UpdateSettingsDto } from '../dto/update-settings.dto';
 
 export const QURAN_FOUNDATION_PROVIDER = 'quran.foundation';
+export const QURANENC_PROVIDER = 'quranenc';
 
 export type SettingsWithCatalog = UserSettings & {
   defaultTranslation: Omit<QuranTranslation, 'metadata'> | null;

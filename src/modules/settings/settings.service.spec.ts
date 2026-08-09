@@ -229,6 +229,57 @@ describe('SettingsService', () => {
     );
   });
 
+  it('resolves QuranEnc Kyrgyz string translation id', async () => {
+    repository.findActiveTranslationByExternalId.mockResolvedValue({
+      id: 'uuid-ky',
+      provider: 'quranenc',
+      externalId: 'kyrgyz_hakimov',
+      languageCode: 'ky',
+      name: 'Kyrgyz — Shamsuddin Hakimov',
+      authorName: 'Shamsuddin Hakimov',
+      slug: 'kyrgyz_hakimov',
+      isActive: true,
+      isDefault: false,
+      sortOrder: 0,
+      metadata: null,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    repository.upsertWithUpdate.mockResolvedValue({
+      ...baseSettings,
+      defaultTranslationId: 'uuid-ky',
+      defaultTranslation: {
+        id: 'uuid-ky',
+        provider: 'quranenc',
+        externalId: 'kyrgyz_hakimov',
+        languageCode: 'ky',
+        name: 'Kyrgyz — Shamsuddin Hakimov',
+        authorName: 'Shamsuddin Hakimov',
+        slug: 'kyrgyz_hakimov',
+        isActive: true,
+        isDefault: false,
+        sortOrder: 0,
+        deletedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    });
+
+    const result = await service.updateForUser('user-1', {
+      translationId: 'kyrgyz_hakimov',
+    });
+
+    expect(repository.findActiveTranslationByExternalId).toHaveBeenCalledWith(
+      'kyrgyz_hakimov',
+    );
+    expect(repository.upsertWithUpdate).toHaveBeenCalledWith('user-1', {
+      defaultTranslationId: 'uuid-ky',
+    });
+    expect(result.translation?.id).toBe('kyrgyz_hakimov');
+    expect(result.translation?.languageCode).toBe('ky');
+  });
+
   it('clears resource selections when null is provided', async () => {
     repository.upsertWithUpdate.mockResolvedValue(baseSettings);
 

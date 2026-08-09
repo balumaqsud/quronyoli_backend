@@ -164,7 +164,6 @@ export class SettingsRepository {
   ): Promise<QuranTranslation | null> {
     return await this.prisma.quranTranslation.findFirst({
       where: {
-        provider: QURAN_FOUNDATION_PROVIDER,
         externalId,
         isActive: true,
         deletedAt: null,
@@ -216,7 +215,6 @@ export class SettingsRepository {
   async findDefaultActiveTranslation(): Promise<QuranTranslation | null> {
     return await this.prisma.quranTranslation.findFirst({
       where: {
-        provider: QURAN_FOUNDATION_PROVIDER,
         isActive: true,
         isDefault: true,
         deletedAt: null,
@@ -230,7 +228,6 @@ export class SettingsRepository {
   ): Promise<QuranTranslation | null> {
     return await this.prisma.quranTranslation.findFirst({
       where: {
-        provider: QURAN_FOUNDATION_PROVIDER,
         languageCode,
         isActive: true,
         deletedAt: null,

@@ -35,6 +35,8 @@ export function toQfTranslationResource(
     return {
       ...rest,
       id: resourceId(row.externalId),
+      language_name: rest.language_name ?? row.languageCode,
+      provider: row.provider,
       ...adminFields,
     };
   }
@@ -45,13 +47,12 @@ export function toQfTranslationResource(
     author_name: row.authorName,
     slug: row.slug,
     language_name: row.languageCode,
+    provider: row.provider,
     ...adminFields,
   };
 }
 
-export function toQfTafsirResource(
-  row: QuranTafsir,
-): Record<string, unknown> {
+export function toQfTafsirResource(row: QuranTafsir): Record<string, unknown> {
   const meta = asRecord(row.metadata);
   const adminFields = {
     sort_order: row.sortOrder,

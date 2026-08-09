@@ -11,6 +11,7 @@ export const CONFIG_KEYS = {
   THROTTLE: 'throttle',
   AUTH_COOKIE: 'authCookie',
   QURAN_FOUNDATION: 'quranFoundation',
+  QURANENC: 'quranEnc',
   SUPER_ADMIN: 'superAdmin',
 } as const;
 

@@ -13,7 +13,10 @@ import {
   CatalogTranslationPayload,
   LEGACY_LANGUAGE_CODE_HEALS,
 } from './qf-catalog.mapper';
-import { isCuratedTranslationExternalId, CURATED_TRANSLATION_EXTERNAL_IDS } from './curated-translations';
+import {
+  isCuratedTranslationExternalId,
+  CURATED_TRANSLATION_EXTERNAL_IDS,
+} from './curated-translations';
 
 export type CatalogSyncStats = {
   upserted: number;
@@ -36,11 +39,7 @@ export class QfCatalogRepository {
           ? { languageCode: options.languageCode }
           : {}),
       },
-      orderBy: [
-        { isDefault: 'desc' },
-        { sortOrder: 'asc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
     });
   }
 
@@ -68,11 +67,21 @@ export class QfCatalogRepository {
         isActive: true,
         deletedAt: null,
       },
-      orderBy: [
-        { isPopular: 'desc' },
-        { sortOrder: 'asc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ isPopular: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+    });
+  }
+
+  async findActiveTranslationByExternalId(
+    externalId: string,
+    options?: { provider?: string },
+  ): Promise<QuranTranslation | null> {
+    return this.prisma.quranTranslation.findFirst({
+      where: {
+        externalId,
+        isActive: true,
+        deletedAt: null,
+        ...(options?.provider ? { provider: options.provider } : {}),
+      },
     });
   }
 

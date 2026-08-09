@@ -7,6 +7,7 @@ import { QuranCacheService } from './cache/quran-cache.service';
 import { QfCatalogRepository } from './catalog/qf-catalog.repository';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { QfPagesRepository } from './pages/qf-pages.repository';
+import { QuranEncTranslationService } from './quranenc/quranenc.translation.service';
 import { QuranService } from './quran.service';
 
 describe('QuranService', () => {
@@ -31,6 +32,12 @@ describe('QuranService', () => {
     listActiveTranslations: jest.Mock;
     listActiveTafsirs: jest.Mock;
     listActiveReciters: jest.Mock;
+    findActiveTranslationByExternalId: jest.Mock;
+  };
+  let quranEncTranslations: {
+    getSurahNormalized: jest.Mock;
+    getAyahNormalized: jest.Mock;
+    tryGetSurahMap: jest.Mock;
   };
   let analyticsTracking: jest.Mocked<Pick<AnalyticsTrackingService, 'track'>>;
 
@@ -60,6 +67,12 @@ describe('QuranService', () => {
       listActiveTranslations: jest.fn().mockResolvedValue([]),
       listActiveTafsirs: jest.fn().mockResolvedValue([]),
       listActiveReciters: jest.fn().mockResolvedValue([]),
+      findActiveTranslationByExternalId: jest.fn().mockResolvedValue(null),
+    };
+    quranEncTranslations = {
+      getSurahNormalized: jest.fn(),
+      getAyahNormalized: jest.fn(),
+      tryGetSurahMap: jest.fn().mockResolvedValue(null),
     };
     analyticsTracking = {
       track: jest.fn().mockResolvedValue(undefined),
@@ -79,6 +92,10 @@ describe('QuranService', () => {
         { provide: QfCatalogRepository, useValue: catalogRepository },
         { provide: AnalyticsTrackingService, useValue: analyticsTracking },
         { provide: ReadingService, useValue: readingService },
+        {
+          provide: QuranEncTranslationService,
+          useValue: quranEncTranslations,
+        },
         {
           provide: ConfigService,
           useValue: {
@@ -449,22 +466,30 @@ describe('QuranService', () => {
     expect(result.verses).toHaveLength(15);
     expect(result.pagination.complete).toBe(true);
     expect(client.getContent).toHaveBeenCalledTimes(2);
-    expect(client.getContent).toHaveBeenNthCalledWith(1, '/verses/by_page/604', {
-      mushaf: 1,
-      fields:
-        'text_uthmani,chapter_id,verse_number,verse_key,page_number,juz_number,hizb_number,rub_el_hizb_number,sajdah_number,sajdah_type',
-      words: 'true',
-      per_page: 10,
-      page: 1,
-    });
-    expect(client.getContent).toHaveBeenNthCalledWith(2, '/verses/by_page/604', {
-      mushaf: 1,
-      fields:
-        'text_uthmani,chapter_id,verse_number,verse_key,page_number,juz_number,hizb_number,rub_el_hizb_number,sajdah_number,sajdah_type',
-      words: 'true',
-      per_page: 10,
-      page: 2,
-    });
+    expect(client.getContent).toHaveBeenNthCalledWith(
+      1,
+      '/verses/by_page/604',
+      {
+        mushaf: 1,
+        fields:
+          'text_uthmani,chapter_id,verse_number,verse_key,page_number,juz_number,hizb_number,rub_el_hizb_number,sajdah_number,sajdah_type',
+        words: 'true',
+        per_page: 10,
+        page: 1,
+      },
+    );
+    expect(client.getContent).toHaveBeenNthCalledWith(
+      2,
+      '/verses/by_page/604',
+      {
+        mushaf: 1,
+        fields:
+          'text_uthmani,chapter_id,verse_number,verse_key,page_number,juz_number,hizb_number,rub_el_hizb_number,sajdah_number,sajdah_type',
+        words: 'true',
+        per_page: 10,
+        page: 2,
+      },
+    );
   });
 
   it('rejects unsupported script names', async () => {
@@ -659,5 +684,127 @@ describe('QuranService', () => {
       kind: 'CHAPTER',
     });
     expect(client.getContent).not.toHaveBeenCalled();
+  });
+
+  it('never forwards Enc keys to QF on mixed translations=', async () => {
+    catalogRepository.findActiveTranslationByExternalId.mockResolvedValue({
+      id: 'uuid-ky',
+      provider: 'quranenc',
+      externalId: 'kyrgyz_hakimov',
+      languageCode: 'ky',
+      name: 'Kyrgyz — Shamsuddin Hakimov',
+      authorName: 'Shamsuddin Hakimov',
+      slug: 'kyrgyz_hakimov',
+      isActive: true,
+      isDefault: false,
+      sortOrder: 0,
+      metadata: null,
+      deletedAt: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    quranEncTranslations.tryGetSurahMap.mockResolvedValue(
+      new Map([
+        [
+          1,
+          {
+            resource_id: 'kyrgyz_hakimov',
+            resource_name: 'Kyrgyz — Shamsuddin Hakimov',
+            text: 'Ырайымдуу',
+            verse_key: '1:1',
+            verse_number: 1,
+          },
+        ],
+      ]),
+    );
+    client.getContent.mockResolvedValue({
+      verses: [
+        {
+          chapter_id: 1,
+          verse_number: 1,
+          verse_key: '1:1',
+          text_uthmani: 'بِسْمِ',
+          translations: [{ resource_id: 55, text: 'Bismillah' }],
+        },
+      ],
+    });
+
+    const result = (await service.getAyahsBySurah(1, {
+      translations: '55,kyrgyz_hakimov',
+    })) as { verses: Array<Record<string, unknown>> };
+
+    expect(client.getContent).toHaveBeenCalledWith(
+      '/verses/by_chapter/1',
+      expect.objectContaining({ translations: '55' }),
+    );
+    const firstCall = client.getContent.mock.calls[0] as
+      [string, { translations?: string }] | undefined;
+    expect(firstCall?.[1].translations).not.toContain('kyrgyz_hakimov');
+    expect(result.verses[0].translations).toEqual(
+      expect.arrayContaining([
+        { resource_id: 55, text: 'Bismillah' },
+        expect.objectContaining({
+          resource_id: 'kyrgyz_hakimov',
+          text: 'Ырайымдуу',
+        }),
+      ]),
+    );
+  });
+
+  it('omits Enc from verse merge when catalog row is inactive', async () => {
+    catalogRepository.findActiveTranslationByExternalId.mockResolvedValue(null);
+    client.getContent.mockResolvedValue({
+      verses: [
+        {
+          chapter_id: 1,
+          verse_number: 1,
+          verse_key: '1:1',
+          text_uthmani: 'بِسْمِ',
+          translations: [],
+        },
+      ],
+    });
+
+    const result = (await service.getAyahsBySurah(1, {
+      translations: 'kyrgyz_hakimov',
+    })) as { verses: Array<Record<string, unknown>> };
+
+    expect(quranEncTranslations.tryGetSurahMap).not.toHaveBeenCalled();
+    expect(result.verses[0].translations).toEqual([]);
+  });
+
+  it('strips Enc keys from search translation_ids before QF', async () => {
+    client.getSearch.mockResolvedValue({ result: {} });
+
+    await service.search('user-1', {
+      query: 'fatiha',
+      translation_ids: '55,kyrgyz_hakimov',
+    });
+
+    expect(client.getSearch).toHaveBeenCalledWith(
+      '/search',
+      expect.objectContaining({ translation_ids: '55' }),
+    );
+  });
+
+  it('omits translation_ids from search when only Enc keys were provided', async () => {
+    client.getSearch.mockResolvedValue({ result: {} });
+
+    await service.search('user-1', {
+      query: 'fatiha',
+      translation_ids: 'kyrgyz_hakimov',
+    });
+
+    const firstCall = client.getSearch.mock.calls[0] as
+      [string, Record<string, unknown>] | undefined;
+    expect(firstCall?.[1].translation_ids).toBeUndefined();
+  });
+
+  it('returns 404 for Enc content routes when inactive', async () => {
+    catalogRepository.findActiveTranslationByExternalId.mockResolvedValue(null);
+
+    await expect(
+      service.getTranslationBySurah('kyrgyz_hakimov', 1, {}),
+    ).rejects.toThrow(/not found or inactive/);
   });
 });
