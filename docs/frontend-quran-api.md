@@ -127,7 +127,7 @@ Returns QF lookup JSON (pass-through). Use to resolve Madani page number.
 | Surah list / names / `bismillah_pre` | `GET /quran/surahs?language=` | Live QF snake_case |
 | Surah stream mode | `GET /quran/ayahs/by-surah/:id` | Same verse query params |
 | Single ayah | `GET /quran/ayahs/by-key/:key` | Also records reading progress |
-| Translations catalog | `GET /quran/translations` | **Local** active catalog |
+| Translations catalog | `GET /quran/translations` | **Local** active catalog. Optional `?language=` accepts ISO 639-1 (`kk`, `tg`, `ky`, `tk`) **and** app chip aliases (`kz`→`kk`, `kg`/`kgz`→`ky`). |
 | Reciters | `GET /quran/audio/chapter-reciters` | **Local** active catalog |
 | Chapter audio | `GET /quran/audio/chapter-reciters/:id/:chapter` | Live QF |
 | Mushaf picker | `GET /quran/mushafs` | **Static** catalog; image **10** (`isStandard`) + **1405**; glyph ids 1, 2, 4, 5, 19, … |
@@ -144,6 +144,7 @@ Returns QF lookup JSON (pass-through). Use to resolve Madani page number.
 5. Default **API** mushaf id = **1** (QCF V2) when `mushaf=` omitted. Book-mode FE default = catalog entry with `isStandard: true` (**10**). Pass `mushaf=10` or `mushaf=1405` for page images; handle `<img onError>` — do not show a silent broken `?`.
 6. Empty DB → 404 with message to run sync — show sync/retry UI, not fake Madani tables.
 7. Do **not** use verse-level QF `image_url` (e.g. `91_1.png` ~675×52) as full-page art.
+8. **Central Asian translation chips:** prefer ISO codes `kk` (Kazakh), `tg` (Tajik), `ky` (Kyrgyz), `tk` (Turkmen). Country chips `KZ`/`KG` are accepted as aliases for `kk`/`ky`. **Kyrgyz and Turkmen are not in the Quran.com Content API** (they may appear in the Quran.com mobile offline list only) — empty `ky`/`kg`/`tk` results are expected until QF publishes them; do not treat that as a sync failure. Kazakh (`222`, `113`) and Tajik (`139`, `223`, `74`) sync from QF and are curated active.
 
 ---
 

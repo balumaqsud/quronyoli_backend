@@ -17,7 +17,10 @@ export const CURATED_TRANSLATION_EXTERNAL_IDS = [
   '161', // bn — Taisirul Quran
   '135', // fa — IslamHouse
   '222', // kk — Khalifa Altay
+  '113', // kk — Khalifah Altai
   '139', // tg — Khawaja Mirof
+  '223', // tg — Pioneers of Translation Center
+  '74', // tg — AbdolMohammad Ayati
   '75', // az — Musayev
 ] as const;
 

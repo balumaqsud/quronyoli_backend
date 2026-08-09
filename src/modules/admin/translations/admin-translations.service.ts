@@ -12,6 +12,7 @@ import {
 import { CurrentAdminContext } from '../../../common/decorators/current-admin.decorator';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { QfCatalogSyncService } from '../../quran/catalog/qf-catalog-sync.service';
+import { resolveCatalogLanguageFilter } from '../../quran/catalog/qf-catalog.mapper';
 import { AuthRequestContext } from '../../auth/interfaces/auth-request-context.interface';
 import { AdminLogsService } from '../logs/admin-logs.service';
 import {
@@ -37,9 +38,10 @@ export class AdminTranslationsService {
     query: AdminTranslationsQueryDto,
   ): Promise<OffsetPage<AdminTranslationView>> {
     const offset = resolveOffset(query.page, query.limit);
+    const languageCode = resolveCatalogLanguageFilter(query.languageCode);
     const where = {
       deletedAt: null as null,
-      ...(query.languageCode ? { languageCode: query.languageCode } : {}),
+      ...(languageCode ? { languageCode } : {}),
       ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
       ...(query.isDefault !== undefined ? { isDefault: query.isDefault } : {}),
     };

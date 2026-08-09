@@ -5,6 +5,7 @@ import {
   mapRecitationResource,
   mapTafsirResource,
   mapTranslationResource,
+  resolveCatalogLanguageFilter,
 } from './qf-catalog.mapper';
 
 describe('qf-catalog.mapper', () => {
@@ -13,12 +14,37 @@ describe('qf-catalog.mapper', () => {
       expect(mapLanguageNameToCode('english')).toBe('en');
       expect(mapLanguageNameToCode('Uzbek')).toBe('uz');
       expect(mapLanguageNameToCode('russian')).toBe('ru');
+      expect(mapLanguageNameToCode('kazakh')).toBe('kk');
+      expect(mapLanguageNameToCode('Tajik')).toBe('tg');
+      expect(mapLanguageNameToCode('kyrgyz')).toBe('ky');
+      expect(mapLanguageNameToCode('turkmen')).toBe('tk');
+    });
+
+    it('maps app/country chip aliases to ISO codes', () => {
+      expect(mapLanguageNameToCode('KG')).toBe('ky');
+      expect(mapLanguageNameToCode('kgz')).toBe('ky');
+      expect(mapLanguageNameToCode('KZ')).toBe('kk');
     });
 
     it('falls back for unknown languages', () => {
       expect(mapLanguageNameToCode('Klingon')).toBe('klingon');
       expect(mapLanguageNameToCode('')).toBe('und');
       expect(mapLanguageNameToCode(null)).toBe('und');
+    });
+  });
+
+  describe('resolveCatalogLanguageFilter', () => {
+    it('returns ISO codes for names and aliases', () => {
+      expect(resolveCatalogLanguageFilter('kazakh')).toBe('kk');
+      expect(resolveCatalogLanguageFilter('kz')).toBe('kk');
+      expect(resolveCatalogLanguageFilter('tg')).toBe('tg');
+      expect(resolveCatalogLanguageFilter('KG')).toBe('ky');
+    });
+
+    it('returns undefined for missing/empty input', () => {
+      expect(resolveCatalogLanguageFilter(undefined)).toBeUndefined();
+      expect(resolveCatalogLanguageFilter('')).toBeUndefined();
+      expect(resolveCatalogLanguageFilter('   ')).toBeUndefined();
     });
   });
 

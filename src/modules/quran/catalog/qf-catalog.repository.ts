@@ -11,6 +11,7 @@ import {
   CatalogReciterPayload,
   CatalogTafsirPayload,
   CatalogTranslationPayload,
+  LEGACY_LANGUAGE_CODE_HEALS,
 } from './qf-catalog.mapper';
 import { isCuratedTranslationExternalId, CURATED_TRANSLATION_EXTERNAL_IDS } from './curated-translations';
 
@@ -116,6 +117,17 @@ export class QfCatalogRepository {
         },
         data: { isActive: true },
       });
+
+      // Remap legacy full-name language_code values (kazakh/tajik/…) to ISO codes.
+      for (const heal of LEGACY_LANGUAGE_CODE_HEALS) {
+        await tx.quranTranslation.updateMany({
+          where: {
+            provider: QURAN_FOUNDATION_PROVIDER,
+            languageCode: heal.from,
+          },
+          data: { languageCode: heal.to },
+        });
+      }
 
       const deactivated =
         seenIds.length === 0

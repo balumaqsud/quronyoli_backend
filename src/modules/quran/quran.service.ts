@@ -16,7 +16,7 @@ import {
   toQfTafsirResource,
   toQfTranslationResource,
 } from './catalog/qf-catalog-list.mapper';
-import { mapLanguageNameToCode } from './catalog/qf-catalog.mapper';
+import { resolveCatalogLanguageFilter } from './catalog/qf-catalog.mapper';
 import { QfCatalogRepository } from './catalog/qf-catalog.repository';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { DailyAyahResponseDto } from './dto/daily-ayah-response.dto';
@@ -582,7 +582,7 @@ export class QuranService {
   }
 
   async getTranslations(query: LanguageQueryDto): Promise<unknown> {
-    const languageCode = this.resolveCatalogLanguageFilter(query.language);
+    const languageCode = resolveCatalogLanguageFilter(query.language);
     const rows = await this.catalogRepository.listActiveTranslations(
       languageCode ? { languageCode } : undefined,
     );
@@ -649,7 +649,7 @@ export class QuranService {
   }
 
   async getTafsirs(query: LanguageQueryDto): Promise<unknown> {
-    const languageCode = this.resolveCatalogLanguageFilter(query.language);
+    const languageCode = resolveCatalogLanguageFilter(query.language);
     const rows = await this.catalogRepository.listActiveTafsirs(
       languageCode ? { languageCode } : undefined,
     );
@@ -835,20 +835,6 @@ export class QuranService {
       }
       return normalizeQfMediaUrls(payload, this.config.audioCdnBase);
     });
-  }
-
-  /**
-   * Map optional list `language` query to a DB languageCode filter.
-   * Returns undefined when missing/unknown so all active rows are returned.
-   */
-  private resolveCatalogLanguageFilter(
-    language: string | undefined,
-  ): string | undefined {
-    if (!language?.trim()) {
-      return undefined;
-    }
-    const code = mapLanguageNameToCode(language);
-    return code === 'und' ? undefined : code;
   }
 
   private verseQuery(query: VersesQueryDto): QuranQueryParams {

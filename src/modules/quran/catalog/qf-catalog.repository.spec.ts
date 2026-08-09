@@ -62,7 +62,14 @@ describe('QfCatalogRepository', () => {
       },
       data: { isActive: true },
     });
-    expect(updateMany).toHaveBeenNthCalledWith(2, {
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        provider: 'quran.foundation',
+        languageCode: 'kazakh',
+      },
+      data: { languageCode: 'kk' },
+    });
+    expect(updateMany).toHaveBeenCalledWith({
       where: {
         provider: 'quran.foundation',
         isActive: true,
@@ -109,7 +116,7 @@ describe('QfCatalogRepository', () => {
       },
       data: { isActive: true },
     });
-    expect(updateMany).toHaveBeenNthCalledWith(2, {
+    expect(updateMany).toHaveBeenCalledWith({
       where: {
         provider: 'quran.foundation',
         isActive: true,

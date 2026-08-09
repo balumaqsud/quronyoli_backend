@@ -41,7 +41,30 @@ const LANGUAGE_CODE_MAP: Record<string, string> = {
   swahili: 'sw',
   thai: 'th',
   vietnamese: 'vi',
+  // Central Asian (QF language_name → ISO 639-1)
+  kazakh: 'kk',
+  tajik: 'tg',
+  kyrgyz: 'ky',
+  turkmen: 'tk',
+  // App / country-style chip aliases → ISO 639-1
+  kg: 'ky',
+  kgz: 'ky',
+  kz: 'kk',
 };
+
+/**
+ * Legacy full-name language_code values written before Central Asian ISO mapping.
+ * Healed on catalog sync so list filters (`kk`/`tg`) match existing rows.
+ */
+export const LEGACY_LANGUAGE_CODE_HEALS: ReadonlyArray<{
+  from: string;
+  to: string;
+}> = [
+  { from: 'kazakh', to: 'kk' },
+  { from: 'tajik', to: 'tg' },
+  { from: 'kyrgyz', to: 'ky' },
+  { from: 'turkmen', to: 'tk' },
+];
 
 export type CatalogTranslationPayload = {
   provider: string;
@@ -85,6 +108,21 @@ export function mapLanguageNameToCode(languageName: unknown): string {
   }
 
   return normalized.replace(/[^a-z0-9-]/g, '').slice(0, 16) || 'und';
+}
+
+/**
+ * Normalize an optional catalog/list language query to a DB `languageCode`.
+ * Accepts QF English names, ISO codes, and app chip aliases (KG/KZ).
+ * Returns undefined when missing/unknown so callers can skip filtering.
+ */
+export function resolveCatalogLanguageFilter(
+  language: string | undefined,
+): string | undefined {
+  if (!language?.trim()) {
+    return undefined;
+  }
+  const code = mapLanguageNameToCode(language);
+  return code === 'und' ? undefined : code;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
