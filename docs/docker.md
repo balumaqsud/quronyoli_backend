@@ -74,7 +74,7 @@ Project name is pinned as `quron-yoli` so volume names do not depend on the chec
 # or: npm run update:prod
 ```
 
-Rebuilds the API, runs additive `prisma migrate deploy` on start, and **never** runs `down -v`. See [deployment.md](./deployment.md).
+Rebuilds the API, runs additive `prisma migrate deploy` on start, and **never** runs `down -v`. Full day-2 guide: [ops-runbook.md](./ops-runbook.md). Also [deployment.md](./deployment.md).
 
 | Goal | Command |
 | --- | --- |

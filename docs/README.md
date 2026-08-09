@@ -12,9 +12,11 @@ Staff-engineer reference for the Quron Yo'li NestJS backend. Prefer linking thes
 | [rest-api.md](./rest-api.md) | Auth, versioning, envelope, pagination, errors, rate limits, full route inventory |
 | [environment.md](./environment.md) | `.env.example` + Joi defaults, secrets, Compose-only vars, QF overrides |
 | [deployment.md](./deployment.md) | Build / migrate / start, probes, `TRUST_PROXY`, cookies, webhook TLS, rollback |
+| [ops-runbook.md](./ops-runbook.md) | **Production ops**: which script to run, Caddy/HTTPS, DB repair, doctor, VPS `189.74.96.28` |
 | [docker.md](./docker.md) | Dockerfile stages, Compose services, local vs prod caveats |
 | [PRODUCTION_READINESS_REPORT.md](./PRODUCTION_READINESS_REPORT.md) | Production hardening report (score, changes, recommendations) |
 | [../README_DEPLOYMENT.md](../README_DEPLOYMENT.md) | Ubuntu 24.04 one-command deploy |
+| [sslip-caddy-redeploy.md](./sslip-caddy-redeploy.md) | First HTTPS setup with `189.74.96.28.sslip.io` |
 | [../README_DOCKER.md](../README_DOCKER.md) | Docker Compose quick reference |
 | [database-schema.md](./database-schema.md) | Prisma/PostgreSQL ERD, cascades, soft delete, SQL-only constraints |
 | [future-improvements.md](./future-improvements.md) | Prioritized follow-ups |

@@ -2,6 +2,8 @@
 
 Use free hostname **`189.74.96.28.sslip.io`** so Caddy can issue Let's Encrypt HTTPS for Telegram webhooks on VPS **`189.74.96.28`**.
 
+Day-2 operations after this first setup: **[ops-runbook.md](./ops-runbook.md)** (update, restart, doctor, DB repair, PORT/Caddy drift).
+
 Repo: `https://github.com/balumaqsud/quronyoli_backend.git`
 
 ---

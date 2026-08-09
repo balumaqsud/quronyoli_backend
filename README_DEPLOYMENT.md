@@ -2,6 +2,8 @@
 
 Deploy the API with Docker Compose + Caddy (HTTPS).
 
+**Ops runbook (day-2 commands, Caddy, DB repair):** [docs/ops-runbook.md](docs/ops-runbook.md)
+
 ## Prerequisites
 
 - Ubuntu 24.04 server (root or sudo)
@@ -127,8 +129,8 @@ Verify:
 ```bash
 curl -sS http://127.0.0.1:3000/api/health
 curl -sS http://127.0.0.1:3000/api/v1/health/ready
-# with Caddy:
-curl -sS https://YOUR_DOMAIN/api/v1/health/ready
+# with Caddy (production VPS):
+curl -sS https://189.74.96.28.sslip.io/api/v1/health/ready
 ```
 
 ## What happens automatically
@@ -212,4 +214,4 @@ CONFIRM_RESTORE=yes ./scripts/repair-db.sh backups/<timestamp>
 | Local (+ published DB/Redis ports) | `docker compose up -d` |
 | Local + pgAdmin / Redis Insight | `docker compose --profile dev up -d` |
 
-More detail: [docs/deployment.md](docs/deployment.md), [README_DOCKER.md](README_DOCKER.md).
+More detail: [docs/ops-runbook.md](docs/ops-runbook.md), [docs/deployment.md](docs/deployment.md), [README_DOCKER.md](README_DOCKER.md).

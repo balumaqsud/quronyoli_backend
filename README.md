@@ -33,7 +33,7 @@ Production NestJS backend for the **Quron Yo'li** Telegram Mini App: Telegram Mi
 # or: npm run deploy:prod
 ```
 
-Later updates: `./scripts/update.sh`. See [README_DEPLOYMENT.md](README_DEPLOYMENT.md) and [README_DOCKER.md](README_DOCKER.md).
+Later updates: `./scripts/update.sh`. Ops cheat sheet: [docs/ops-runbook.md](docs/ops-runbook.md). Also [README_DEPLOYMENT.md](README_DEPLOYMENT.md) and [README_DOCKER.md](README_DOCKER.md).
 
 ### Local development
 
@@ -133,6 +133,7 @@ Dependency injection tokens of note: `TELEGRAM_API`, `QURAN_FOUNDATION_CLIENT` (
 | [docs/rest-api.md](docs/rest-api.md) | Auth, envelope, pagination, full route inventory |
 | [docs/environment.md](docs/environment.md) | Env vars, Joi defaults, secrets |
 | [docs/deployment.md](docs/deployment.md) | Build, migrate, probes, cookies, rollback |
+| [docs/ops-runbook.md](docs/ops-runbook.md) | Production ops: restart/update, Caddy/HTTPS, DB repair |
 | [docs/docker.md](docs/docker.md) | Dockerfile, Compose, troubleshooting |
 | [docs/database-schema.md](docs/database-schema.md) | ERD, cascades, soft delete, SQL constraints |
 | [docs/quran-foundation.md](docs/quran-foundation.md) | QF proxy ops |

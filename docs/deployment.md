@@ -2,6 +2,8 @@
 
 Operational guide for building, migrating, running, and rolling back the API. Hardening details (pools, timeouts, throttle behavior) live in [production.md](./production.md). Container specifics: [docker.md](./docker.md). Env reference: [environment.md](./environment.md).
 
+**Day-2 ops (which script, Caddy/HTTPS, P1003 repair, VPS checklist):** [ops-runbook.md](./ops-runbook.md).
+
 Ubuntu one-pager: [README_DEPLOYMENT.md](../README_DEPLOYMENT.md).
 
 ## Recommended: Ubuntu + Compose (one-command)
