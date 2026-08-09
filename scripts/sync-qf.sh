@@ -6,7 +6,7 @@
 #   - mushaf 1 (full crawl — QCF V2 / Madani coords)
 #   - mushaf 4,5,19 (clone coords from 1)
 #   - mushaf 10 (full crawl — FE book/reading mode default; do NOT clone)
-#   - mushaf 1405 (clone from 1) only when QF_MUSHAF_1405_IMAGE_BASE is set
+#   - mushaf 1405 (clone from 1) when QF_MUSHAF_1405_IMAGE_BASE or PUBLIC_API_ORIGIN is set
 #
 # Usage (repo root, stack running):
 #   ./scripts/sync-qf.sh
@@ -29,7 +29,7 @@ if ! ${COMPOSE_BIN} ps --status running -q api 2>/dev/null | grep -q .; then
   exit 1
 fi
 
-# Load optional QF_MUSHAF_1405_IMAGE_BASE from .env without exporting secrets broadly.
+# Load optional Classic Medina 1405 image base (explicit or via PUBLIC_API_ORIGIN).
 MUSHAF_1405_BASE=""
 if [[ -f .env ]]; then
   # shellcheck disable=SC1091
@@ -38,6 +38,12 @@ if [[ -f .env ]]; then
   source .env
   set +a
   MUSHAF_1405_BASE="$(printf '%s' "${QF_MUSHAF_1405_IMAGE_BASE:-}" | tr -d '[:space:]')"
+  if [[ -z "$MUSHAF_1405_BASE" ]]; then
+    origin="$(printf '%s' "${PUBLIC_API_ORIGIN:-}" | tr -d '[:space:]')"
+    if [[ -n "$origin" ]]; then
+      MUSHAF_1405_BASE="${origin%/}/uploads/mushaf/1405"
+    fi
+  fi
 fi
 
 echo "[${LABEL}] Syncing Quran.Foundation catalog..."
@@ -53,11 +59,11 @@ echo "[${LABEL}] Syncing mushaf pages: mushaf=10 (book/reading mode, full crawl)
 ${COMPOSE_BIN} exec -T api npm run qf:sync-pages:prod -- --mushaf=10
 
 if [[ -n "$MUSHAF_1405_BASE" ]]; then
-  echo "[${LABEL}] Cloning Madani layout to mushaf=1405 from 1 (QF_MUSHAF_1405_IMAGE_BASE set)..."
+  echo "[${LABEL}] Cloning Madani layout to mushaf=1405 from 1 (Classic Medina image base set)..."
   ${COMPOSE_BIN} exec -T api npm run qf:sync-pages:prod -- --mushaf=1405 --clone-from=1
   echo "[${LABEL}] Ensure WebPs exist at uploads/mushaf/1405/{1..604}.webp and are reachable via ${MUSHAF_1405_BASE}"
 else
-  echo "[${LABEL}] Skipping mushaf=1405 — set QF_MUSHAF_1405_IMAGE_BASE and upload WebPs to enable Classic Medina."
+  echo "[${LABEL}] Skipping mushaf=1405 — set QF_MUSHAF_1405_IMAGE_BASE (or PUBLIC_API_ORIGIN) and upload WebPs to enable Classic Medina."
 fi
 
 echo "[${LABEL}] Done. Enable translations/tafsirs in admin as needed."

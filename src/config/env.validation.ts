@@ -35,6 +35,12 @@ export const envValidationSchema = Joi.object({
   REDIS_KEY_PREFIX: Joi.string().default('quron-yoli:'),
   LOG_DIR: Joi.string().default('logs'),
   UPLOADS_DIR: Joi.string().default('uploads'),
+  PUBLIC_API_ORIGIN: Joi.alternatives()
+    .try(
+      Joi.string().valid(''),
+      Joi.string().uri({ scheme: ['http', 'https'] }),
+    )
+    .default(''),
 
   JWT_ACCESS_SECRET: Joi.string().min(32).required(),
   JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),

@@ -51,13 +51,29 @@ else
   echo "[update] Skipping git pull (SKIP_GIT_PULL=1)"
 fi
 
+DOMAIN="${DOMAIN:-}"
+if [[ -z "$DOMAIN" ]]; then
+  DOMAIN="$(qy_domain_from_webhook_url || true)"
+fi
+export DOMAIN
+
 qy_prepare_runtime_dirs "update"
+qy_ensure_mushaf_1405_env "update"
 
 echo "[update] Rebuilding and starting stack (volumes preserved)..."
 # Intentionally no -v / down -v: named volumes postgres_data / redis_data stay intact.
 ${COMPOSE_BIN} up -d --build
 
 qy_wait_for_health "update"
+
+SKIP_QF_ENSURE="${SKIP_QF_ENSURE:-0}"
+if [[ "$SKIP_QF_ENSURE" == "1" ]]; then
+  echo "[update] Skipping QF ensure (SKIP_QF_ENSURE=1)"
+else
+  echo "[update] Ensuring Quran catalog + mushaf pages (incl. 1405 when configured)..."
+  FORCE_QF_SYNC="${FORCE_QF_SYNC:-0}" RUN_QF_SYNC="${RUN_QF_SYNC:-0}" \
+    bash "${ROOT_DIR}/scripts/ensure-qf-data.sh"
+fi
 
 echo "[update] Container status:"
 ${COMPOSE_BIN} ps
@@ -73,3 +89,4 @@ ${COMPOSE_BIN} logs --tail=40 api 2>/dev/null | grep -E '\[entrypoint\]|migrate|
 
 echo "[update] Done. Postgres and Redis data were not removed."
 echo "[update] New schema (including new tables) applied via prisma migrate deploy on api start."
+echo "[update] Manual QF sync anytime: ./scripts/sync-qf.sh"

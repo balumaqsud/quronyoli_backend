@@ -169,9 +169,10 @@ Compose builds `DATABASE_URL` for the `api` service as `postgresql://…@postgre
 | `QF_RATE_LIMIT_WINDOW_SECONDS` | `60` | |
 | `QF_HTTP_MAX_SOCKETS` | `50` | |
 | `QF_AUDIO_CDN_BASE` | `https://audio.qurancdn.com` | Absolute base for relative ayah audio paths |
+| `PUBLIC_API_ORIGIN` | _(empty)_ | Public HTTPS origin (no trailing slash). Fallback for Classic Medina 1405 image URLs; auto-filled by deploy/update when 604 WebPs exist |
 | `QF_TAJWEED_PAGE_IMAGE_BASE` | `https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp` | Full-page Dar al-Marefa (mushaf 10) WebP CDN |
 | `QF_TAJWEED_PAGE_IMAGE_EXT` | `webp` | Extension appended as `/{page}.{ext}` |
-| `QF_MUSHAF_1405_IMAGE_BASE` | _(empty)_ | Classic Medina 1405 page images; e.g. `https://<host>/uploads/mushaf/1405`. Empty → `imageUrl` null for mushaf 1405 |
+| `QF_MUSHAF_1405_IMAGE_BASE` | _(empty)_ / derived from `PUBLIC_API_ORIGIN` | Classic Medina 1405 page images; e.g. `https://<host>/uploads/mushaf/1405`. Empty and no origin → edition hidden from `GET /mushafs` |
 | `QF_MUSHAF_1405_IMAGE_EXT` | `webp` | Extension for 1405 page files |
 | `QF_CACHE_TTL_CHAPTERS_SECONDS` | `86400` | |
 | `QF_CACHE_TTL_VERSES_SECONDS` | `3600` | |

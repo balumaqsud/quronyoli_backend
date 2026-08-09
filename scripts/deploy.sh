@@ -60,6 +60,7 @@ export DOMAIN
 export PORT
 
 qy_prepare_runtime_dirs "$LABEL"
+qy_ensure_mushaf_1405_env "$LABEL"
 
 echo "[${LABEL}] Building and starting stack (volumes preserved)..."
 ${COMPOSE_BIN} up -d --build

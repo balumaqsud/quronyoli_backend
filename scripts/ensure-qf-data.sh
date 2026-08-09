@@ -2,7 +2,7 @@
 # Ensure required mushaf page rows exist; sync only when missing.
 #
 # Skips when mushaf 1 and mushaf 10 each have 604 active rows (unless forced).
-# When QF_MUSHAF_1405_IMAGE_BASE is set, also requires 604 rows for mushaf 1405.
+# When QF_MUSHAF_1405_IMAGE_BASE or PUBLIC_API_ORIGIN is set, also requires 604 rows for mushaf 1405.
 #
 # Usage:
 #   ./scripts/ensure-qf-data.sh
@@ -36,11 +36,17 @@ if [[ -f .env ]]; then
   source .env
   set +a
   MUSHAF_1405_BASE="$(printf '%s' "${QF_MUSHAF_1405_IMAGE_BASE:-}" | tr -d '[:space:]')"
+  if [[ -z "$MUSHAF_1405_BASE" ]]; then
+    origin="$(printf '%s' "${PUBLIC_API_ORIGIN:-}" | tr -d '[:space:]')"
+    if [[ -n "$origin" ]]; then
+      MUSHAF_1405_BASE="${origin%/}/uploads/mushaf/1405"
+    fi
+  fi
 fi
 
 if [[ -n "$MUSHAF_1405_BASE" ]]; then
   REQUIRED_MUSHAFS="${REQUIRED_MUSHAFS} 1405"
-  echo "[${LABEL}] QF_MUSHAF_1405_IMAGE_BASE set — will also ensure mushaf=1405"
+  echo "[${LABEL}] Classic Medina image base set — will also ensure mushaf=1405"
 fi
 
 if ! ${COMPOSE_BIN} ps --status running -q api 2>/dev/null | grep -q .; then

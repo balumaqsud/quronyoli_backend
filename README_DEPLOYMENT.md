@@ -32,7 +32,9 @@ What `deploy.sh` does:
 3. `docker compose -f docker-compose.yml up -d --build`  
 4. Waits for `/api/v1/health/ready`  
 5. Installs/configures Caddy for `DOMAIN` (from `DOMAIN=...` or host of `TELEGRAM_WEBHOOK_URL`)  
-6. Runs `./scripts/ensure-qf-data.sh` — syncs catalog + mushaf pages if mushaf **1** or **10** lack 604 active rows (book/reading mode needs **10**)
+6. Runs `./scripts/ensure-qf-data.sh` — syncs catalog + mushaf pages if mushaf **1** or **10** lack 604 active rows (book/reading mode needs **10**); also mushaf **1405** when Classic Medina is configured
+
+Before `compose up`, deploy also runs `qy_ensure_mushaf_1405_env`: if `uploads/mushaf/1405/` has **604** WebPs and a public host is known (`PUBLIC_API_ORIGIN`, `DOMAIN`, or `TELEGRAM_WEBHOOK_URL`), it writes `PUBLIC_API_ORIGIN` + `QF_MUSHAF_1405_IMAGE_BASE` into `.env` automatically.
 
 | Env | Effect |
 | --- | --- |
@@ -59,9 +61,11 @@ What it does:
 
 1. Pre-update backup (skip with `SKIP_BACKUP=1`)
 2. `git pull --ff-only`
-3. `docker compose -f docker-compose.yml up -d --build` — **volumes are never removed**
-4. Waits for `/api/v1/health/ready`
-5. Entrypoint runs `prisma migrate deploy` (additive; creates new tables without wiping rows)
+3. Auto-configures Classic Medina 1405 env when 604 WebPs are present
+4. `docker compose -f docker-compose.yml up -d --build` — **volumes are never removed**
+5. Waits for `/api/v1/health/ready`
+6. Entrypoint runs `prisma migrate deploy` (additive; creates new tables without wiping rows)
+7. Runs `./scripts/ensure-qf-data.sh` to heal missing mushaf page rows (incl. 1405 when configured)
 
 ### Hard rules (data safety)
 
@@ -111,15 +115,15 @@ docker compose -f docker-compose.yml exec api npm run qf:sync-pages:prod -- --mu
 
 Then in the **admin panel**, enable the translations/tafsirs that should appear in the Mini App. New translations/tafsirs sync as inactive; **qaris sync as active**. Sync never re-enables ones you disabled. List endpoints (`/quran/translations`, `/quran/audio/recitations`, `/quran/audio/chapter-reciters`) only return `isActive=true` rows.
 
-### Classic Medina 1405 (optional image edition)
+### Classic Medina 1405 (image edition)
 
-`GET /quran/mushafs` **hides** mushaf **1405** until all of the following are done:
+Upload `1.webp`…`604.webp` to `uploads/mushaf/1405/` once. After that, **`./scripts/deploy.sh`** or **`./scripts/update.sh`** keeps it enabled:
 
-1. Upload `1.webp`…`604.webp` to `uploads/mushaf/1405/` on the server  
-2. Set `QF_MUSHAF_1405_IMAGE_BASE=https://<public-api-host>/uploads/mushaf/1405` in `.env` and restart the API  
-3. Run `./scripts/sync-qf.sh` (clones mushaf 1405 from 1 when the env base is set)
+1. Auto-sets `PUBLIC_API_ORIGIN` and `QF_MUSHAF_1405_IMAGE_BASE=https://<public-host>/uploads/mushaf/1405` when 604 WebPs are present  
+2. Ensures 604 page rows for mushaf **1405** (clone from mushaf 1) via `ensure-qf-data.sh`  
+3. `GET /quran/mushafs` then includes id **1405**
 
-Without WebP assets, leave `QF_MUSHAF_1405_IMAGE_BASE` unset so the Mini App picker only shows working editions (Dar al-Marefa / mushaf 10).
+Without WebP assets, leave the base unset so the Mini App picker only shows working editions (Dar al-Marefa / mushaf 10).
 
 ## Backups (cron)
 

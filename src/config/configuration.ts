@@ -10,6 +10,8 @@ export interface AppConfig {
   logLevel: string;
   logDir: string;
   uploadsDir: string;
+  /** Public HTTPS origin (no trailing slash), e.g. https://api.example.com */
+  publicApiOrigin: string;
   swaggerEnabled: boolean;
   swaggerPath: string;
   trustProxy: boolean;
@@ -268,11 +270,27 @@ const resolveQuranFoundationUrls = (
   };
 };
 
+/** Classic Medina 1405 image CDN: explicit base, else PUBLIC_API_ORIGIN + /uploads/mushaf/1405. */
+const resolveMadina1405PageImageBase = (): string => {
+  const explicit = (process.env.QF_MUSHAF_1405_IMAGE_BASE ?? '').trim();
+  if (explicit) {
+    return explicit.replace(/\/+$/, '');
+  }
+  const origin = (process.env.PUBLIC_API_ORIGIN ?? '').trim().replace(/\/+$/, '');
+  if (origin) {
+    return `${origin}/uploads/mushaf/1405`;
+  }
+  return '';
+};
+
 export default (): AppConfiguration => {
   const nodeEnv = (process.env.NODE_ENV as Environment) || 'development';
   const refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN ?? '7d';
   const quranEnvironment = resolveQuranFoundationEnvironment();
   const quranUrls = resolveQuranFoundationUrls(quranEnvironment);
+  const publicApiOrigin = (process.env.PUBLIC_API_ORIGIN ?? '')
+    .trim()
+    .replace(/\/+$/, '');
 
   return {
     app: {
@@ -285,6 +303,7 @@ export default (): AppConfiguration => {
       logLevel: process.env.LOG_LEVEL ?? 'info',
       logDir: process.env.LOG_DIR ?? 'logs',
       uploadsDir: process.env.UPLOADS_DIR ?? 'uploads',
+      publicApiOrigin,
       swaggerEnabled:
         process.env.SWAGGER_ENABLED !== undefined
           ? process.env.SWAGGER_ENABLED === 'true'
@@ -476,9 +495,7 @@ export default (): AppConfiguration => {
         process.env.QF_TAJWEED_PAGE_IMAGE_BASE ??
         'https://www.noureddin.dev/quran-pages/2/pages/776x1053-webp',
       tajweedPageImageExt: process.env.QF_TAJWEED_PAGE_IMAGE_EXT ?? 'webp',
-      madina1405PageImageBase: (
-        process.env.QF_MUSHAF_1405_IMAGE_BASE ?? ''
-      ).trim(),
+      madina1405PageImageBase: resolveMadina1405PageImageBase(),
       madina1405PageImageExt:
         process.env.QF_MUSHAF_1405_IMAGE_EXT ?? 'webp',
       cacheTtl: {

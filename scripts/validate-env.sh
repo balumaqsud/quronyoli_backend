@@ -142,6 +142,19 @@ if [[ "$TRUST_LOWER" != "true" && "$TRUST" != "1" ]]; then
   warn "TRUST_PROXY is not true — set TRUST_PROXY=true behind Caddy/nginx"
 fi
 
+webp_dir="uploads/mushaf/1405"
+webp_count=0
+if [[ -d "$webp_dir" ]]; then
+  webp_count="$(find "$webp_dir" -maxdepth 1 -type f -name '*.webp' 2>/dev/null | wc -l | tr -d '[:space:]')"
+fi
+mushaf_1405_base="$(env_get QF_MUSHAF_1405_IMAGE_BASE)"
+public_origin="$(env_get PUBLIC_API_ORIGIN)"
+if [[ "$webp_count" =~ ^[0-9]+$ ]] && [[ "$webp_count" -ge 604 ]]; then
+  if [[ -z "$mushaf_1405_base" && -z "$public_origin" ]]; then
+    warn "uploads/mushaf/1405 has ${webp_count} WebPs but QF_MUSHAF_1405_IMAGE_BASE and PUBLIC_API_ORIGIN are empty — deploy/update will auto-fill when DOMAIN or TELEGRAM_WEBHOOK_URL is known"
+  fi
+fi
+
 if [[ "$ERRORS" -gt 0 ]]; then
   echo "[${LABEL}] Failed with ${ERRORS} error(s), ${WARNINGS} warning(s)." >&2
   exit 1

@@ -65,14 +65,13 @@ CamelCase local DTO:
 
 Book / image mode:
 - Standard book: `GET /quran/pages/:pageNumber?mushaf=10` (full sync — do **not** clone from mushaf 1)
-- Classic 1405: enable only after ops steps below, then `GET /quran/pages/:pageNumber?mushaf=1405`
+- Classic 1405: `GET /quran/pages/:pageNumber?mushaf=1405` once assets + pages are in place
 
-**Enable Classic Medina 1405 (ops):**
+**Enable Classic Medina 1405:**
 
 1. Upload `1.webp`…`604.webp` to `uploads/mushaf/1405/`
-2. Set `QF_MUSHAF_1405_IMAGE_BASE=https://<public-api-host>/uploads/mushaf/1405` (and restart API)
-3. Run `./scripts/sync-qf.sh` (clones mushaf 1405 from 1 when the env base is set)
-4. `GET /quran/mushafs` then includes id **1405** (`key: madina-1405`)
+2. Run `./scripts/deploy.sh` or `./scripts/update.sh` (auto-sets `PUBLIC_API_ORIGIN` / `QF_MUSHAF_1405_IMAGE_BASE` and syncs page rows)
+3. `GET /quran/mushafs` then includes id **1405** (`key: madina-1405`)
 
 `GET /quran/mushafs` includes `isStandard` — use the `true` entry (id **10**) as the FE book-mode default. API omit-`mushaf=` still defaults to **1** (QCF V2 text).
 
