@@ -318,9 +318,9 @@ export class QuranController {
   @ApiOperation({
     summary: 'List known mushaf IDs for verse/page rendering',
     description:
-      'Static metadata — Quran.Foundation has no /resources/mushafs catalog. Pass mushaf= on verse queries.',
+      'Static metadata — Quran.Foundation has no /resources/mushafs catalog. Pass mushaf= on verse queries. Classic Medina 1405 is included only when QF_MUSHAF_1405_IMAGE_BASE is set and 604 pages are synced.',
   })
-  getMushafs(): { mushafs: unknown } {
+  getMushafs(): Promise<{ mushafs: unknown }> {
     return this.quranService.getMushafs();
   }
 

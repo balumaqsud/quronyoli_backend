@@ -25,6 +25,7 @@ describe('QuranService', () => {
   let pagesRepository: {
     findActiveByMushaf: jest.Mock;
     findActivePage: jest.Mock;
+    countActive: jest.Mock;
   };
   let catalogRepository: {
     listActiveTranslations: jest.Mock;
@@ -53,6 +54,7 @@ describe('QuranService', () => {
     pagesRepository = {
       findActiveByMushaf: jest.fn(),
       findActivePage: jest.fn(),
+      countActive: jest.fn().mockResolvedValue(0),
     };
     catalogRepository = {
       listActiveTranslations: jest.fn().mockResolvedValue([]),
@@ -146,17 +148,45 @@ describe('QuranService', () => {
     );
   });
 
-  it('returns static mushaf metadata', () => {
-    const result = service.getMushafs();
+  it('omits mushaf 1405 when image base is not configured', async () => {
+    const result = await service.getMushafs();
     expect(result.mushafs.some((m) => m.id === 19)).toBe(true);
     expect(result.mushafs.some((m) => m.id === 1)).toBe(true);
     expect(result.mushafs.some((m) => m.id === 10)).toBe(true);
-    expect(result.mushafs.some((m) => m.id === 1405)).toBe(true);
+    expect(result.mushafs.some((m) => m.id === 1405)).toBe(false);
     const standard = result.mushafs.filter((m) => m.isStandard);
     expect(standard).toHaveLength(1);
     expect(standard[0]?.id).toBe(10);
+    expect(pagesRepository.countActive).not.toHaveBeenCalled();
   });
 
+  it('includes mushaf 1405 when image base is set and 604 pages are synced', async () => {
+    (
+      service as unknown as {
+        config: { madina1405PageImageBase: string };
+      }
+    ).config.madina1405PageImageBase =
+      'https://api.example/uploads/mushaf/1405';
+    pagesRepository.countActive.mockResolvedValue(604);
+
+    const result = await service.getMushafs();
+    expect(result.mushafs.some((m) => m.id === 1405)).toBe(true);
+    expect(pagesRepository.countActive).toHaveBeenCalledWith(1405);
+  });
+
+  it('omits mushaf 1405 when image base is set but pages are not synced', async () => {
+    (
+      service as unknown as {
+        config: { madina1405PageImageBase: string };
+      }
+    ).config.madina1405PageImageBase =
+      'https://api.example/uploads/mushaf/1405';
+    pagesRepository.countActive.mockResolvedValue(0);
+
+    const result = await service.getMushafs();
+    expect(result.mushafs.some((m) => m.id === 1405)).toBe(false);
+    expect(pagesRepository.countActive).toHaveBeenCalledWith(1405);
+  });
   it('heals stale verse-strip imageUrl on GET page cache hits', async () => {
     cache.getOrSet.mockResolvedValue({
       pageNumber: 1,

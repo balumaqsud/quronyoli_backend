@@ -60,16 +60,23 @@ CamelCase local DTO:
 - `verses`: **string keys only** (e.g. `"112:1"`) — not Arabic text
 - `imageUrl` / `imageWidth`: full-page art for **image mushafs** only:
   - mushaf **10** (Dar al-Marefa, `isStandard: true`) — external WebP CDN (e.g. `…/776x1053-webp/1.webp`)
-  - mushaf **1405** (classic Medina 1405) — self-hosted `/uploads/mushaf/1405/{page}.webp` when `QF_MUSHAF_1405_IMAGE_BASE` is set; otherwise `null`
+  - mushaf **1405** (classic Medina 1405) — self-hosted `/uploads/mushaf/1405/{page}.webp` when `QF_MUSHAF_1405_IMAGE_BASE` is set **and** 604 pages are synced; otherwise the edition is **omitted** from `GET /mushafs` (do not show it in the picker)
   - Glyph/unicode mushafs (1, 2, …) → `null` — never treat QF verse ayah-strip URLs as page scans
 
 Book / image mode:
 - Standard book: `GET /quran/pages/:pageNumber?mushaf=10` (full sync — do **not** clone from mushaf 1)
-- Classic 1405: `GET /quran/pages/:pageNumber?mushaf=1405` after `npm run qf:sync-pages -- --mushaf=1405 --clone-from=1`
+- Classic 1405: enable only after ops steps below, then `GET /quran/pages/:pageNumber?mushaf=1405`
+
+**Enable Classic Medina 1405 (ops):**
+
+1. Upload `1.webp`…`604.webp` to `uploads/mushaf/1405/`
+2. Set `QF_MUSHAF_1405_IMAGE_BASE=https://<public-api-host>/uploads/mushaf/1405` (and restart API)
+3. Run `./scripts/sync-qf.sh` (clones mushaf 1405 from 1 when the env base is set)
+4. `GET /quran/mushafs` then includes id **1405** (`key: madina-1405`)
 
 `GET /quran/mushafs` includes `isStandard` — use the `true` entry (id **10**) as the FE book-mode default. API omit-`mushaf=` still defaults to **1** (QCF V2 text).
 
-404 = pages not synced → backend needs `npm run qf:sync-pages`.
+404 = pages not synced → backend needs `./scripts/sync-qf.sh` or `npm run qf:sync-pages`.
 
 ### 3. Page body (Arabic + optional tajweed)
 

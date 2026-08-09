@@ -89,17 +89,22 @@ npm run qf:sync-pages -- --mushaf=1,4,5,19 --clone-from=1
 # (page breaks differ; page image URLs are attached during sync)
 npm run qf:sync-pages -- --mushaf=10
 
-# Classic Medina 1405 (image edition): clone Madani layout from mushaf 1, then host WebPs
-# under uploads/mushaf/1405/ and set QF_MUSHAF_1405_IMAGE_BASE=https://<host>/uploads/mushaf/1405
+# Classic Medina 1405 (image edition):
+# 1) Upload 1.webp…604.webp to uploads/mushaf/1405/
+# 2) Set QF_MUSHAF_1405_IMAGE_BASE=https://<host>/uploads/mushaf/1405 and restart API
+# 3) Clone Madani layout from mushaf 1 (or use ./scripts/sync-qf.sh which does this when base is set)
 npm run qf:sync-pages -- --mushaf=1405 --clone-from=1
 
-# production build:
-npm run qf:sync-pages:prod
+# production build / Compose:
+./scripts/sync-qf.sh
+# or:
 npm run qf:sync-pages:prod -- --mushaf=4,5,19 --clone-from=1
 npm run qf:sync-pages:prod -- --mushaf=1405 --clone-from=1
 ```
 
 Page serving is **per mushaf id**. Frontend Settings editions (QCF V2, QPC Hafs, Uthmani, QCF V4 Tajweed) each need synced rows or `GET /pages?mushaf=N` returns **404**. Editions that share the Madani 604 layout can use `--clone-from=1` instead of a full QF crawl. Image mushaf **10** cannot be cloned (own layout); image mushaf **1405** may clone from 1. Static files are served at `GET /uploads/...` (e.g. `/uploads/mushaf/1405/1.webp`).
+
+`GET /quran/mushafs` **omits** mushaf **1405** until `QF_MUSHAF_1405_IMAGE_BASE` is set **and** 604 active pages exist for that id — so the Mini App picker does not offer a broken edition.
 
 After sync:
 

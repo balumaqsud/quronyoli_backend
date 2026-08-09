@@ -2,6 +2,7 @@
 # Ensure required mushaf page rows exist; sync only when missing.
 #
 # Skips when mushaf 1 and mushaf 10 each have 604 active rows (unless forced).
+# When QF_MUSHAF_1405_IMAGE_BASE is set, also requires 604 rows for mushaf 1405.
 #
 # Usage:
 #   ./scripts/ensure-qf-data.sh
@@ -26,6 +27,21 @@ fi
 
 REQUIRED_PAGES="${REQUIRED_PAGES:-604}"
 REQUIRED_MUSHAFS="${REQUIRED_MUSHAFS:-1 10}"
+
+MUSHAF_1405_BASE=""
+if [[ -f .env ]]; then
+  # shellcheck disable=SC1091
+  set -a
+  # shellcheck source=/dev/null
+  source .env
+  set +a
+  MUSHAF_1405_BASE="$(printf '%s' "${QF_MUSHAF_1405_IMAGE_BASE:-}" | tr -d '[:space:]')"
+fi
+
+if [[ -n "$MUSHAF_1405_BASE" ]]; then
+  REQUIRED_MUSHAFS="${REQUIRED_MUSHAFS} 1405"
+  echo "[${LABEL}] QF_MUSHAF_1405_IMAGE_BASE set — will also ensure mushaf=1405"
+fi
 
 if ! ${COMPOSE_BIN} ps --status running -q api 2>/dev/null | grep -q .; then
   echo "[${LABEL}] api container is not running. Start the stack first." >&2

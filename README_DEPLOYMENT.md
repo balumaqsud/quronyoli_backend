@@ -111,6 +111,16 @@ docker compose -f docker-compose.yml exec api npm run qf:sync-pages:prod -- --mu
 
 Then in the **admin panel**, enable the translations/tafsirs that should appear in the Mini App. New translations/tafsirs sync as inactive; **qaris sync as active**. Sync never re-enables ones you disabled. List endpoints (`/quran/translations`, `/quran/audio/recitations`, `/quran/audio/chapter-reciters`) only return `isActive=true` rows.
 
+### Classic Medina 1405 (optional image edition)
+
+`GET /quran/mushafs` **hides** mushaf **1405** until all of the following are done:
+
+1. Upload `1.webp`…`604.webp` to `uploads/mushaf/1405/` on the server  
+2. Set `QF_MUSHAF_1405_IMAGE_BASE=https://<public-api-host>/uploads/mushaf/1405` in `.env` and restart the API  
+3. Run `./scripts/sync-qf.sh` (clones mushaf 1405 from 1 when the env base is set)
+
+Without WebP assets, leave `QF_MUSHAF_1405_IMAGE_BASE` unset so the Mini App picker only shows working editions (Dar al-Marefa / mushaf 10).
+
 ## Backups (cron)
 
 ```bash

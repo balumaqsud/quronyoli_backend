@@ -529,7 +529,21 @@ export class QuranService {
     );
   }
 
-  getMushafs(): { mushafs: typeof QF_MUSHAF_RESOURCES } {
+  async getMushafs(): Promise<{ mushafs: typeof QF_MUSHAF_RESOURCES }> {
+    const base = this.config.madina1405PageImageBase?.trim() ?? '';
+    if (!base) {
+      return {
+        mushafs: QF_MUSHAF_RESOURCES.filter((m) => m.id !== 1405),
+      };
+    }
+
+    const pageCount = await this.pagesRepository.countActive(1405);
+    if (pageCount < MADANI_MUSHAF_PAGE_COUNT) {
+      return {
+        mushafs: QF_MUSHAF_RESOURCES.filter((m) => m.id !== 1405),
+      };
+    }
+
     return { mushafs: QF_MUSHAF_RESOURCES };
   }
 
