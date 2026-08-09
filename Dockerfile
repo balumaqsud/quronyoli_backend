@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.7
+# syntax=docker/dockerfile:1.7 (comment with message)
 
 ARG NODE_VERSION=22
 
