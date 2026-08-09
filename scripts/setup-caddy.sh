@@ -17,9 +17,21 @@ qy_init_root
 LABEL="setup-caddy"
 PORT="${PORT:-3000}"
 
+# Prefer PORT from .env over a stale shell export (e.g. leftover PORT=3001).
 if [[ -f .env ]]; then
   qy_load_env
-  PORT="${PORT:-3000}"
+  env_port="$(
+    grep -E '^[[:space:]]*PORT=' .env \
+      | tail -1 \
+      | cut -d= -f2- \
+      | tr -d '[:space:]"'"'"'' \
+      || true
+  )"
+  if [[ -n "${env_port}" ]]; then
+    PORT="${env_port}"
+  else
+    PORT="${PORT:-3000}"
+  fi
 fi
 
 DOMAIN="${DOMAIN:-}"
@@ -63,14 +75,20 @@ else
 fi
 
 CADDYFILE="/etc/caddy/Caddyfile"
-echo "[${LABEL}] Writing ${CADDYFILE} (${DOMAIN} -> 127.0.0.1:${PORT})"
+UPSTREAM="127.0.0.1:${PORT}"
+echo "[${LABEL}] Writing ${CADDYFILE} (${DOMAIN} -> ${UPSTREAM})"
 
 cat >"$CADDYFILE" <<EOF
 ${DOMAIN} {
 	encode gzip
-	reverse_proxy 127.0.0.1:${PORT}
+	reverse_proxy ${UPSTREAM}
 }
 EOF
+
+if ! grep -qF "reverse_proxy ${UPSTREAM}" "$CADDYFILE"; then
+  echo "[${LABEL}] ERROR: ${CADDYFILE} missing upstream ${UPSTREAM}" >&2
+  exit 1
+fi
 
 caddy validate --config "$CADDYFILE"
 systemctl enable --now caddy
