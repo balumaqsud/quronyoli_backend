@@ -6,6 +6,7 @@
 #   - mushaf 1 (full crawl — QCF V2 / Madani coords)
 #   - mushaf 4,5,19 (clone coords from 1)
 #   - mushaf 10 (full crawl — FE book/reading mode default; do NOT clone)
+#   - mushaf 1405 (clone from 1) when QF_MUSHAF_1405_IMAGE_BASE is set
 #
 # Usage (repo root, stack running):
 #   ./scripts/sync-qf.sh
@@ -19,6 +20,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 qy_init_root
 qy_refuse_destructive_args "sync-qf" "$@"
 qy_require_compose_file "sync-qf"
+qy_load_env
 
 LABEL="sync-qf"
 
@@ -38,6 +40,13 @@ ${COMPOSE_BIN} exec -T api npm run qf:sync-pages:prod -- --mushaf=4,5,19 --clone
 
 echo "[${LABEL}] Syncing mushaf pages: mushaf=10 (book/reading mode, full crawl)..."
 ${COMPOSE_BIN} exec -T api npm run qf:sync-pages:prod -- --mushaf=10
+
+if [[ -n "${QF_MUSHAF_1405_IMAGE_BASE:-}" ]]; then
+  echo "[${LABEL}] Cloning Madani layout to mushaf=1405 from 1 (QF_MUSHAF_1405_IMAGE_BASE set)..."
+  ${COMPOSE_BIN} exec -T api npm run qf:sync-pages:prod -- --mushaf=1405 --clone-from=1
+else
+  echo "[${LABEL}] Skipping mushaf=1405 (QF_MUSHAF_1405_IMAGE_BASE empty)."
+fi
 
 echo "[${LABEL}] Done. Enable translations/tafsirs in admin as needed."
 echo "[${LABEL}] Reading mode needs mushaf=10 (604 active pages)."
