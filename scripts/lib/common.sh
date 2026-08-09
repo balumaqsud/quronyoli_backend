@@ -54,6 +54,21 @@ qy_load_env() {
   HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${PORT}/api/v1/health/ready}"
 }
 
+# Bind mounts ./uploads and ./logs into the api container (USER nestjs, uid 100).
+# Host dirs created as root are not writable by nestjs — fix ownership before start.
+qy_prepare_runtime_dirs() {
+  local label="${1:-script}"
+  local nestjs_uid="${NESTJS_HOST_UID:-100}"
+  local nestjs_gid="${NESTJS_HOST_GID:-101}"
+  mkdir -p uploads/mushaf/1405 logs
+  if [[ "${EUID}" -eq 0 ]]; then
+    chown -R "${nestjs_uid}:${nestjs_gid}" uploads logs
+    echo "[${label}] Runtime dirs uploads/ logs/ owned by ${nestjs_uid}:${nestjs_gid}"
+  else
+    echo "[${label}] WARN: not root — ensure uploads/ and logs/ are writable by uid ${nestjs_uid}" >&2
+  fi
+}
+
 qy_wait_for_health() {
   local label="${1:-script}"
   echo "[${label}] Waiting for API readiness at ${HEALTH_URL}..."

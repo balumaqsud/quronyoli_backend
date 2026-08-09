@@ -59,7 +59,7 @@ fi
 export DOMAIN
 export PORT
 
-mkdir -p uploads logs
+qy_prepare_runtime_dirs "$LABEL"
 
 echo "[${LABEL}] Building and starting stack (volumes preserved)..."
 ${COMPOSE_BIN} up -d --build

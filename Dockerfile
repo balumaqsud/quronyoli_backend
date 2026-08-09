@@ -14,6 +14,8 @@ RUN npm ci
 
 FROM deps AS build
 COPY . .
+# prisma.config.ts requires DATABASE_URL; .env is dockerignored. Runtime URL comes from Compose.
+ENV DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:5432/quron_yoli?schema=public"
 RUN npx prisma generate
 RUN npm run build
 RUN npm prune --omit=dev
@@ -45,7 +47,7 @@ USER nestjs
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/api/v1/health/live || exit 1
+  CMD wget -qO- "http://127.0.0.1:$${PORT:-3000}/api/v1/health/live" || exit 1
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["node", "dist/main.js"]

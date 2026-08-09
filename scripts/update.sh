@@ -51,6 +51,8 @@ else
   echo "[update] Skipping git pull (SKIP_GIT_PULL=1)"
 fi
 
+qy_prepare_runtime_dirs "update"
+
 echo "[update] Rebuilding and starting stack (volumes preserved)..."
 # Intentionally no -v / down -v: named volumes postgres_data / redis_data stay intact.
 ${COMPOSE_BIN} up -d --build

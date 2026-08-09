@@ -38,13 +38,30 @@ fi
 echo "[${LABEL}] Installing Docker CE + Compose plugin..."
 
 export DEBIAN_FRONTEND=noninteractive
+
+# Drop broken/placeholder Docker apt entries before any apt-get update
+# (e.g. https://docker.com instead of download.docker.com, or HTML saved as GPG).
+rm -f /etc/apt/sources.list.d/docker.list /etc/apt/keyrings/docker.asc
+# Also strip any leftover docker.com lines from other list files if present.
+if [[ -d /etc/apt/sources.list.d ]]; then
+  for f in /etc/apt/sources.list.d/*.list; do
+    [[ -f "$f" ]] || continue
+    if grep -qE 'https?://(www\.)?docker\.com' "$f" 2>/dev/null; then
+      echo "[${LABEL}] Removing broken Docker apt entries from ${f}"
+      sed -i -E '/https?:\/\/(www\.)?docker\.com/d' "$f"
+    fi
+  done
+fi
+
 apt-get update -y
 apt-get install -y ca-certificates curl
 
 install -m 0755 -d /etc/apt/keyrings
-if [[ ! -f /etc/apt/keyrings/docker.asc ]]; then
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-  chmod a+r /etc/apt/keyrings/docker.asc
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+chmod a+r /etc/apt/keyrings/docker.asc
+if ! grep -q 'BEGIN PGP PUBLIC KEY BLOCK' /etc/apt/keyrings/docker.asc; then
+  echo "[${LABEL}] Docker GPG key download looks invalid (expected PGP block)." >&2
+  exit 1
 fi
 
 ARCH="$(dpkg --print-architecture)"
