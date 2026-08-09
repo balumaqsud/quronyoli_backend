@@ -66,6 +66,20 @@ describe('TelegramBotService', () => {
     track: jest.fn().mockResolvedValue(undefined),
   };
 
+  const settingsService = {
+    disableAyatReminders: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const ayahCardService = {
+    buildCard: jest.fn().mockResolvedValue({
+      verseKey: '1:1',
+      chapterNumber: 1,
+      verseNumber: 1,
+      text: '<b>Kunlik eslatma</b>\n\nArabic',
+      keyboard: { inline_keyboard: [] },
+    }),
+  };
+
   const logger = { warn: jest.fn(), info: jest.fn(), debug: jest.fn() };
 
   const service = new TelegramBotService(
@@ -74,6 +88,8 @@ describe('TelegramBotService', () => {
     configService,
     usersService as never,
     analyticsTracking as never,
+    settingsService as never,
+    ayahCardService as never,
     logger as never,
   );
 
@@ -88,6 +104,15 @@ describe('TelegramBotService', () => {
     jest.clearAllMocks();
     sendMessage.mockResolvedValue({ message_id: 1 });
     usersService.upsertFromTelegram.mockResolvedValue(user);
+  });
+
+  it('disables ayat reminders on /stop', async () => {
+    await service.handleStopCommand({ ...baseMessage, text: '/stop' });
+
+    expect(settingsService.disableAyatReminders).toHaveBeenCalledWith('user-1');
+    expect(sendMessage.mock.calls[0]?.[0]?.text).toContain(
+      "Oyat eslatmalari o'chirildi",
+    );
   });
 
   it('sends welcome with web_app and Main Mini App fallback for /start', async () => {

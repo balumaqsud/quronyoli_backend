@@ -4,6 +4,7 @@ import { TelegramBotCommand } from './interfaces/telegram-api.interface';
 export const TELEGRAM_BOT_COMMANDS: TelegramBotCommand[] = [
   { command: 'start', description: 'Botni boshlash' },
   { command: 'ilova', description: 'Ilovani ochish' },
+  { command: 'stop', description: "Oyat eslatmalarini o'chirish" },
 ];
 
 export const SURAH_PAGE_SIZE = 15;

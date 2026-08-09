@@ -2,6 +2,7 @@ import {
   NotificationDeliveryStatus,
   DailyGoalMetric,
 } from '../../generated/prisma';
+import { SettingsService } from '../settings/settings.service';
 import { TelegramBlockedError } from '../telegram/errors/telegram-error.mapper';
 import { TelegramBotService } from '../telegram/telegram-bot.service';
 import { NotificationService } from './notification.service';
@@ -38,6 +39,9 @@ describe('NotificationService', () => {
     >
   >;
   let botService: jest.Mocked<Pick<TelegramBotService, 'sendDailyReminder'>>;
+  let settingsService: jest.Mocked<
+    Pick<SettingsService, 'markLastAyatReminderAt' | 'disableAyatReminders'>
+  >;
   let service: NotificationService;
 
   beforeEach(() => {
@@ -52,9 +56,14 @@ describe('NotificationService', () => {
     botService = {
       sendDailyReminder: jest.fn(),
     };
+    settingsService = {
+      markLastAyatReminderAt: jest.fn().mockResolvedValue(undefined),
+      disableAyatReminders: jest.fn().mockResolvedValue(undefined),
+    };
     service = new NotificationService(
       repository as unknown as NotificationsRepository,
       botService as unknown as TelegramBotService,
+      settingsService as unknown as SettingsService,
     );
   });
 
@@ -96,11 +105,17 @@ describe('NotificationService', () => {
         userId: 'user-1',
         dedupeKey: '2026-07-30',
         title: 'Kunlik eslatma',
+        payload: expect.objectContaining({
+          verseKey: expect.any(String) as string,
+          chapterId: expect.any(Number) as number,
+          verseNumber: expect.any(Number) as number,
+        }) as Record<string, unknown>,
       }),
     );
     expect(botService.sendDailyReminder).toHaveBeenCalledWith(
       expect.objectContaining({
         chatId: '42',
+        userId: 'user-1',
         goalLines: ['VERSES: 3/10'],
       }),
     );
@@ -108,6 +123,9 @@ describe('NotificationService', () => {
       id: 'delivery-1',
       telegramMessageId: '99',
     });
+    expect(settingsService.markLastAyatReminderAt).toHaveBeenCalledWith(
+      'user-1',
+    );
   });
 
   it('upserts inbox even when write-to-pm is disabled', async () => {
@@ -139,9 +157,12 @@ describe('NotificationService', () => {
 
     expect(repository.upsertUserNotification).toHaveBeenCalled();
     expect(botService.sendDailyReminder).not.toHaveBeenCalled();
+    expect(settingsService.markLastAyatReminderAt).toHaveBeenCalledWith(
+      'user-1',
+    );
   });
 
-  it('skips blocked Telegram chats without retrying', async () => {
+  it('disables reminders when Telegram chat is blocked', async () => {
     repository.findUserForDelivery.mockResolvedValue({
       id: 'user-1',
       telegramId: '42',
@@ -171,6 +192,8 @@ describe('NotificationService', () => {
       }),
     ).resolves.toEqual({ status: 'skipped', reason: 'telegram_blocked' });
     expect(repository.upsertUserNotification).toHaveBeenCalled();
+    expect(settingsService.disableAyatReminders).toHaveBeenCalledWith('user-1');
+    expect(settingsService.markLastAyatReminderAt).not.toHaveBeenCalled();
   });
 
   it('is idempotent when delivery already exists', async () => {

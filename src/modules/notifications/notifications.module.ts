@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { NOTIFICATION_QUEUES } from '../../common/constants';
 import { BullRootModule } from '../../infrastructure/queue/bull-root.module';
 import { UsersModule } from '../users/users.module';
+import { SettingsModule } from '../settings/settings.module';
 import { TelegramModule } from '../telegram/telegram.module';
 import { InboxController } from './inbox.controller';
 import { InboxService } from './inbox.service';
@@ -20,6 +21,7 @@ const isTestEnv = process.env.NODE_ENV === 'test';
   imports: [
     LoggerModule,
     UsersModule,
+    SettingsModule,
     TelegramModule,
     ...(isTestEnv
       ? []

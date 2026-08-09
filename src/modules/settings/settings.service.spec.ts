@@ -14,6 +14,9 @@ describe('SettingsService', () => {
       SettingsRepository,
       | 'upsertDefaults'
       | 'upsertWithUpdate'
+      | 'syncReminderPreferenceFromSettings'
+      | 'setAyatRemindersEnabled'
+      | 'markLastAyatReminderAt'
       | 'findActiveTranslationByExternalId'
       | 'findActiveTafsirByExternalId'
       | 'findActiveReciterByExternalId'
@@ -36,6 +39,8 @@ describe('SettingsService', () => {
     playbackRate: 1,
     autoPlayNext: false,
     repeatVerse: false,
+    ayatRemindersEnabled: false,
+    lastAyatReminderAt: null,
     defaultTranslationId: null,
     defaultTafsirId: null,
     defaultReciterId: null,
@@ -52,6 +57,11 @@ describe('SettingsService', () => {
     repository = {
       upsertDefaults: jest.fn().mockResolvedValue(baseSettings),
       upsertWithUpdate: jest.fn(),
+      syncReminderPreferenceFromSettings: jest
+        .fn()
+        .mockResolvedValue(undefined),
+      setAyatRemindersEnabled: jest.fn().mockResolvedValue(undefined),
+      markLastAyatReminderAt: jest.fn().mockResolvedValue(undefined),
       findActiveTranslationByExternalId: jest.fn(),
       findActiveTafsirByExternalId: jest.fn(),
       findActiveReciterByExternalId: jest.fn(),
@@ -86,6 +96,8 @@ describe('SettingsService', () => {
       locale: 'uz',
       theme: ThemePreference.SYSTEM,
       arabicFontSize: 24,
+      ayatRemindersEnabled: false,
+      lastAyatReminderAt: null,
       translation: null,
       tafsir: null,
       reciter: null,
@@ -94,6 +106,39 @@ describe('SettingsService', () => {
 
     expect(usersService.getActiveByIdOrThrow).toHaveBeenCalledWith('user-1');
     expect(repository.upsertDefaults).toHaveBeenCalledWith('user-1');
+  });
+
+  it('enables ayat reminders and syncs Telegram preference', async () => {
+    repository.upsertWithUpdate.mockResolvedValue({
+      ...baseSettings,
+      ayatRemindersEnabled: true,
+    });
+
+    const result = await service.updateForUser('user-1', {
+      ayatRemindersEnabled: true,
+    });
+
+    expect(repository.upsertWithUpdate).toHaveBeenCalledWith('user-1', {
+      ayatRemindersEnabled: true,
+    });
+    expect(repository.syncReminderPreferenceFromSettings).toHaveBeenCalledWith({
+      userId: 'user-1',
+      enabled: true,
+    });
+    expect(result.ayatRemindersEnabled).toBe(true);
+  });
+
+  it('disables ayat reminders for /stop and blocked chats', async () => {
+    await service.disableAyatReminders('user-1');
+
+    expect(repository.setAyatRemindersEnabled).toHaveBeenCalledWith(
+      'user-1',
+      false,
+    );
+    expect(repository.syncReminderPreferenceFromSettings).toHaveBeenCalledWith({
+      userId: 'user-1',
+      enabled: false,
+    });
   });
 
   it('maps catalog resources to Quran.Foundation external IDs', () => {

@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { SettingsService } from '../settings/settings.service';
 import { UsersService } from '../users/users.service';
 import {
   DailyReminderResponseDto,
@@ -17,6 +18,7 @@ export class RemindersService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
     private readonly usersService: UsersService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async getDailyReminder(userId: string): Promise<DailyReminderResponseDto> {
@@ -57,6 +59,11 @@ export class RemindersService {
         localTime: dto.localTime,
       });
 
+    await this.settingsService.syncAyatRemindersEnabledFromPreference(
+      userId,
+      dto.enabled,
+    );
+
     return {
       enabled: preference.enabled,
       localTime: preference.localTime,
@@ -73,6 +80,10 @@ export class RemindersService {
     if (!deleted) {
       throw new NotFoundException('Daily reminder preference not found');
     }
+    await this.settingsService.syncAyatRemindersEnabledFromPreference(
+      userId,
+      false,
+    );
     return { deleted: true };
   }
 

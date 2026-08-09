@@ -4,6 +4,7 @@ describe('TelegramUpdateDispatcher', () => {
   const botService = {
     handleStartCommand: jest.fn(),
     handleIlovaCommand: jest.fn(),
+    handleStopCommand: jest.fn(),
     handleBugunCommand: jest.fn(),
     handleTasodifiyCommand: jest.fn(),
     handleSuralarCommand: jest.fn(),
@@ -60,6 +61,19 @@ describe('TelegramUpdateDispatcher', () => {
       },
     });
     expect(botService.handleIlovaCommand).toHaveBeenCalledTimes(2);
+  });
+
+  it('routes /stop to disable reminders', async () => {
+    await dispatcher.dispatch({
+      update_id: 20,
+      message: {
+        message_id: 20,
+        chat: { id: 42, type: 'private' },
+        date: 1,
+        text: '/stop',
+      },
+    });
+    expect(botService.handleStopCommand).toHaveBeenCalled();
   });
 
   it('routes /bugun and /tasodifiy', async () => {

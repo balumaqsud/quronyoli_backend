@@ -46,6 +46,7 @@ describe('Auth & Users (e2e)', () => {
     isPremium: false,
     allowsWriteToPm: false,
     isActive: true,
+    isBanned: false,
     lastLoginAt: new Date(),
     deletedAt: null,
     createdAt: new Date(),
@@ -58,6 +59,14 @@ describe('Auth & Users (e2e)', () => {
     isHealthy: jest.fn().mockResolvedValue(true),
     onModuleInit: jest.fn().mockResolvedValue(undefined),
     onModuleDestroy: jest.fn().mockResolvedValue(undefined),
+    user: {
+      findFirst: jest.fn().mockImplementation(() =>
+        Promise.resolve({
+          id: userId,
+          isBanned: false,
+        }),
+      ),
+    },
   };
 
   const redisService = {
@@ -173,6 +182,8 @@ describe('Auth & Users (e2e)', () => {
     playbackRate: 1,
     autoPlayNext: false,
     repeatVerse: false,
+    ayatRemindersEnabled: false,
+    lastAyatReminderAt: null,
     defaultTranslationId: null,
     defaultTafsirId: null,
     defaultReciterId: null,
@@ -186,6 +197,15 @@ describe('Auth & Users (e2e)', () => {
   };
 
   let storedSettings = { ...defaultSettings };
+
+  let reminderStore: {
+    id: string;
+    userId: string;
+    enabled: boolean;
+    localTime: string;
+    createdAt: Date;
+    updatedAt: Date;
+  } | null = null;
 
   const settingsRepository = {
     findByUserId: jest
@@ -204,6 +224,32 @@ describe('Auth & Users (e2e)', () => {
         };
         return Promise.resolve(storedSettings);
       }),
+    syncReminderPreferenceFromSettings: jest
+      .fn()
+      .mockImplementation(
+        (input: { userId: string; enabled: boolean }) => {
+          reminderStore = {
+            id: reminderStore?.id ?? randomUUID(),
+            userId: input.userId,
+            enabled: input.enabled,
+            localTime: reminderStore?.localTime ?? '07:00',
+            createdAt: reminderStore?.createdAt ?? new Date(),
+            updatedAt: new Date(),
+          };
+          return Promise.resolve(undefined);
+        },
+      ),
+    setAyatRemindersEnabled: jest
+      .fn()
+      .mockImplementation((_userId: string, enabled: boolean) => {
+        storedSettings = {
+          ...storedSettings,
+          ayatRemindersEnabled: enabled,
+          updatedAt: new Date(),
+        };
+        return Promise.resolve(undefined);
+      }),
+    markLastAyatReminderAt: jest.fn().mockResolvedValue(undefined),
     findActiveTranslationByExternalId: jest.fn().mockResolvedValue(null),
     findActiveTafsirByExternalId: jest.fn().mockResolvedValue(null),
     findActiveReciterByExternalId: jest.fn().mockResolvedValue(null),
@@ -549,15 +595,6 @@ describe('Auth & Users (e2e)', () => {
       ),
   };
 
-  let reminderStore: {
-    id: string;
-    userId: string;
-    enabled: boolean;
-    localTime: string;
-    createdAt: Date;
-    updatedAt: Date;
-  } | null = null;
-
   const notificationsRepository = {
     getTimezone: jest.fn().mockResolvedValue('Asia/Tashkent'),
     findReminderPreference: jest
@@ -837,6 +874,52 @@ describe('Auth & Users (e2e)', () => {
       locale: 'uz',
       theme: 'SYSTEM',
       arabicFontSize: 24,
+      ayatRemindersEnabled: false,
+      lastAyatReminderAt: null,
+    });
+  });
+
+  it('enables ayat reminders via settings and syncs preference', async () => {
+    storedSettings = { ...defaultSettings };
+    reminderStore = null;
+    const accessToken = await tokenService.generateAccessToken(
+      userId,
+      sessionId,
+    );
+
+    const response = await request(app.getHttpServer())
+      .patch('/api/v1/settings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ ayatRemindersEnabled: true })
+      .expect(200);
+
+    const body = response.body as {
+      success: boolean;
+      data: { ayatRemindersEnabled: boolean };
+    };
+
+    expect(body.success).toBe(true);
+    expect(body.data.ayatRemindersEnabled).toBe(true);
+    expect(
+      settingsRepository.syncReminderPreferenceFromSettings,
+    ).toHaveBeenCalledWith({
+      userId,
+      enabled: true,
+    });
+    expect(reminderStore).toMatchObject({
+      userId,
+      enabled: true,
+      localTime: '07:00',
+    });
+
+    const getResponse = await request(app.getHttpServer())
+      .get('/api/v1/settings')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(200);
+
+    expect(getResponse.body).toMatchObject({
+      success: true,
+      data: { ayatRemindersEnabled: true },
     });
   });
 
@@ -1221,7 +1304,10 @@ describe('Auth & Users (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/v1/telegram/webhook')
-      .set('x-telegram-bot-api-secret-token', 'dev-webhook-secret-min16')
+      .set(
+        'x-telegram-bot-api-secret-token',
+        '84570ed6d86b4d5f1c6b14654e6390a92ff11f863421c8f4',
+      )
       .send({
         update_id: 1,
         message: {
@@ -1241,7 +1327,10 @@ describe('Auth & Users (e2e)', () => {
 
     await request(app.getHttpServer())
       .post('/api/v1/telegram/webhook')
-      .set('x-telegram-bot-api-secret-token', 'dev-webhook-secret-min16')
+      .set(
+        'x-telegram-bot-api-secret-token',
+        '84570ed6d86b4d5f1c6b14654e6390a92ff11f863421c8f4',
+      )
       .send({
         update_id: 3,
         message: {

@@ -43,6 +43,13 @@ export class SettingsService {
       data,
     );
 
+    if (dto.ayatRemindersEnabled !== undefined) {
+      await this.settingsRepository.syncReminderPreferenceFromSettings({
+        userId,
+        enabled: dto.ayatRemindersEnabled,
+      });
+    }
+
     if (
       data.defaultTranslationId !== undefined &&
       data.defaultTranslationId !== previous.defaultTranslationId
@@ -61,6 +68,32 @@ export class SettingsService {
     return this.toResponse(settings);
   }
 
+  /**
+   * Disable ayat reminders from bot /stop or Telegram 403.
+   * Clears Settings flag and TelegramReminderPreference.enabled.
+   */
+  async disableAyatReminders(userId: string): Promise<void> {
+    await this.settingsRepository.setAyatRemindersEnabled(userId, false);
+    await this.settingsRepository.syncReminderPreferenceFromSettings({
+      userId,
+      enabled: false,
+    });
+  }
+
+  /**
+   * Keep Settings.ayatRemindersEnabled in sync when the legacy reminders API writes.
+   */
+  async syncAyatRemindersEnabledFromPreference(
+    userId: string,
+    enabled: boolean,
+  ): Promise<void> {
+    await this.settingsRepository.setAyatRemindersEnabled(userId, enabled);
+  }
+
+  async markLastAyatReminderAt(userId: string, at: Date = new Date()): Promise<void> {
+    await this.settingsRepository.markLastAyatReminderAt(userId, at);
+  }
+
   toResponse(settings: SettingsWithCatalog): SettingsResponseDto {
     return {
       locale: settings.locale,
@@ -71,6 +104,8 @@ export class SettingsService {
       playbackRate: settings.playbackRate,
       autoPlayNext: settings.autoPlayNext,
       repeatVerse: settings.repeatVerse,
+      ayatRemindersEnabled: settings.ayatRemindersEnabled,
+      lastAyatReminderAt: settings.lastAyatReminderAt,
       translation: this.mapTranslation(settings.defaultTranslation),
       tafsir: this.mapTafsir(settings.defaultTafsir),
       reciter: this.mapReciter(settings.defaultReciter),
@@ -107,6 +142,9 @@ export class SettingsService {
     }
     if (dto.repeatVerse !== undefined) {
       data.repeatVerse = dto.repeatVerse;
+    }
+    if (dto.ayatRemindersEnabled !== undefined) {
+      data.ayatRemindersEnabled = dto.ayatRemindersEnabled;
     }
 
     if (dto.translationId !== undefined) {

@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { SettingsService } from '../settings/settings.service';
 import { UsersService } from '../users/users.service';
 import { NotificationsRepository } from './notifications.repository';
 import { RemindersService } from './reminders.service';
@@ -14,6 +15,9 @@ describe('RemindersService', () => {
     >
   >;
   let usersService: jest.Mocked<Pick<UsersService, 'getActiveByIdOrThrow'>>;
+  let settingsService: jest.Mocked<
+    Pick<SettingsService, 'syncAyatRemindersEnabledFromPreference'>
+  >;
   let service: RemindersService;
 
   beforeEach(() => {
@@ -29,9 +33,15 @@ describe('RemindersService', () => {
         allowsWriteToPm: true,
       }),
     };
+    settingsService = {
+      syncAyatRemindersEnabledFromPreference: jest
+        .fn()
+        .mockResolvedValue(undefined),
+    };
     service = new RemindersService(
       repository as unknown as NotificationsRepository,
       usersService as unknown as UsersService,
+      settingsService as unknown as SettingsService,
     );
   });
 
@@ -56,6 +66,9 @@ describe('RemindersService', () => {
       timezone: 'Asia/Tashkent',
       allowsWriteToPm: true,
     });
+    expect(
+      settingsService.syncAyatRemindersEnabledFromPreference,
+    ).toHaveBeenCalledWith('user-1', true);
   });
 
   it('rejects invalid timezones', async () => {

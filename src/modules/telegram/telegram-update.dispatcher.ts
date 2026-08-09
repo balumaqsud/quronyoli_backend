@@ -44,6 +44,9 @@ export class TelegramUpdateDispatcher {
       case 'app':
         await this.botService.handleIlovaCommand(message);
         return;
+      case 'stop':
+        await this.botService.handleStopCommand(message);
+        return;
       case 'bugun':
         await this.botService.handleBugunCommand(message);
         return;

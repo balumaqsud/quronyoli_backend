@@ -93,6 +93,15 @@ export class UpdateSettingsDto {
   repeatVerse?: boolean;
 
   @ApiPropertyOptional({
+    example: false,
+    description:
+      'Opt in to Telegram ayat reminders (every 2 days). Mini App Settings toggle.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  ayatRemindersEnabled?: boolean;
+
+  @ApiPropertyOptional({
     description:
       'Quran.Foundation translation resource ID. Pass null to clear.',
     example: '131',

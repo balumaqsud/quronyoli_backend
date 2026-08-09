@@ -158,6 +158,8 @@ model UserSettings {
   defaultTafsirId          String?         @map("default_tafsir_id") @db.Uuid
   defaultReciterId         String?         @map("default_reciter_id") @db.Uuid
   defaultChapterReciterId  String?         @map("default_chapter_reciter_id") @db.Uuid
+  ayatRemindersEnabled     Boolean         @default(false) @map("ayat_reminders_enabled")
+  lastAyatReminderAt       DateTime?       @map("last_ayat_reminder_at")
   createdAt                DateTime        @default(now()) @map("created_at")
   updatedAt                DateTime        @updatedAt @map("updated_at")
 

@@ -9,6 +9,7 @@ import {
   UserNotificationType,
 } from '../../generated/prisma';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
+import { AYAT_REMINDER_INTERVAL_MS } from '../settings/interfaces/settings.interface';
 import { DEFAULT_READING_TIMEZONE } from '../reading/constants/quran-coordinates';
 import { toDateOnly } from '../reading/utils/reading-date.utils';
 
@@ -74,7 +75,12 @@ export class NotificationsRepository {
     return settings?.timezone ?? DEFAULT_READING_TIMEZONE;
   }
 
-  async findDueReminders(localTime: string): Promise<DueReminderRow[]> {
+  async findDueReminders(
+    localTime: string,
+    now: Date = new Date(),
+  ): Promise<DueReminderRow[]> {
+    const dueBefore = new Date(now.getTime() - AYAT_REMINDER_INTERVAL_MS);
+
     const rows = await this.prisma.telegramReminderPreference.findMany({
       where: {
         enabled: true,
@@ -92,20 +98,37 @@ export class NotificationsRepository {
             telegramId: true,
             allowsWriteToPm: true,
             settings: {
-              select: { timezone: true },
+              select: {
+                timezone: true,
+                ayatRemindersEnabled: true,
+                lastAyatReminderAt: true,
+              },
             },
           },
         },
       },
     });
 
-    return rows.map((row) => ({
-      userId: row.userId,
-      telegramId: row.user.telegramId,
-      allowsWriteToPm: row.user.allowsWriteToPm,
-      localTime: row.localTime,
-      timezone: row.user.settings?.timezone ?? DEFAULT_READING_TIMEZONE,
-    }));
+    return rows
+      .filter((row) => {
+        const settings = row.user.settings;
+        // Prefer Settings flag when present; legacy prefs without settings stay eligible
+        if (settings && !settings.ayatRemindersEnabled) {
+          return false;
+        }
+        const lastAt = settings?.lastAyatReminderAt;
+        if (lastAt && lastAt.getTime() > dueBefore.getTime()) {
+          return false;
+        }
+        return true;
+      })
+      .map((row) => ({
+        userId: row.userId,
+        telegramId: row.user.telegramId,
+        allowsWriteToPm: row.user.allowsWriteToPm,
+        localTime: row.localTime,
+        timezone: row.user.settings?.timezone ?? DEFAULT_READING_TIMEZONE,
+      }));
   }
 
   async claimDelivery(input: {

@@ -9,6 +9,7 @@ import {
   formatLocalDate,
   toDateOnly,
 } from '../reading/utils/reading-date.utils';
+import { SettingsService } from '../settings/settings.service';
 import { TelegramBlockedError } from '../telegram/errors/telegram-error.mapper';
 import { TelegramBotService } from '../telegram/telegram-bot.service';
 import { buildDailyReminderInboxCopy } from './notification-copy';
@@ -25,6 +26,7 @@ export class NotificationService {
   constructor(
     private readonly notificationsRepository: NotificationsRepository,
     private readonly telegramBotService: TelegramBotService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   async deliverDailyReminder(input: {
@@ -88,6 +90,9 @@ export class NotificationService {
       dedupeKey: input.localDate,
       payload: {
         verseKey: ayah.verseKey,
+        chapterId: ayah.chapterNumber,
+        chapterNumber: ayah.chapterNumber,
+        verseNumber: ayah.verseNumber,
         localDate: input.localDate,
       },
     });
@@ -98,12 +103,14 @@ export class NotificationService {
         errorMessage: 'User does not allow write to PM',
         status: NotificationDeliveryStatus.SKIPPED,
       });
+      await this.settingsService.markLastAyatReminderAt(input.userId);
       return { status: 'skipped', reason: 'write_to_pm_disabled' };
     }
 
     try {
       const sent = await this.telegramBotService.sendDailyReminder({
         chatId: user.telegramId,
+        userId: input.userId,
         localDate: input.localDate,
         verseKey: ayah.verseKey,
         goalLines,
@@ -113,6 +120,7 @@ export class NotificationService {
         id: claim.delivery.id,
         telegramMessageId: String(sent.messageId),
       });
+      await this.settingsService.markLastAyatReminderAt(input.userId);
 
       return { status: 'sent', messageId: String(sent.messageId) };
     } catch (error) {
@@ -129,6 +137,7 @@ export class NotificationService {
       });
 
       if (isBlocked) {
+        await this.settingsService.disableAyatReminders(input.userId);
         return { status: 'skipped', reason: 'telegram_blocked' };
       }
 

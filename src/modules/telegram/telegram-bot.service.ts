@@ -8,6 +8,7 @@ import { isValidAyahCoordinate } from '../../common/quran/quran-coordinates';
 import { TelegramConfig } from '../../config/configuration';
 import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
 import { buildDailyReminderTelegramText } from '../notifications/notification-copy';
+import { SettingsService } from '../settings/settings.service';
 import { User } from '../../generated/prisma';
 import { UsersService } from '../users/users.service';
 import {
@@ -17,6 +18,7 @@ import {
   TelegramInlineKeyboardMarkup,
   TelegramUser,
 } from './interfaces/telegram-api.interface';
+import { TelegramAyahCardService } from './telegram-ayah-card.service';
 import { TelegramLinksService } from './telegram-links.service';
 import { parseCallbackData } from './utils/telegram-callbacks';
 import { escapeHtml, parseAyahStartPayload } from './utils/telegram-text.utils';
@@ -36,6 +38,8 @@ export class TelegramBotService {
     private readonly configService: ConfigService,
     private readonly usersService: UsersService,
     private readonly analyticsTracking: AnalyticsTrackingService,
+    private readonly settingsService: SettingsService,
+    private readonly ayahCardService: TelegramAyahCardService,
     @InjectPinoLogger(TelegramBotService.name)
     private readonly logger: PinoLogger,
   ) {
@@ -87,6 +91,22 @@ export class TelegramBotService {
       message.chat.id,
       'Ilovani ochish uchun tugmani bosing.',
     );
+  }
+
+  async handleStopCommand(message: TelegramIncomingMessage): Promise<void> {
+    const user = await this.resolveUserFromTelegram(message.from);
+    await this.trackCommand(user?.id, 'stop');
+    if (user) {
+      await this.settingsService.disableAyatReminders(user.id);
+    }
+    await this.telegramApi.sendMessage({
+      chatId: message.chat.id,
+      text:
+        "Oyat eslatmalari o'chirildi. Qayta yoqish uchun Ilova → Sozlamalar → Bildirishnomalar.",
+      parseMode: 'HTML',
+      disableWebPagePreview: true,
+      replyMarkup: this.openMiniAppKeyboard(),
+    });
   }
 
   async handleAppCommand(message: TelegramIncomingMessage): Promise<void> {
@@ -217,24 +237,52 @@ export class TelegramBotService {
 
   async sendDailyReminder(input: {
     chatId: number | string;
+    userId?: string;
     localDate: string;
     verseKey: string;
     goalLines: string[];
   }): Promise<{ messageId: number }> {
     const startParam = `ayah_${input.verseKey.replace(':', '_')}`;
-    const text = buildDailyReminderTelegramText({
+    let text = buildDailyReminderTelegramText({
       localDate: input.localDate,
       verseKey: input.verseKey,
       goalLines: input.goalLines,
       escapeHtml,
     });
+    let replyMarkup = this.openMiniAppKeyboard(startParam);
+
+    if (input.userId) {
+      try {
+        const card = await this.ayahCardService.buildCard(
+          input.userId,
+          input.verseKey,
+          'Kunlik eslatma',
+        );
+        const goalsBlock =
+          input.goalLines.length > 0
+            ? `\n\n<b>Maqsadlar</b>\n${input.goalLines
+                .map((line) => `• ${escapeHtml(line)}`)
+                .join('\n')}`
+            : '';
+        text = `${card.text}${goalsBlock}`;
+        replyMarkup = card.keyboard;
+      } catch (error) {
+        this.logger.warn(
+          {
+            err: error instanceof Error ? error.message : 'unknown',
+            verseKey: input.verseKey,
+          },
+          'Failed to build ayah card for daily reminder; using fallback text',
+        );
+      }
+    }
 
     const message = await this.telegramApi.sendMessage({
       chatId: input.chatId,
       text,
       parseMode: 'HTML',
       disableWebPagePreview: true,
-      replyMarkup: this.openMiniAppKeyboard(startParam),
+      replyMarkup,
     });
 
     return { messageId: message.message_id };

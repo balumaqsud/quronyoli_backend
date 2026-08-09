@@ -49,6 +49,19 @@ export class SettingsResponseDto {
   @ApiProperty({ example: false })
   repeatVerse!: boolean;
 
+  @ApiProperty({
+    example: false,
+    description: 'Whether Telegram ayat reminders are enabled',
+  })
+  ayatRemindersEnabled!: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'When the last ayat reminder was sent (ISO timestamp)',
+    example: null,
+  })
+  lastAyatReminderAt!: Date | null;
+
   @ApiPropertyOptional({
     type: CatalogResourceDto,
     nullable: true,

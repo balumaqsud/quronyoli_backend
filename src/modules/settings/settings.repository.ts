@@ -7,6 +7,7 @@ import {
 } from '../../generated/prisma';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 import {
+  DEFAULT_AYAT_REMINDER_LOCAL_TIME,
   QURAN_FOUNDATION_PROVIDER,
   SettingsUpdateData,
   SettingsWithCatalog,
@@ -99,6 +100,62 @@ export class SettingsRepository {
       },
       update: data,
       include: settingsInclude,
+    });
+  }
+
+  /**
+   * Sync TelegramReminderPreference with Settings ayatRemindersEnabled.
+   * Preserves existing localTime when present; otherwise defaults to 07:00.
+   */
+  async syncReminderPreferenceFromSettings(input: {
+    userId: string;
+    enabled: boolean;
+  }): Promise<void> {
+    const existing = await this.prisma.telegramReminderPreference.findUnique({
+      where: { userId: input.userId },
+      select: { localTime: true },
+    });
+
+    await this.prisma.telegramReminderPreference.upsert({
+      where: { userId: input.userId },
+      create: {
+        userId: input.userId,
+        enabled: input.enabled,
+        localTime: DEFAULT_AYAT_REMINDER_LOCAL_TIME,
+      },
+      update: {
+        enabled: input.enabled,
+        localTime: existing?.localTime ?? DEFAULT_AYAT_REMINDER_LOCAL_TIME,
+      },
+    });
+  }
+
+  async setAyatRemindersEnabled(
+    userId: string,
+    enabled: boolean,
+  ): Promise<void> {
+    await this.prisma.userSettings.upsert({
+      where: { userId },
+      create: {
+        userId,
+        ayatRemindersEnabled: enabled,
+      },
+      update: {
+        ayatRemindersEnabled: enabled,
+      },
+    });
+  }
+
+  async markLastAyatReminderAt(userId: string, at: Date): Promise<void> {
+    await this.prisma.userSettings.upsert({
+      where: { userId },
+      create: {
+        userId,
+        lastAyatReminderAt: at,
+      },
+      update: {
+        lastAyatReminderAt: at,
+      },
     });
   }
 

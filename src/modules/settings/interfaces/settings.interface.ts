@@ -32,6 +32,14 @@ export interface SettingsUpdateData extends ResolvedCatalogIds {
   playbackRate?: number;
   autoPlayNext?: boolean;
   repeatVerse?: boolean;
+  ayatRemindersEnabled?: boolean;
+  lastAyatReminderAt?: Date | null;
 }
+
+/** Default local send window when enabling ayat reminders via Settings. */
+export const DEFAULT_AYAT_REMINDER_LOCAL_TIME = '07:00';
+
+/** Minimum gap between Telegram ayat reminders per user. */
+export const AYAT_REMINDER_INTERVAL_MS = 2 * 24 * 60 * 60 * 1000;
 
 export type UpdateSettingsInput = UpdateSettingsDto;
