@@ -19,3 +19,6 @@ uploads
 backups
 .cursor
 agent-transcripts
+docs
+scripts
+.github

@@ -18,6 +18,15 @@ services:
       - timezone=UTC
       - -c
       - log_timezone=UTC
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - effective_cache_size=256MB
+    mem_limit: 256m
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -47,6 +56,7 @@ services:
       - 'yes'
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    mem_limit: 64m
     volumes:
       - redis_data:/data
     healthcheck:
@@ -86,6 +96,7 @@ services:
       UPLOADS_DIR: /app/uploads
     ports:
       - '${PORT:-3000}:${PORT:-3000}'
+    mem_limit: 384m
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs

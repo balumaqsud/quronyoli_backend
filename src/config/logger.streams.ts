@@ -29,6 +29,7 @@ export const createProductionTransport = (
           frequency: 'daily',
           mkdir: true,
           size: '50m',
+          limit: { count: 7, removeOtherLogFiles: true },
         },
       },
       {
@@ -39,6 +40,7 @@ export const createProductionTransport = (
           frequency: 'daily',
           mkdir: true,
           size: '50m',
+          limit: { count: 7, removeOtherLogFiles: true },
         },
       },
       {
@@ -49,6 +51,7 @@ export const createProductionTransport = (
           frequency: 'daily',
           mkdir: true,
           size: '50m',
+          limit: { count: 7, removeOtherLogFiles: true },
         },
       },
     ],
