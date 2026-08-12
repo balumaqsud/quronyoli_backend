@@ -35,14 +35,10 @@ describe('qf-page-images', () => {
 
   it('detects verse-strip rackcdn URLs', () => {
     expect(
-      isLikelyVerseStripImageUrl(
-        'https://c22506.r6.cf1.rackcdn.com/91_1.png',
-      ),
+      isLikelyVerseStripImageUrl('https://c22506.r6.cf1.rackcdn.com/91_1.png'),
     ).toBe(true);
     expect(
-      isLikelyVerseStripImageUrl(
-        `${DEFAULT_TAJWEED_PAGE_IMAGE_BASE}/593.webp`,
-      ),
+      isLikelyVerseStripImageUrl(`${DEFAULT_TAJWEED_PAGE_IMAGE_BASE}/593.webp`),
     ).toBe(false);
   });
 

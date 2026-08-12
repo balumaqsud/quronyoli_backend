@@ -101,6 +101,46 @@ export class QuranCacheService {
     return promise;
   }
 
+  /**
+   * After mushaf page metadata sync/warm, drop stale page+verses bundles
+   * so the next read rebuilds from fresh page coordinates + QF.
+   * Does not touch OAuth token keys.
+   */
+  async invalidateAfterPagesSync(mushafId = 1): Promise<number> {
+    const patterns =
+      mushafId === 1
+        ? ['page:*:verses:*', 'qf:cache:verses:*']
+        : [`page:${mushafId}:*:verses:*`, 'qf:cache:verses:*'];
+
+    let deleted = 0;
+    for (const pattern of patterns) {
+      deleted += await this.redisService.delByPattern(pattern);
+    }
+    this.logger.info(
+      { mushafId, deleted },
+      'Invalidated Quran page/verses cache after pages sync',
+    );
+    return deleted;
+  }
+
+  /**
+   * After catalog sync (translations/tafsirs/reciters), drop cached resource
+   * lists and verse payloads that may embed translation merges.
+   * Does not touch OAuth token keys.
+   */
+  async invalidateAfterCatalogSync(): Promise<number> {
+    const patterns = ['qf:cache:resources:*', 'qf:cache:verses:*'];
+    let deleted = 0;
+    for (const pattern of patterns) {
+      deleted += await this.redisService.delByPattern(pattern);
+    }
+    this.logger.info(
+      { deleted },
+      'Invalidated Quran resources/verses cache after catalog sync',
+    );
+    return deleted;
+  }
+
   private canonicalizeQuery(query?: QuranQueryParams): string {
     if (!query) {
       return '';

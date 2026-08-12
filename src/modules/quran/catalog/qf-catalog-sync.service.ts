@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { QuranCacheService } from '../cache/quran-cache.service';
 import { QuranFoundationClient } from '../client/quran-foundation.client';
 import {
   extractResourceList,
@@ -22,6 +23,7 @@ export class QfCatalogSyncService {
   constructor(
     private readonly client: QuranFoundationClient,
     private readonly repository: QfCatalogRepository,
+    private readonly cache: QuranCacheService,
     @InjectPinoLogger(QfCatalogSyncService.name)
     private readonly logger: PinoLogger,
   ) {}
@@ -58,6 +60,7 @@ export class QfCatalogSyncService {
       ),
     };
 
+    await this.cache.invalidateAfterCatalogSync();
     this.logger.info({ result }, 'Quran.Foundation catalog sync completed');
     return result;
   }
@@ -69,6 +72,7 @@ export class QfCatalogSyncService {
     }
 
     const stats = await this.repository.syncTranslations(translations);
+    await this.cache.invalidateAfterCatalogSync();
     this.logger.info({ stats }, 'Quran.Foundation translations sync completed');
     return stats;
   }
@@ -80,6 +84,7 @@ export class QfCatalogSyncService {
     }
 
     const stats = await this.repository.syncTafsirs(tafsirs);
+    await this.cache.invalidateAfterCatalogSync();
     this.logger.info({ stats }, 'Quran.Foundation tafsirs sync completed');
     return stats;
   }
@@ -105,6 +110,7 @@ export class QfCatalogSyncService {
       ),
     };
 
+    await this.cache.invalidateAfterCatalogSync();
     this.logger.info({ result }, 'Quran.Foundation reciters sync completed');
     return result;
   }

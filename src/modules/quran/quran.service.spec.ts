@@ -33,6 +33,7 @@ describe('QuranService', () => {
     listActiveTafsirs: jest.Mock;
     listActiveReciters: jest.Mock;
     findActiveTranslationByExternalId: jest.Mock;
+    findActiveTranslationsByExternalIds: jest.Mock;
   };
   let quranEncTranslations: {
     getSurahNormalized: jest.Mock;
@@ -68,6 +69,7 @@ describe('QuranService', () => {
       listActiveTafsirs: jest.fn().mockResolvedValue([]),
       listActiveReciters: jest.fn().mockResolvedValue([]),
       findActiveTranslationByExternalId: jest.fn().mockResolvedValue(null),
+      findActiveTranslationsByExternalIds: jest.fn().mockResolvedValue([]),
     };
     quranEncTranslations = {
       getSurahNormalized: jest.fn(),
@@ -687,22 +689,24 @@ describe('QuranService', () => {
   });
 
   it('never forwards Enc keys to QF on mixed translations=', async () => {
-    catalogRepository.findActiveTranslationByExternalId.mockResolvedValue({
-      id: 'uuid-ky',
-      provider: 'quranenc',
-      externalId: 'kyrgyz_hakimov',
-      languageCode: 'ky',
-      name: 'Kyrgyz — Shamsuddin Hakimov',
-      authorName: 'Shamsuddin Hakimov',
-      slug: 'kyrgyz_hakimov',
-      isActive: true,
-      isDefault: false,
-      sortOrder: 0,
-      metadata: null,
-      deletedAt: null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+    catalogRepository.findActiveTranslationsByExternalIds.mockResolvedValue([
+      {
+        id: 'uuid-ky',
+        provider: 'quranenc',
+        externalId: 'kyrgyz_hakimov',
+        languageCode: 'ky',
+        name: 'Kyrgyz — Shamsuddin Hakimov',
+        authorName: 'Shamsuddin Hakimov',
+        slug: 'kyrgyz_hakimov',
+        isActive: true,
+        isDefault: false,
+        sortOrder: 0,
+        metadata: null,
+        deletedAt: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
     quranEncTranslations.tryGetSurahMap.mockResolvedValue(
       new Map([
         [
@@ -752,7 +756,7 @@ describe('QuranService', () => {
   });
 
   it('omits Enc from verse merge when catalog row is inactive', async () => {
-    catalogRepository.findActiveTranslationByExternalId.mockResolvedValue(null);
+    catalogRepository.findActiveTranslationsByExternalIds.mockResolvedValue([]);
     client.getContent.mockResolvedValue({
       verses: [
         {

@@ -102,8 +102,7 @@ export class TelegramBotService {
     }
     await this.telegramApi.sendMessage({
       chatId: message.chat.id,
-      text:
-        "Oyat eslatmalari o'chirildi. Qayta yoqish uchun Ilova → Sozlamalar → Bildirishnomalar.",
+      text: "Oyat eslatmalari o'chirildi. Qayta yoqish uchun Ilova → Sozlamalar → Bildirishnomalar.",
       parseMode: 'HTML',
       disableWebPagePreview: true,
       replyMarkup: this.openMiniAppKeyboard(),
@@ -374,7 +373,7 @@ export class TelegramBotService {
 
   private aboutMessage(): string {
     return [
-      "<b>Quron Yo‘li</b>",
+      '<b>Quron Yo‘li</b>',
       `Versiya <b>${escapeHtml(this.appVersion)}</b>`,
       '',
       "Telegram Mini App: Qur'on, tarjima, xatcho‘p va tafsir.",

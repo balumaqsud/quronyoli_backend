@@ -28,12 +28,10 @@ export class AdminTafsirsService {
     private readonly catalogSyncService: QfCatalogSyncService,
   ) {}
 
-  async list(
-    query: AdminTafsirsQueryDto,
-  ): Promise<OffsetPage<QuranTafsir>> {
+  async list(query: AdminTafsirsQueryDto): Promise<OffsetPage<QuranTafsir>> {
     const offset = resolveOffset(query.page, query.limit);
     const where = {
-      deletedAt: null as null,
+      deletedAt: null,
       ...(query.languageCode ? { languageCode: query.languageCode } : {}),
       ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
     };
@@ -191,9 +189,7 @@ export class AdminTafsirsService {
     });
 
     if (count !== uniqueIds.length) {
-      throw new BadRequestException(
-        'One or more tafsir IDs were not found',
-      );
+      throw new BadRequestException('One or more tafsir IDs were not found');
     }
   }
 }

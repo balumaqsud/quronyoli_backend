@@ -26,10 +26,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { AuthContext } from '../../auth/decorators/auth-context.decorator';
 import { AuthRequestContext } from '../../auth/interfaces/auth-request-context.interface';
 import { AdminAdminsService } from './admin-admins.service';
-import {
-  AdminAdminsQueryDto,
-  CreateAdminDto,
-} from './dto/admin-admins.dto';
+import { AdminAdminsQueryDto, CreateAdminDto } from './dto/admin-admins.dto';
 
 @ApiTags('Admin Admins')
 @ApiBearerAuth('access-token')

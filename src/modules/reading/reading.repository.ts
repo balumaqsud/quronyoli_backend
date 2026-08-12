@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { keysetDescCursorOr } from '../../common/pagination/paginate-keyset';
 import {
   DailyGoalMetric,
   Prisma,
@@ -198,12 +199,11 @@ export class ReadingRepository {
     };
 
     if (input.cursorAt && input.cursorId) {
-      where.OR = [
-        { lastReadAt: { lt: input.cursorAt } },
-        {
-          AND: [{ lastReadAt: input.cursorAt }, { id: { lt: input.cursorId } }],
-        },
-      ];
+      where.OR = keysetDescCursorOr(
+        'lastReadAt',
+        input.cursorAt,
+        input.cursorId,
+      ).OR;
     }
 
     return await this.prisma.readingVerseProgress.findMany({
@@ -226,16 +226,9 @@ export class ReadingRepository {
     }
 
     if (input.cursorAt && input.cursorId) {
-      const cursorFilter: Prisma.ReadingAyahHistoryWhereInput = {
-        OR: [
-          { openedAt: { lt: input.cursorAt } },
-          {
-            AND: [{ openedAt: input.cursorAt }, { id: { lt: input.cursorId } }],
-          },
-        ],
-      };
-
-      where.AND = [cursorFilter];
+      where.AND = [
+        keysetDescCursorOr('openedAt', input.cursorAt, input.cursorId),
+      ];
     }
 
     return await this.prisma.readingAyahHistory.findMany({

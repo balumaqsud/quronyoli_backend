@@ -69,12 +69,7 @@ export class QfPagesSyncService {
     ) {
       const verses = await this.fetchAllVersesForPage(pageNumber, mushafId);
       const payload = applyPageImageMeta(
-        mapVersesToMushafPage(
-          pageNumber,
-          mushafId,
-          verses,
-          this.config.audioCdnBase,
-        ),
+        mapVersesToMushafPage(pageNumber, mushafId, verses),
         this.pageImageConfig(),
       );
 
@@ -152,6 +147,8 @@ export class QfPagesSyncService {
       },
       this.config.cacheTtl.chaptersSeconds,
     );
+
+    await this.cache.invalidateAfterPagesSync(mushafId);
 
     return {
       mushafId,
@@ -259,6 +256,8 @@ export class QfPagesSyncService {
       },
       this.config.cacheTtl.chaptersSeconds,
     );
+
+    await this.cache.invalidateAfterPagesSync(targetMushafId);
 
     this.logger.info(
       {

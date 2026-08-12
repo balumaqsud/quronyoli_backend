@@ -3,8 +3,6 @@
  * @see docs/qf-integration-contract.md
  */
 
-export type { QuranFoundationClientContract } from './qf-client.interface';
-
 export * from './qf-common.types';
 export * from './qf-chapters.types';
 export * from './qf-verses.types';

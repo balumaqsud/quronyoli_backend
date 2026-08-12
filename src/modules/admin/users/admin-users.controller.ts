@@ -25,10 +25,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { AuthContext } from '../../auth/decorators/auth-context.decorator';
 import { AuthRequestContext } from '../../auth/interfaces/auth-request-context.interface';
 import { AdminUsersService } from './admin-users.service';
-import {
-  AdminUsersQueryDto,
-  UpdateAdminUserDto,
-} from './dto/admin-users.dto';
+import { AdminUsersQueryDto, UpdateAdminUserDto } from './dto/admin-users.dto';
 
 @ApiTags('Admin Users')
 @ApiBearerAuth('access-token')

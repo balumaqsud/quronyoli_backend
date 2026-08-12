@@ -4,18 +4,21 @@ import { PinoLogger } from 'nestjs-pino';
 
 describe('QuranCacheService', () => {
   let service: QuranCacheService;
-  let redis: jest.Mocked<Pick<RedisService, 'get' | 'set' | 'del'>>;
+  let redis: jest.Mocked<
+    Pick<RedisService, 'get' | 'set' | 'del' | 'delByPattern'>
+  >;
 
   beforeEach(() => {
     redis = {
       get: jest.fn(),
       set: jest.fn(),
       del: jest.fn(),
+      delByPattern: jest.fn().mockResolvedValue(0),
     };
 
     service = new QuranCacheService(
       redis as unknown as RedisService,
-      { warn: jest.fn() } as unknown as PinoLogger,
+      { warn: jest.fn(), info: jest.fn() } as unknown as PinoLogger,
     );
   });
 
@@ -71,5 +74,21 @@ describe('QuranCacheService', () => {
     expect(service.pageVersesKey(1, 1, { translations: '20' })).toMatch(
       /^page:1:verses:[a-f0-9]{16}$/,
     );
+  });
+
+  it('invalidates page verse digests after pages sync', async () => {
+    redis.delByPattern.mockResolvedValueOnce(2).mockResolvedValueOnce(3);
+
+    await expect(service.invalidateAfterPagesSync(1)).resolves.toBe(5);
+    expect(redis.delByPattern).toHaveBeenCalledWith('page:*:verses:*');
+    expect(redis.delByPattern).toHaveBeenCalledWith('qf:cache:verses:*');
+  });
+
+  it('invalidates resources and verses after catalog sync', async () => {
+    redis.delByPattern.mockResolvedValue(1);
+
+    await expect(service.invalidateAfterCatalogSync()).resolves.toBe(2);
+    expect(redis.delByPattern).toHaveBeenCalledWith('qf:cache:resources:*');
+    expect(redis.delByPattern).toHaveBeenCalledWith('qf:cache:verses:*');
   });
 });

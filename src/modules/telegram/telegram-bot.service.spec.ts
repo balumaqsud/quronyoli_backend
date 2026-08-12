@@ -159,7 +159,9 @@ describe('TelegramBotService', () => {
       verseNumber: 255,
       text: '<b>Tasodifiy oyat</b>\n\nArabic\n\nTranslation\n\n<b>2:255</b>',
       keyboard: {
-        inline_keyboard: [[{ text: '📖 Ilovani ochish', web_app: { url: 'x' } }]],
+        inline_keyboard: [
+          [{ text: '📖 Ilovani ochish', web_app: { url: 'x' } }],
+        ],
       },
     });
 
@@ -186,7 +188,9 @@ describe('TelegramBotService', () => {
       inline_keyboard: Array<Array<{ web_app?: { url?: string } }>>;
     };
     expect(markup.inline_keyboard).toHaveLength(1);
-    expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toContain('startapp=ayah_');
+    expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toContain(
+      'startapp=ayah_',
+    );
   });
 
   it('sends updated about text for /haqimizda', async () => {

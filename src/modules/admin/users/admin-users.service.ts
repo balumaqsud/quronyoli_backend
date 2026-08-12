@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, User } from '../../../generated/prisma';
 import {
   OffsetPage,
@@ -13,10 +10,7 @@ import { AuthRequestContext } from '../../auth/interfaces/auth-request-context.i
 import { SessionsRepository } from '../../auth/sessions.repository';
 import { CurrentAdminContext } from '../../../common/decorators/current-admin.decorator';
 import { AdminLogsService } from '../logs/admin-logs.service';
-import {
-  AdminUsersQueryDto,
-  UpdateAdminUserDto,
-} from './dto/admin-users.dto';
+import { AdminUsersQueryDto, UpdateAdminUserDto } from './dto/admin-users.dto';
 
 export type AdminUserListItem = User & {
   admin: { id: string; role: string } | null;
@@ -30,7 +24,9 @@ export class AdminUsersService {
     private readonly sessionsRepository: SessionsRepository,
   ) {}
 
-  async list(query: AdminUsersQueryDto): Promise<OffsetPage<AdminUserListItem>> {
+  async list(
+    query: AdminUsersQueryDto,
+  ): Promise<OffsetPage<AdminUserListItem>> {
     const offset = resolveOffset(query.page, query.limit);
     const where = this.buildWhere(query);
 

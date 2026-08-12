@@ -13,10 +13,7 @@ import {
 } from './interfaces/telegram-api.interface';
 import { TelegramLinksService } from './telegram-links.service';
 import { encodeVerseKey } from './utils/telegram-callbacks';
-import {
-  buildAyahStartPayload,
-  escapeHtml,
-} from './utils/telegram-text.utils';
+import { buildAyahStartPayload, escapeHtml } from './utils/telegram-text.utils';
 
 export type AyahCardContent = {
   verseKey: string;

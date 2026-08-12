@@ -8,7 +8,6 @@ import { createHash, randomUUID, timingSafeEqual } from 'crypto';
 import { Response } from 'express';
 import { CONFIG_KEYS } from '../../../common/constants';
 import { AuthCookieConfig } from '../../../config/configuration';
-import { AdminRole } from '../../../generated/prisma';
 import { TokenService } from '../../../infrastructure/auth/token.service';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { AuthCookieService } from '../../auth/auth-cookie.service';
@@ -167,7 +166,7 @@ export class AdminAuthService {
     const tokens = await this.tokenService.generateTokenPair(
       user.id,
       session.id,
-      { role: admin.role as AdminRole },
+      { role: admin.role },
     );
 
     const rotated = await this.sessionsRepository.rotateIfHashMatches({

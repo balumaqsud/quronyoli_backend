@@ -226,19 +226,17 @@ describe('Auth & Users (e2e)', () => {
       }),
     syncReminderPreferenceFromSettings: jest
       .fn()
-      .mockImplementation(
-        (input: { userId: string; enabled: boolean }) => {
-          reminderStore = {
-            id: reminderStore?.id ?? randomUUID(),
-            userId: input.userId,
-            enabled: input.enabled,
-            localTime: reminderStore?.localTime ?? '07:00',
-            createdAt: reminderStore?.createdAt ?? new Date(),
-            updatedAt: new Date(),
-          };
-          return Promise.resolve(undefined);
-        },
-      ),
+      .mockImplementation((input: { userId: string; enabled: boolean }) => {
+        reminderStore = {
+          id: reminderStore?.id ?? randomUUID(),
+          userId: input.userId,
+          enabled: input.enabled,
+          localTime: reminderStore?.localTime ?? '07:00',
+          createdAt: reminderStore?.createdAt ?? new Date(),
+          updatedAt: new Date(),
+        };
+        return Promise.resolve(undefined);
+      }),
     setAyatRemindersEnabled: jest
       .fn()
       .mockImplementation((_userId: string, enabled: boolean) => {

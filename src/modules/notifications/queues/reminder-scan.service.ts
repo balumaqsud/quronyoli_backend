@@ -55,8 +55,10 @@ export class ReminderScanService implements OnModuleInit {
     let enqueued = 0;
 
     for (const localTime of candidates) {
-      const due =
-        await this.notificationsRepository.findDueReminders(localTime, now);
+      const due = await this.notificationsRepository.findDueReminders(
+        localTime,
+        now,
+      );
 
       for (const row of due) {
         const userLocalMinute = this.formatLocalMinute(now, row.timezone);

@@ -55,3 +55,24 @@ export function parseKeysetCursor(cursor?: string): {
     cursorId: decoded.id,
   };
 }
+
+/**
+ * Descending keyset cursor predicate: (timestamp, id) < (cursorAt, cursorId).
+ * Shared by bookmarks, favorites, notifications, and reading feeds.
+ */
+export function keysetDescCursorOr(
+  timestampField: string,
+  cursorAt: Date,
+  cursorId: string,
+): {
+  OR: Array<Record<string, unknown>>;
+} {
+  return {
+    OR: [
+      { [timestampField]: { lt: cursorAt } },
+      {
+        AND: [{ [timestampField]: cursorAt }, { id: { lt: cursorId } }],
+      },
+    ],
+  };
+}

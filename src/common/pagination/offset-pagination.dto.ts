@@ -57,7 +57,10 @@ export function toOffsetPage<T>(
   };
 }
 
-export function resolveOffset(page = 1, limit = 20): {
+export function resolveOffset(
+  page = 1,
+  limit = 20,
+): {
   skip: number;
   take: number;
   page: number;

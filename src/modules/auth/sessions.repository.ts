@@ -72,21 +72,6 @@ export class SessionsRepository {
     return await this.findById(input.sessionId);
   }
 
-  /** @deprecated Prefer rotateIfHashMatches for concurrent-safe rotation. */
-  async rotate(input: RotateSessionInput): Promise<UserSession> {
-    return await this.prisma.userSession.update({
-      where: { id: input.sessionId },
-      data: {
-        refreshTokenHash: input.refreshTokenHash,
-        expiresAt: input.expiresAt,
-        ipAddress: input.ipAddress,
-        userAgent: input.userAgent,
-        lastUsedAt: new Date(),
-        revokedAt: null,
-      },
-    });
-  }
-
   async revoke(sessionId: string): Promise<UserSession | null> {
     const session = await this.findById(sessionId);
 

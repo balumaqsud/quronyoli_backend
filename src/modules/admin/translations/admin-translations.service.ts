@@ -40,7 +40,7 @@ export class AdminTranslationsService {
     const offset = resolveOffset(query.page, query.limit);
     const languageCode = resolveCatalogLanguageFilter(query.languageCode);
     const where = {
-      deletedAt: null as null,
+      deletedAt: null,
       ...(languageCode ? { languageCode } : {}),
       ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
       ...(query.isDefault !== undefined ? { isDefault: query.isDefault } : {}),

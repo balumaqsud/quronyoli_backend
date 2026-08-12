@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { keysetDescCursorOr } from '../../common/pagination/paginate-keyset';
 import { Bookmark, Prisma } from '../../generated/prisma';
 import { PrismaService } from '../../infrastructure/database/prisma.service';
 
@@ -107,17 +108,7 @@ export class BookmarksRepository {
 
     if (query.cursorAt && query.cursorId) {
       where.AND = [
-        {
-          OR: [
-            { createdAt: { lt: query.cursorAt } },
-            {
-              AND: [
-                { createdAt: query.cursorAt },
-                { id: { lt: query.cursorId } },
-              ],
-            },
-          ],
-        },
+        keysetDescCursorOr('createdAt', query.cursorAt, query.cursorId),
       ];
     }
 

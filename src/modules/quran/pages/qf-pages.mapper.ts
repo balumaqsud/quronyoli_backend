@@ -6,12 +6,11 @@ import {
   resolvePageImageUrlConfig,
   type PageImageSourcesConfig,
   type PageImageUrlConfig,
-  type TajweedPageImageConfig,
 } from './qf-page-images';
 
 /** Accept legacy single tajweed config or multi-mushaf sources. */
 function toPageImageSources(
-  config?: PageImageSourcesConfig | PageImageUrlConfig | TajweedPageImageConfig,
+  config?: PageImageSourcesConfig | PageImageUrlConfig,
 ): PageImageSourcesConfig | undefined {
   if (!config) {
     return undefined;
@@ -107,7 +106,6 @@ export function mapVersesToMushafPage(
   pageNumber: number,
   mushafId: number,
   verses: QfPageVerseSnippet[],
-  _audioCdnBase = 'https://audio.qurancdn.com',
 ): MushafPagePayload {
   if (verses.length === 0) {
     throw new Error(`Page ${pageNumber} returned zero verses from QF`);
@@ -195,10 +193,7 @@ export function applyPageImageMeta<
     imageUrl: string | null;
     imageWidth: number | null;
   },
->(
-  row: T,
-  pageImageConfig?: PageImageSourcesConfig | PageImageUrlConfig | TajweedPageImageConfig,
-): T {
+>(row: T, pageImageConfig?: PageImageSourcesConfig | PageImageUrlConfig): T {
   const entry = getImageMushafEntry(row.mushafId);
   if (entry) {
     const resolved = resolvePageImageUrlConfig(
@@ -263,7 +258,7 @@ export function toMushafPageDetail(
     imageWidth: number | null;
     syncedAt: Date;
   },
-  pageImageConfig?: PageImageSourcesConfig | PageImageUrlConfig | TajweedPageImageConfig,
+  pageImageConfig?: PageImageSourcesConfig | PageImageUrlConfig,
 ): MushafPageDetail {
   const withImages = applyPageImageMeta(
     {

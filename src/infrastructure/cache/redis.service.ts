@@ -85,6 +85,50 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.del(this.buildKey(key));
   }
 
+  /**
+   * SCAN matching keys for a logical (unprefixed) glob pattern.
+   * Uses SCAN only — never KEYS — so production Redis stays responsive.
+   */
+  async scanKeys(pattern: string): Promise<string[]> {
+    const fullPattern = this.buildKey(pattern);
+    const keys: string[] = [];
+    let cursor = '0';
+
+    do {
+      const [nextCursor, batch] = await this.client.scan(
+        cursor,
+        'MATCH',
+        fullPattern,
+        'COUNT',
+        100,
+      );
+      cursor = nextCursor;
+      keys.push(...batch);
+    } while (cursor !== '0');
+
+    return keys;
+  }
+
+  /**
+   * Delete all keys matching a logical glob pattern via SCAN + DEL.
+   * Returns the number of keys removed.
+   */
+  async delByPattern(pattern: string): Promise<number> {
+    const keys = await this.scanKeys(pattern);
+    if (keys.length === 0) {
+      return 0;
+    }
+
+    // Keys from SCAN already include the keyPrefix; delete them as-is.
+    let deleted = 0;
+    const chunkSize = 100;
+    for (let i = 0; i < keys.length; i += chunkSize) {
+      const chunk = keys.slice(i, i + chunkSize);
+      deleted += await this.client.del(...chunk);
+    }
+    return deleted;
+  }
+
   async isHealthy(): Promise<boolean> {
     try {
       const result = await this.client.ping();

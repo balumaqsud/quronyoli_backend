@@ -153,17 +153,12 @@ async function bootstrap(): Promise<void> {
 }
 
 process.on('uncaughtException', (error: Error) => {
-  Logger.error(
-    `Uncaught exception: ${error.message}`,
-    error.stack,
-    'Process',
-  );
+  Logger.error(`Uncaught exception: ${error.message}`, error.stack, 'Process');
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason: unknown) => {
-  const message =
-    reason instanceof Error ? reason.message : String(reason);
+  const message = reason instanceof Error ? reason.message : String(reason);
   const stack = reason instanceof Error ? reason.stack : undefined;
   Logger.error(`Unhandled rejection: ${message}`, stack, 'Process');
   process.exit(1);

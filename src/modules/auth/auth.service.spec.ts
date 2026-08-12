@@ -26,7 +26,7 @@ describe('AuthService', () => {
   let sessionsRepository: jest.Mocked<
     Pick<
       SessionsRepository,
-      'create' | 'findById' | 'rotate' | 'rotateIfHashMatches' | 'revoke'
+      'create' | 'findById' | 'rotateIfHashMatches' | 'revoke'
     >
   >;
   let tokenService: jest.Mocked<
@@ -79,7 +79,6 @@ describe('AuthService', () => {
     sessionsRepository = {
       create: jest.fn(),
       findById: jest.fn(),
-      rotate: jest.fn(),
       rotateIfHashMatches: jest.fn(),
       revoke: jest.fn(),
     };

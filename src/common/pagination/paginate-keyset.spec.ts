@@ -1,5 +1,9 @@
 import { encodeKeysetCursor, decodeKeysetCursor } from './keyset-cursor';
-import { parseKeysetCursor, toKeysetPage } from './paginate-keyset';
+import {
+  keysetDescCursorOr,
+  parseKeysetCursor,
+  toKeysetPage,
+} from './paginate-keyset';
 
 describe('keyset pagination helpers', () => {
   it('round-trips cursor encode/decode', () => {
@@ -56,5 +60,15 @@ describe('keyset pagination helpers', () => {
     const parsed = parseKeysetCursor(encoded);
     expect(parsed.cursorId).toBe('x');
     expect(parsed.cursorAt?.toISOString()).toBe('2026-07-30T12:00:00.000Z');
+  });
+
+  it('builds a descending keyset cursor OR predicate', () => {
+    const at = new Date('2026-07-02T00:00:00.000Z');
+    expect(keysetDescCursorOr('createdAt', at, 'abc')).toEqual({
+      OR: [
+        { createdAt: { lt: at } },
+        { AND: [{ createdAt: at }, { id: { lt: 'abc' } }] },
+      ],
+    });
   });
 });

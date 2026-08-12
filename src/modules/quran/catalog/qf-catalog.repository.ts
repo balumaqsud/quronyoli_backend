@@ -85,6 +85,24 @@ export class QfCatalogRepository {
     });
   }
 
+  async findActiveTranslationsByExternalIds(
+    externalIds: string[],
+    options?: { provider?: string },
+  ): Promise<QuranTranslation[]> {
+    if (externalIds.length === 0) {
+      return [];
+    }
+
+    return this.prisma.quranTranslation.findMany({
+      where: {
+        externalId: { in: externalIds },
+        isActive: true,
+        deletedAt: null,
+        ...(options?.provider ? { provider: options.provider } : {}),
+      },
+    });
+  }
+
   async syncTranslations(
     items: CatalogTranslationPayload[],
   ): Promise<CatalogSyncStats> {

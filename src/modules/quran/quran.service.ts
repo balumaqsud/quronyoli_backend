@@ -990,23 +990,26 @@ export class QuranService {
       Map<number, NormalizedEncTranslationRow>
     >();
 
-    for (const key of activeEncKeys) {
-      for (const chapter of chapters) {
-        const map = await this.quranEncTranslations.tryGetSurahMap(
-          key,
+    const fetchResults = await Promise.all(
+      activeEncKeys.flatMap((key) =>
+        chapters.map(async (chapter) => ({
           chapter,
-        );
-        if (!map) {
-          continue;
-        }
-        const existing: Map<number, NormalizedEncTranslationRow> =
-          encByChapter.get(chapter) ??
-          new Map<number, NormalizedEncTranslationRow>();
-        for (const [ayah, row] of map) {
-          existing.set(ayah, row);
-        }
-        encByChapter.set(chapter, existing);
+          map: await this.quranEncTranslations.tryGetSurahMap(key, chapter),
+        })),
+      ),
+    );
+
+    for (const { chapter, map } of fetchResults) {
+      if (!map) {
+        continue;
       }
+      const existing: Map<number, NormalizedEncTranslationRow> =
+        encByChapter.get(chapter) ??
+        new Map<number, NormalizedEncTranslationRow>();
+      for (const [ayah, row] of map) {
+        existing.set(ayah, row);
+      }
+      encByChapter.set(chapter, existing);
     }
 
     return mergeEncIntoVersesPayload(payload, encByChapter);
@@ -1019,20 +1022,18 @@ export class QuranService {
   private async filterActiveEncKeys(
     encKeys: string[],
   ): Promise<QuranEncTranslationKey[]> {
-    const active: QuranEncTranslationKey[] = [];
-    for (const key of encKeys) {
-      if (!isQuranEncTranslationKey(key)) {
-        continue;
-      }
-      const row =
-        await this.catalogRepository.findActiveTranslationByExternalId(key, {
-          provider: QURANENC_PROVIDER,
-        });
-      if (row) {
-        active.push(key);
-      }
+    const candidates = encKeys.filter(isQuranEncTranslationKey);
+    if (candidates.length === 0) {
+      return [];
     }
-    return active;
+
+    const rows =
+      await this.catalogRepository.findActiveTranslationsByExternalIds(
+        candidates,
+        { provider: QURANENC_PROVIDER },
+      );
+    const activeIds = new Set(rows.map((row) => row.externalId));
+    return candidates.filter((key) => activeIds.has(key));
   }
 
   private async assertActiveEncTranslation(

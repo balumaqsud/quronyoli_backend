@@ -1,4 +1,5 @@
 import { PinoLogger } from 'nestjs-pino';
+import { QuranCacheService } from '../cache/quran-cache.service';
 import { QuranFoundationClient } from '../client/quran-foundation.client';
 import { QfCatalogRepository } from './qf-catalog.repository';
 import { QfCatalogSyncService } from './qf-catalog-sync.service';
@@ -8,6 +9,7 @@ describe('QfCatalogSyncService', () => {
   const syncTranslations = jest.fn();
   const syncTafsirs = jest.fn();
   const syncReciters = jest.fn();
+  const invalidateAfterCatalogSync = jest.fn().mockResolvedValue(0);
 
   const client = {
     getContent,
@@ -18,6 +20,10 @@ describe('QfCatalogSyncService', () => {
     syncTafsirs,
     syncReciters,
   } as unknown as QfCatalogRepository;
+
+  const cache = {
+    invalidateAfterCatalogSync,
+  } as unknown as QuranCacheService;
 
   const logger = {
     info: jest.fn(),
@@ -30,7 +36,8 @@ describe('QfCatalogSyncService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new QfCatalogSyncService(client, repository, logger);
+    invalidateAfterCatalogSync.mockResolvedValue(0);
+    service = new QfCatalogSyncService(client, repository, cache, logger);
 
     getContent.mockImplementation((path: string) => {
       if (path === '/resources/translations') {
@@ -133,6 +140,7 @@ describe('QfCatalogSyncService', () => {
     );
     expect(result.translations.upserted).toBe(1);
     expect(result.chapterReciters.upserted).toBe(1);
+    expect(invalidateAfterCatalogSync).toHaveBeenCalledTimes(1);
   });
 
   it('does not write when upstream fetch fails', async () => {

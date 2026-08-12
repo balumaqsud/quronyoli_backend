@@ -9,6 +9,7 @@ import configuration, {
 import { envValidationSchema } from '../../../config/env.validation';
 import { DatabaseModule } from '../../../infrastructure/database/database.module';
 import { RedisModule } from '../../../infrastructure/cache/redis.module';
+import { QuranCacheService } from '../cache/quran-cache.service';
 import { QuranFoundationClient } from '../client/quran-foundation.client';
 import { QuranFoundationTokenService } from '../client/quran-foundation-token.service';
 import { QuranFoundationErrorMapper } from '../errors/quran-foundation.error-mapper';
@@ -59,6 +60,7 @@ import { QfCatalogSyncService } from './qf-catalog-sync.service';
     QuranFoundationClient,
     QuranFoundationTokenService,
     QuranFoundationErrorMapper,
+    QuranCacheService,
     QfCatalogRepository,
     QfCatalogSyncService,
   ],

@@ -1,11 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
-import {
-  IsBoolean,
-  IsOptional,
-  IsString,
-  MaxLength,
-} from 'class-validator';
+import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
 import { OffsetPaginationQueryDto } from '../../../../common/pagination/offset-pagination.dto';
 import { toOptionalBoolean } from '../../../../common/validation/to-optional-boolean';
 

@@ -42,4 +42,18 @@ describe('normalizeQfMediaUrls', () => {
       normalizeQfMediaUrls({ audio_file: { audio_url: absolute } }, base),
     ).toEqual({ audio_file: { audio_url: absolute } });
   });
+
+  it('preserves object identity when no media URLs need rewriting', () => {
+    const payload = {
+      verses: [
+        {
+          verse_key: '1:1',
+          text_uthmani: 'بِسْمِ',
+          words: [{ text: 'بِسْمِ', position: 1 }],
+        },
+      ],
+    };
+
+    expect(normalizeQfMediaUrls(payload, base)).toBe(payload);
+  });
 });

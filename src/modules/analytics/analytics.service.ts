@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CONFIG_KEYS } from '../../common/constants';
+import { assertValidTimezone } from '../../common/datetime/local-date';
 import { AnalyticsConfig } from '../../config/configuration';
 import { RedisService } from '../../infrastructure/cache/redis.service';
 import { UsersService } from '../users/users.service';
@@ -186,9 +187,7 @@ export class AnalyticsService {
   }
 
   private assertTimezone(timezone: string): void {
-    try {
-      Intl.DateTimeFormat(undefined, { timeZone: timezone });
-    } catch {
+    if (!assertValidTimezone(timezone)) {
       throw new BadRequestException('Invalid timezone');
     }
   }

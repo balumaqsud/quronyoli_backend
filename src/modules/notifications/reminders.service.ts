@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { assertValidTimezone } from '../../common/datetime/local-date';
 import { SettingsService } from '../settings/settings.service';
 import { UsersService } from '../users/users.service';
 import {
@@ -89,15 +90,10 @@ export class RemindersService {
 
   private async assertValidTimezone(userId: string): Promise<string> {
     const timezone = await this.notificationsRepository.getTimezone(userId);
-    if (!IANA_TIMEZONE_PATTERN.test(timezone)) {
-      throw new BadRequestException(
-        'User timezone must be a valid IANA timezone before enabling reminders',
-      );
-    }
-
-    try {
-      Intl.DateTimeFormat(undefined, { timeZone: timezone });
-    } catch {
+    if (
+      !IANA_TIMEZONE_PATTERN.test(timezone) ||
+      !assertValidTimezone(timezone)
+    ) {
       throw new BadRequestException(
         'User timezone must be a valid IANA timezone before enabling reminders',
       );

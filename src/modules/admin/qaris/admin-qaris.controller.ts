@@ -69,7 +69,8 @@ export class AdminQarisController {
 
   @Patch('qaris/:id')
   @ApiOperation({
-    summary: 'Update admin-controlled qari fields (isActive, isPopular, sortOrder)',
+    summary:
+      'Update admin-controlled qari fields (isActive, isPopular, sortOrder)',
   })
   async update(
     @Param('id', ParseUUIDPipe) id: string,

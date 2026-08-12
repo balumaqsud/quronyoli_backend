@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
-  decodeKeysetCursor,
-  encodeKeysetCursor,
-} from '../../common/pagination/keyset-cursor';
+  parseKeysetCursor,
+  toKeysetPage,
+} from '../../common/pagination/paginate-keyset';
 import { parseVerseKey } from '../../common/quran/ayah-coordinate';
 import { CONFIG_KEYS } from '../../common/constants';
 import {
@@ -87,28 +87,20 @@ export class ReadingService {
     cursor?: string,
   ): Promise<PaginatedRecentResponseDto> {
     await this.usersService.getActiveByIdOrThrow(userId);
-    const decoded = cursor ? decodeKeysetCursor(cursor) : undefined;
+    const { cursorAt, cursorId } = parseKeysetCursor(cursor);
     const rows = await this.readingRepository.findRecent({
       userId,
       limit: limit + 1,
-      cursorAt: decoded ? new Date(decoded.at) : undefined,
-      cursorId: decoded?.id,
+      cursorAt,
+      cursorId,
     });
 
-    const hasMore = rows.length > limit;
-    const page = hasMore ? rows.slice(0, limit) : rows;
-    const last = page[page.length - 1];
-
-    return {
-      items: page.map((row) => this.mapRecent(row)),
-      nextCursor:
-        hasMore && last
-          ? encodeKeysetCursor({
-              at: last.lastReadAt.toISOString(),
-              id: last.id,
-            })
-          : null,
-    };
+    return toKeysetPage(rows, {
+      limit,
+      getCursorAt: (row) => row.lastReadAt,
+      getCursorId: (row) => row.id,
+      mapItem: (row) => this.mapRecent(row),
+    });
   }
 
   async getHistory(
@@ -122,33 +114,23 @@ export class ReadingService {
   ): Promise<PaginatedHistoryResponseDto> {
     await this.usersService.getActiveByIdOrThrow(userId);
     const limit = options.limit ?? 20;
-    const decoded = options.cursor
-      ? decodeKeysetCursor(options.cursor)
-      : undefined;
+    const { cursorAt, cursorId } = parseKeysetCursor(options.cursor);
 
     const rows = await this.readingRepository.findHistory({
       userId,
       limit: limit + 1,
-      cursorAt: decoded ? new Date(decoded.at) : undefined,
-      cursorId: decoded?.id,
+      cursorAt,
+      cursorId,
       from: options.from ? new Date(options.from) : undefined,
       to: options.to ? new Date(options.to) : undefined,
     });
 
-    const hasMore = rows.length > limit;
-    const page = hasMore ? rows.slice(0, limit) : rows;
-    const last = page[page.length - 1];
-
-    return {
-      items: page.map((row) => this.mapHistory(row)),
-      nextCursor:
-        hasMore && last
-          ? encodeKeysetCursor({
-              at: last.openedAt.toISOString(),
-              id: last.id,
-            })
-          : null,
-    };
+    return toKeysetPage(rows, {
+      limit,
+      getCursorAt: (row) => row.openedAt,
+      getCursorId: (row) => row.id,
+      mapItem: (row) => this.mapHistory(row),
+    });
   }
 
   async getProgress(userId: string): Promise<ReadingProgressResponseDto> {

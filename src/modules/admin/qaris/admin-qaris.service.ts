@@ -31,7 +31,7 @@ export class AdminQarisService {
   async list(query: AdminQarisQueryDto): Promise<OffsetPage<QuranReciter>> {
     const offset = resolveOffset(query.page, query.limit);
     const where = {
-      deletedAt: null as null,
+      deletedAt: null,
       ...(query.kind ? { kind: query.kind } : {}),
       ...(query.isActive !== undefined ? { isActive: query.isActive } : {}),
       ...(query.isPopular !== undefined ? { isPopular: query.isPopular } : {}),

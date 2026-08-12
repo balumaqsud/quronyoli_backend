@@ -39,9 +39,7 @@ describe('AdminTafsirsService', () => {
       },
       $transaction: jest.fn(async (arg: unknown) => {
         if (typeof arg === 'function') {
-          return (
-            arg as (tx: typeof prisma) => Promise<unknown>
-          )(prisma);
+          return (arg as (tx: typeof prisma) => Promise<unknown>)(prisma);
         }
         return Promise.all(arg as Promise<unknown>[]);
       }),

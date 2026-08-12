@@ -16,6 +16,13 @@ function resourceId(externalId: string): number | string {
   return Number.isFinite(numeric) ? numeric : externalId;
 }
 
+/** Drop internal sync `source` marker from stored QF metadata before API output. */
+function omitSource(meta: Record<string, unknown>): Record<string, unknown> {
+  const rest = { ...meta };
+  delete rest.source;
+  return rest;
+}
+
 /**
  * Build a QF-shaped catalog resource from a local row.
  * Prefer stored upstream metadata so Mini App field names stay compatible.
@@ -31,7 +38,7 @@ export function toQfTranslationResource(
   };
 
   if (meta) {
-    const { source: _source, ...rest } = meta;
+    const rest = omitSource(meta);
     return {
       ...rest,
       id: resourceId(row.externalId),
@@ -59,7 +66,7 @@ export function toQfTafsirResource(row: QuranTafsir): Record<string, unknown> {
   };
 
   if (meta) {
-    const { source: _source, ...rest } = meta;
+    const rest = omitSource(meta);
     return {
       ...rest,
       id: resourceId(row.externalId),
@@ -87,7 +94,7 @@ export function toQfReciterResource(
   };
 
   if (meta) {
-    const { source: _source, ...rest } = meta;
+    const rest = omitSource(meta);
     return {
       ...rest,
       id: resourceId(row.externalId),

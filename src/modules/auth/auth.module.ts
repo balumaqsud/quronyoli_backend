@@ -16,11 +16,7 @@ import { TelegramInitDataVerifier } from './telegram/telegram-init-data.verifier
     SessionsRepository,
     TelegramInitDataVerifier,
   ],
-  exports: [
-    AuthCookieService,
-    SessionsRepository,
-    TelegramInitDataVerifier,
-  ],
+  exports: [AuthCookieService, SessionsRepository, TelegramInitDataVerifier],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

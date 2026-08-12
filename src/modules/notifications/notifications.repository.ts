@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { keysetDescCursorOr } from '../../common/pagination/paginate-keyset';
 import {
   NotificationDelivery,
   NotificationDeliveryStatus,
@@ -340,17 +341,7 @@ export class NotificationsRepository {
 
     if (query.cursorAt && query.cursorId) {
       where.AND = [
-        {
-          OR: [
-            { createdAt: { lt: query.cursorAt } },
-            {
-              AND: [
-                { createdAt: query.cursorAt },
-                { id: { lt: query.cursorId } },
-              ],
-            },
-          ],
-        },
+        keysetDescCursorOr('createdAt', query.cursorAt, query.cursorId),
       ];
     }
 

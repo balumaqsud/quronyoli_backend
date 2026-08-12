@@ -1,6 +1,20 @@
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
 import { QfCatalogRepository } from './qf-catalog.repository';
 
+type UpsertCallArg = {
+  create: Record<string, unknown>;
+  update: Record<string, unknown>;
+};
+
+function upsertArgAt(mockFn: jest.Mock, index: number): UpsertCallArg {
+  const calls = mockFn.mock.calls as unknown[][];
+  const arg = calls[index]?.[0];
+  if (!arg || typeof arg !== 'object') {
+    throw new Error(`Expected upsert call at index ${index}`);
+  }
+  return arg as UpsertCallArg;
+}
+
 describe('QfCatalogRepository', () => {
   const upsert = jest.fn();
   const updateMany = jest.fn();
@@ -47,7 +61,7 @@ describe('QfCatalogRepository', () => {
     ]);
 
     expect(upsert).toHaveBeenCalledTimes(1);
-    const call = upsert.mock.calls[0][0];
+    const call = upsertArgAt(upsert, 0);
     expect(call.create).toMatchObject({
       externalId: '55',
       isActive: true,
@@ -56,6 +70,7 @@ describe('QfCatalogRepository', () => {
     expect(updateMany).toHaveBeenNthCalledWith(1, {
       where: {
         provider: 'quran.foundation',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- jest asymmetric matcher
         externalId: { in: expect.arrayContaining(['55']) },
         deletedAt: null,
         isActive: false,
@@ -96,7 +111,7 @@ describe('QfCatalogRepository', () => {
     ]);
 
     expect(upsert).toHaveBeenCalledTimes(1);
-    const call = upsert.mock.calls[0][0];
+    const call = upsertArgAt(upsert, 0);
     expect(call.create).toMatchObject({
       externalId: '999',
       isActive: false,
@@ -110,6 +125,7 @@ describe('QfCatalogRepository', () => {
     expect(updateMany).toHaveBeenNthCalledWith(1, {
       where: {
         provider: 'quran.foundation',
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- jest asymmetric matcher
         externalId: { in: expect.arrayContaining(['55']) },
         deletedAt: null,
         isActive: false,
@@ -182,7 +198,9 @@ describe('QfCatalogRepository', () => {
             kind: 'AYAH',
           },
         },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- jest asymmetric matcher
         create: expect.objectContaining({ isActive: true }),
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- jest asymmetric matcher
         update: expect.not.objectContaining({ isActive: expect.anything() }),
       }),
     );
@@ -195,10 +213,11 @@ describe('QfCatalogRepository', () => {
             kind: 'CHAPTER',
           },
         },
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- jest asymmetric matcher
         create: expect.objectContaining({ isActive: true }),
       }),
     );
-    const chapterUpdate = quranReciter.upsert.mock.calls[1][0].update;
+    const chapterUpdate = upsertArgAt(quranReciter.upsert, 1).update;
     expect(chapterUpdate).not.toHaveProperty('isActive');
 
     expect(quranReciter.updateMany).toHaveBeenCalledWith({
@@ -234,18 +253,15 @@ describe('QfCatalogRepository', () => {
         deletedAt: null,
         languageCode: 'uz',
       },
-      orderBy: [
-        { isDefault: 'desc' },
-        { sortOrder: 'asc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
     });
   });
 
   it('finds active translation by externalId with optional provider', async () => {
     const findFirst = jest.fn().mockResolvedValue({ id: 'ky-row' });
-    (prisma as unknown as { quranTranslation: { findFirst: jest.Mock } })
-      .quranTranslation.findFirst = findFirst;
+    (
+      prisma as unknown as { quranTranslation: { findFirst: jest.Mock } }
+    ).quranTranslation.findFirst = findFirst;
 
     await expect(
       repository.findActiveTranslationByExternalId('kyrgyz_hakimov', {
@@ -263,10 +279,46 @@ describe('QfCatalogRepository', () => {
     });
   });
 
+  it('finds active translations by externalIds in one query', async () => {
+    const findMany = jest.fn().mockResolvedValue([{ id: 'ky-row' }]);
+    (
+      prisma as unknown as { quranTranslation: { findMany: jest.Mock } }
+    ).quranTranslation.findMany = findMany;
+
+    await expect(
+      repository.findActiveTranslationsByExternalIds(['kyrgyz_hakimov'], {
+        provider: 'quranenc',
+      }),
+    ).resolves.toEqual([{ id: 'ky-row' }]);
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        externalId: { in: ['kyrgyz_hakimov'] },
+        isActive: true,
+        deletedAt: null,
+        provider: 'quranenc',
+      },
+    });
+  });
+
+  it('returns empty list without querying when externalIds is empty', async () => {
+    const findMany = jest.fn();
+    (
+      prisma as unknown as { quranTranslation: { findMany: jest.Mock } }
+    ).quranTranslation.findMany = findMany;
+
+    await expect(
+      repository.findActiveTranslationsByExternalIds([]),
+    ).resolves.toEqual([]);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
   it('lists active tafsirs with optional language filter', async () => {
-    const tafsirFindMany = (prisma as unknown as {
-      quranTafsir: { findMany: jest.Mock };
-    }).quranTafsir.findMany;
+    const tafsirFindMany = (
+      prisma as unknown as {
+        quranTafsir: { findMany: jest.Mock };
+      }
+    ).quranTafsir.findMany;
     tafsirFindMany.mockResolvedValueOnce([{ id: 'tf1' }]);
 
     await expect(
@@ -284,25 +336,19 @@ describe('QfCatalogRepository', () => {
   });
 
   it('lists active reciters by kind', async () => {
-    (prisma.quranReciter.findMany as jest.Mock).mockResolvedValueOnce([
-      { id: 'r1' },
-    ]);
+    findMany.mockResolvedValueOnce([{ id: 'r1' }]);
 
     await expect(
       repository.listActiveReciters({ kind: 'CHAPTER' }),
     ).resolves.toEqual([{ id: 'r1' }]);
 
-    expect(prisma.quranReciter.findMany).toHaveBeenCalledWith({
+    expect(findMany).toHaveBeenCalledWith({
       where: {
         kind: 'CHAPTER',
         isActive: true,
         deletedAt: null,
       },
-      orderBy: [
-        { isPopular: 'desc' },
-        { sortOrder: 'asc' },
-        { name: 'asc' },
-      ],
+      orderBy: [{ isPopular: 'desc' }, { sortOrder: 'asc' }, { name: 'asc' }],
     });
   });
 });

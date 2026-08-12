@@ -90,7 +90,10 @@ export class SettingsService {
     await this.settingsRepository.setAyatRemindersEnabled(userId, enabled);
   }
 
-  async markLastAyatReminderAt(userId: string, at: Date = new Date()): Promise<void> {
+  async markLastAyatReminderAt(
+    userId: string,
+    at: Date = new Date(),
+  ): Promise<void> {
     await this.settingsRepository.markLastAyatReminderAt(userId, at);
   }
 
