@@ -1,4 +1,5 @@
-import { resolveDailyAyahForDate } from './daily-ayah';
+import { resolveDailyAyahForDate, resolveRandomAyah } from './daily-ayah';
+import { isValidAyahCoordinate } from './quran-coordinates';
 
 describe('resolveDailyAyahForDate', () => {
   it('returns a stable verse key for the same date', () => {
@@ -13,5 +14,15 @@ describe('resolveDailyAyahForDate', () => {
     const b = resolveDailyAyahForDate('2026-12-31');
     expect(a.chapterNumber).toBeGreaterThanOrEqual(1);
     expect(b.chapterNumber).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('resolveRandomAyah', () => {
+  it('returns a valid ayah coordinate', () => {
+    const ayah = resolveRandomAyah();
+    expect(isValidAyahCoordinate(ayah.chapterNumber, ayah.verseNumber)).toBe(
+      true,
+    );
+    expect(ayah.verseKey).toBe(`${ayah.chapterNumber}:${ayah.verseNumber}`);
   });
 });

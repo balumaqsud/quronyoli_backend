@@ -11,7 +11,7 @@ The backend integrates with Telegram for:
 
 ## Mini App–first UX
 
-The chat is an **entry door** only. Product features (daily ayah, random ayah, search, tafsir, audio, bookmarks, settings) live in the Mini App.
+The chat is primarily an **entry door**. Most product features (search, tafsir browsing, settings) live in the Mini App. `/bugun` is an exception: it sends a random ayah card in chat.
 
 Registered via `setMyCommands` on bootstrap:
 
@@ -20,9 +20,13 @@ Registered via `setMyCommands` on bootstrap:
 | `/start` | Upsert user; short welcome + **single** Ilovani ochish button. Supports `ayah_c_v` deep link. |
 | `/ilova` (`/app`) | Short line + Ilovani ochish |
 
-Legacy commands (`/bugun`, `/tasodifiy`, `/suralar`, `/juz`, `/davom`, `/saqlangan`, `/yordam`, `/haqimizda`) still respond with a short “Ilovada oching” message and the same single button (not listed in BotFather menu).
+| Legacy command | Behavior |
+| --- | --- |
+| `/bugun` | Random in-chat ayah card (Arabic + translation + actions). Falls back to Mini App open if fetch fails. |
+| `/haqimizda` | About copy + single Ilovani ochish button |
+| `/tasodifiy`, `/suralar`, `/juz`, `/davom`, `/saqlangan`, `/yordam` | Short “Ilovada oching” message + single Ilovani ochish button (not listed in BotFather menu) |
 
-**Ilovani ochish** uses a native Telegram `web_app` button pointing at `TELEGRAM_WEB_APP_URL` (HTTPS Mini App), plus a fallback Main Mini App URL button (`t.me/<bot>?startapp=`). Share / external deep links still use Direct Links: `https://t.me/<bot>/<shortName>` (optional `?startapp=`).
+**Ilovani ochish** uses a native Telegram `web_app` button pointing at `TELEGRAM_WEB_APP_URL` (HTTPS Mini App). Share / external deep links still use Direct Links: `https://t.me/<bot>/<shortName>` (optional `?startapp=`).
 
 On bootstrap the bot also calls `setChatMenuButton` with the same HTTPS Web App URL (bottom menu label `Quron Yo'li`).
 
@@ -35,7 +39,7 @@ Webhook `allowed_updates`: `message`, `callback_query` (legacy callbacks soft-re
 - `TelegramApi` interface + `TelegramHttpApi` Axios client (`TELEGRAM_API` token)
 - Controllers stay thin: validation + delegation only
 - `TelegramUpdateDispatcher` routes commands and `callback_query`
-- `TelegramAyahCardService` kept for possible reminder / future formatting (commands no longer send in-chat ayah cards)
+- `TelegramAyahCardService` builds in-chat ayah cards for `/bugun` and daily reminders
 - `NotificationService` owns delivery orchestration; BullMQ handles scan + retries
 
 ## Environment

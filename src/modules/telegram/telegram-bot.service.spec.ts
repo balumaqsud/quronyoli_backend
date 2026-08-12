@@ -115,7 +115,7 @@ describe('TelegramBotService', () => {
     );
   });
 
-  it('sends welcome with web_app and Main Mini App fallback for /start', async () => {
+  it('sends welcome with a single Ilovani ochish button for /start', async () => {
     await service.handleStartCommand({ ...baseMessage, text: '/start' });
 
     expect(usersService.upsertFromTelegram).toHaveBeenCalledWith(
@@ -131,15 +131,11 @@ describe('TelegramBotService', () => {
         Array<{ text?: string; web_app?: { url?: string }; url?: string }>
       >;
     };
-    expect(markup.inline_keyboard).toHaveLength(2);
+    expect(markup.inline_keyboard).toHaveLength(1);
     expect(markup.inline_keyboard[0]).toHaveLength(1);
     expect(markup.inline_keyboard[0]?.[0]).toEqual({
       text: '📖 Ilovani ochish',
       web_app: { url: 'https://quronyoli-front.vercel.app' },
-    });
-    expect(markup.inline_keyboard[1]?.[0]).toEqual({
-      text: "🌐 Quron Yo'li",
-      url: 'https://t.me/QuronYoliBot?startapp',
     });
   });
 
@@ -150,21 +146,63 @@ describe('TelegramBotService', () => {
     const markup = payload?.replyMarkup as {
       inline_keyboard: Array<Array<{ web_app?: { url?: string } }>>;
     };
+    expect(markup.inline_keyboard).toHaveLength(1);
     expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toBe(
       'https://quronyoli-front.vercel.app',
     );
   });
 
-  it('redirects /bugun to Mini App without ayah card', async () => {
+  it('sends a random ayah card for /bugun', async () => {
+    ayahCardService.buildCard.mockResolvedValue({
+      verseKey: '2:255',
+      chapterNumber: 2,
+      verseNumber: 255,
+      text: '<b>Tasodifiy oyat</b>\n\nArabic\n\nTranslation\n\n<b>2:255</b>',
+      keyboard: {
+        inline_keyboard: [[{ text: '📖 Ilovani ochish', web_app: { url: 'x' } }]],
+      },
+    });
+
     await service.handleBugunCommand({ ...baseMessage, text: '/bugun' });
+
+    expect(ayahCardService.buildCard).toHaveBeenCalledWith(
+      'user-1',
+      expect.stringMatching(/^\d+:\d+$/),
+      'Tasodifiy oyat',
+    );
+    const payload = sendMessage.mock.calls[0]?.[0];
+    expect(payload?.text).toContain('Tasodifiy oyat');
+    expect(payload?.text).not.toContain('Ilovada');
+  });
+
+  it('falls back to Mini App when /bugun ayah card fails', async () => {
+    ayahCardService.buildCard.mockRejectedValue(new Error('QF down'));
+
+    await service.handleBugunCommand({ ...baseMessage, text: '/bugun' });
+
     const payload = sendMessage.mock.calls[0]?.[0];
     expect(payload?.text).toContain('Ilovada');
     const markup = payload?.replyMarkup as {
       inline_keyboard: Array<Array<{ web_app?: { url?: string } }>>;
     };
-    expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toBe(
-      'https://quronyoli-front.vercel.app',
-    );
+    expect(markup.inline_keyboard).toHaveLength(1);
+    expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toContain('startapp=ayah_');
+  });
+
+  it('sends updated about text for /haqimizda', async () => {
+    await service.handleHaqimizdaCommand({
+      ...baseMessage,
+      text: '/haqimizda',
+    });
+    const payload = sendMessage.mock.calls[0]?.[0];
+    expect(payload?.text).toContain('Telegram Mini App');
+    expect(payload?.text).toContain('Quran.com litsenziyasi');
+    expect(payload?.text).toContain('MIT litsenziyasi');
+    expect(payload?.text).toContain('© 2026');
+    const markup = payload?.replyMarkup as {
+      inline_keyboard: Array<Array<{ web_app?: { url?: string } }>>;
+    };
+    expect(markup.inline_keyboard).toHaveLength(1);
   });
 
   it('redirects /saqlangan to Mini App', async () => {
@@ -191,11 +229,8 @@ describe('TelegramBotService', () => {
         Array<{ web_app?: { url?: string }; url?: string }>
       >;
     };
-    expect(markup.inline_keyboard).toHaveLength(2);
+    expect(markup.inline_keyboard).toHaveLength(1);
     expect(markup.inline_keyboard[0]?.[0]?.web_app?.url).toContain(
-      'startapp=ayah_2_255',
-    );
-    expect(markup.inline_keyboard[1]?.[0]?.url).toContain(
       'startapp=ayah_2_255',
     );
   });

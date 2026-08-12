@@ -4,6 +4,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { CONFIG_KEYS, TELEGRAM_API } from '../../common/constants';
+import { resolveRandomAyah } from '../../common/quran/daily-ayah';
 import { isValidAyahCoordinate } from '../../common/quran/quran-coordinates';
 import { TelegramConfig } from '../../config/configuration';
 import { AnalyticsTrackingService } from '../analytics/analytics-tracking.service';
@@ -25,7 +26,7 @@ import { escapeHtml, parseAyahStartPayload } from './utils/telegram-text.utils';
 
 /**
  * Mini App–first bot: chat is an entry door with a single Ilovani ochish button.
- * Legacy commands soft-redirect into the Mini App (no in-chat product UX).
+ * `/bugun` sends a random in-chat ayah card; other legacy commands soft-redirect.
  */
 @Injectable()
 export class TelegramBotService {
@@ -114,11 +115,46 @@ export class TelegramBotService {
   }
 
   async handleBugunCommand(message: TelegramIncomingMessage): Promise<void> {
-    await this.redirectToMiniApp(
-      message,
-      'bugun',
-      'Bugungi oyat Ilovada ochiladi.',
-    );
+    const user = await this.resolveUserFromTelegram(message.from);
+    await this.trackCommand(user?.id, 'bugun');
+
+    const ayah = resolveRandomAyah();
+    if (!user) {
+      await this.sendOpenMiniApp(
+        message.chat.id,
+        'Tasodifiy oyat Ilovada ochiladi.',
+        `ayah_${ayah.chapterNumber}_${ayah.verseNumber}`,
+      );
+      return;
+    }
+
+    try {
+      const card = await this.ayahCardService.buildCard(
+        user.id,
+        ayah.verseKey,
+        'Tasodifiy oyat',
+      );
+      await this.telegramApi.sendMessage({
+        chatId: message.chat.id,
+        text: card.text,
+        parseMode: 'HTML',
+        disableWebPagePreview: true,
+        replyMarkup: card.keyboard,
+      });
+    } catch (error) {
+      this.logger.warn(
+        {
+          err: error instanceof Error ? error.message : 'unknown',
+          verseKey: ayah.verseKey,
+        },
+        'Failed to build ayah card for /bugun; using Mini App fallback',
+      );
+      await this.sendOpenMiniApp(
+        message.chat.id,
+        'Tasodifiy oyat Ilovada ochiladi.',
+        `ayah_${ayah.chapterNumber}_${ayah.verseNumber}`,
+      );
+    }
   }
 
   async handleTasodifiyCommand(
@@ -338,12 +374,14 @@ export class TelegramBotService {
 
   private aboutMessage(): string {
     return [
-      "<b>Quron Yo'li</b>",
-      `Versiya: <b>${escapeHtml(this.appVersion)}</b>`,
+      "<b>Quron Yo‘li</b>",
+      `Versiya <b>${escapeHtml(this.appVersion)}</b>`,
       '',
-      "Maqsad: Qur'oni Karimni o‘qish, tinglash va anglashni osonlashtirish.",
+      "Telegram Mini App: Qur'on, tarjima, xatcho‘p va tafsir.",
       '',
-      'Davom etish uchun Ilovani oching.',
+      "Qur'on mazmuni Quran.com litsenziyasi asosida. Ilova kodi MIT litsenziyasi ostida.",
+      '',
+      '© 2026 Quron Yo‘li. Barcha huquqlar himoyalangan.',
     ].join('\n');
   }
 
@@ -357,24 +395,11 @@ export class TelegramBotService {
     };
   }
 
-  private mainMiniAppFallbackButton(startParam?: string): {
-    text: string;
-    url: string;
-  } {
-    return {
-      text: "🌐 Quron Yo'li",
-      url: this.linksService.buildMainMiniAppUrl(startParam),
-    };
-  }
-
   private openMiniAppKeyboard(
     startParam?: string,
   ): TelegramInlineKeyboardMarkup {
     return {
-      inline_keyboard: [
-        [this.ilovaniOchishButton(startParam)],
-        [this.mainMiniAppFallbackButton(startParam)],
-      ],
+      inline_keyboard: [[this.ilovaniOchishButton(startParam)]],
     };
   }
 

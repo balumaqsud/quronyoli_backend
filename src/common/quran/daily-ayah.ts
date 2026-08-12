@@ -15,6 +15,14 @@ export function resolveDailyAyahForDate(localDate: string): AyahCoordinate {
   return ayahIndexToCoordinate(ayahIndex);
 }
 
+/**
+ * Uniform random ayah across all 6236 verses.
+ */
+export function resolveRandomAyah(): AyahCoordinate {
+  const ayahIndex = Math.floor(Math.random() * TOTAL_QURAN_AYAHS) + 1;
+  return ayahIndexToCoordinate(ayahIndex);
+}
+
 function hashDateString(localDate: string): number {
   let hash = 2166136261;
   for (let i = 0; i < localDate.length; i += 1) {
