@@ -8,6 +8,7 @@ import { AnalyticsModule } from '../analytics/analytics.module';
 import { QfCatalogRepository } from './catalog/qf-catalog.repository';
 import { QfCatalogSyncService } from './catalog/qf-catalog-sync.service';
 import { QuranCacheService } from './cache/quran-cache.service';
+import { QuranCacheWarmerService } from './cache/quran-cache-warmer.service';
 import { QuranFoundationClient } from './client/quran-foundation.client';
 import { QuranFoundationTokenService } from './client/quran-foundation-token.service';
 import { QuranFoundationErrorMapper } from './errors/quran-foundation.error-mapper';
@@ -42,6 +43,7 @@ import { QuranService } from './quran.service';
     },
     QuranFoundationTokenService,
     QuranCacheService,
+    QuranCacheWarmerService,
     QuranFoundationErrorMapper,
     QuranRateLimitGuard,
     QfPagesRepository,
@@ -50,6 +52,11 @@ import { QuranService } from './quran.service';
     QuranEncClient,
     QuranEncTranslationService,
   ],
-  exports: [QuranService, QURAN_FOUNDATION_CLIENT, QfCatalogSyncService],
+  exports: [
+    QuranService,
+    QURAN_FOUNDATION_CLIENT,
+    QfCatalogSyncService,
+    QuranCacheService,
+  ],
 })
 export class QuranModule {}

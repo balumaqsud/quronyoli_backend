@@ -27,6 +27,15 @@ export class HttpCacheInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap(() => {
+        if (policy === 'private-long') {
+          response.setHeader(
+            'Cache-Control',
+            'private, max-age=3600, stale-while-revalidate=86400',
+          );
+          response.setHeader('Vary', 'Authorization');
+          return;
+        }
+
         if (policy === 'private-short') {
           response.setHeader(
             'Cache-Control',

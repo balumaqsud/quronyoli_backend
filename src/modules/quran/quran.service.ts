@@ -117,7 +117,10 @@ export class QuranService {
     return this.cachedVersesWithOptionalEnc(
       `/verses/by_chapter/${chapter}`,
       query,
-    );
+    ).then((payload) => {
+      this.prefetchNextSurahVersePage(chapter, query, payload);
+      return payload;
+    });
   }
 
   getAyahByKey(verseKey: string, query: VersesQueryDto): Promise<unknown> {
@@ -321,6 +324,18 @@ export class QuranService {
   }
 
   getPageVerses(page: number, query: VersesQueryDto): Promise<unknown> {
+    return this.assemblePageVerses(page, query).then((payload) => {
+      if (process.env.NODE_ENV !== 'test' && page < MADANI_MUSHAF_PAGE_COUNT) {
+        void this.assemblePageVerses(page + 1, query).catch(() => undefined);
+      }
+      return payload;
+    });
+  }
+
+  private assemblePageVerses(
+    page: number,
+    query: VersesQueryDto,
+  ): Promise<unknown> {
     this.assertMadaniPageNumber(page);
     const mushafId = this.resolveMushafId(
       query.mushaf !== undefined ? Number(query.mushaf) : undefined,
@@ -568,14 +583,23 @@ export class QuranService {
     );
   }
 
-  async getTranslations(query: LanguageQueryDto): Promise<unknown> {
+  getTranslations(query: LanguageQueryDto): Promise<unknown> {
     const languageCode = resolveCatalogLanguageFilter(query.language);
-    const rows = await this.catalogRepository.listActiveTranslations(
-      languageCode ? { languageCode } : undefined,
+    const cacheKey = this.cache.buildKey('resources', '/catalog/translations', {
+      language: languageCode ?? '',
+    });
+    return this.cache.getOrSet(
+      cacheKey,
+      this.config.cacheTtl.resourcesSeconds,
+      async () => {
+        const rows = await this.catalogRepository.listActiveTranslations(
+          languageCode ? { languageCode } : undefined,
+        );
+        return {
+          translations: rows.map(toQfTranslationResource),
+        };
+      },
     );
-    return {
-      translations: rows.map(toQfTranslationResource),
-    };
   }
 
   async getTranslationInfo(translationId: string): Promise<unknown> {
@@ -720,14 +744,23 @@ export class QuranService {
     );
   }
 
-  async getTafsirs(query: LanguageQueryDto): Promise<unknown> {
+  getTafsirs(query: LanguageQueryDto): Promise<unknown> {
     const languageCode = resolveCatalogLanguageFilter(query.language);
-    const rows = await this.catalogRepository.listActiveTafsirs(
-      languageCode ? { languageCode } : undefined,
+    const cacheKey = this.cache.buildKey('resources', '/catalog/tafsirs', {
+      language: languageCode ?? '',
+    });
+    return this.cache.getOrSet(
+      cacheKey,
+      this.config.cacheTtl.resourcesSeconds,
+      async () => {
+        const rows = await this.catalogRepository.listActiveTafsirs(
+          languageCode ? { languageCode } : undefined,
+        );
+        return {
+          tafsirs: rows.map(toQfTafsirResource),
+        };
+      },
     );
-    return {
-      tafsirs: rows.map(toQfTafsirResource),
-    };
   }
 
   getTafsirInfo(tafsirId: number): Promise<unknown> {
@@ -787,24 +820,44 @@ export class QuranService {
     );
   }
 
-  async getRecitations(query: LanguageQueryDto): Promise<unknown> {
+  getRecitations(query: LanguageQueryDto): Promise<unknown> {
     void query;
-    const rows = await this.catalogRepository.listActiveReciters({
+    const cacheKey = this.cache.buildKey('resources', '/catalog/recitations', {
       kind: 'AYAH',
     });
-    return {
-      recitations: rows.map(toQfReciterResource),
-    };
+    return this.cache.getOrSet(
+      cacheKey,
+      this.config.cacheTtl.resourcesSeconds,
+      async () => {
+        const rows = await this.catalogRepository.listActiveReciters({
+          kind: 'AYAH',
+        });
+        return {
+          recitations: rows.map(toQfReciterResource),
+        };
+      },
+    );
   }
 
-  async getChapterReciters(query: LanguageQueryDto): Promise<unknown> {
+  getChapterReciters(query: LanguageQueryDto): Promise<unknown> {
     void query;
-    const rows = await this.catalogRepository.listActiveReciters({
-      kind: 'CHAPTER',
-    });
-    return {
-      reciters: rows.map(toQfReciterResource),
-    };
+    const cacheKey = this.cache.buildKey(
+      'resources',
+      '/catalog/chapter-reciters',
+      { kind: 'CHAPTER' },
+    );
+    return this.cache.getOrSet(
+      cacheKey,
+      this.config.cacheTtl.resourcesSeconds,
+      async () => {
+        const rows = await this.catalogRepository.listActiveReciters({
+          kind: 'CHAPTER',
+        });
+        return {
+          reciters: rows.map(toQfReciterResource),
+        };
+      },
+    );
   }
 
   getChapterAudioFiles(reciterId: number): Promise<unknown> {
@@ -891,6 +944,7 @@ export class QuranService {
       cacheKey,
       this.config.cacheTtl.searchSeconds,
       () => this.client.getSearch<unknown>('/search', params),
+      { retainSeconds: this.config.cacheTtl.searchSeconds },
     );
 
     await this.analyticsTracking.track({
@@ -926,6 +980,33 @@ export class QuranService {
    * Fetch QF verses with only numeric translation ids, then soft-merge
    * allowlisted QuranEnc translations onto each verse.
    */
+  private prefetchNextSurahVersePage(
+    chapter: number,
+    query: VersesQueryDto,
+    payload: unknown,
+  ): void {
+    if (
+      process.env.NODE_ENV === 'test' ||
+      !payload ||
+      typeof payload !== 'object'
+    ) {
+      return;
+    }
+    const next = (payload as { pagination?: { next_page?: unknown } })
+      .pagination?.next_page;
+    if (
+      typeof next !== 'number' ||
+      !Number.isFinite(next) ||
+      next === query.page
+    ) {
+      return;
+    }
+    void this.cachedVersesWithOptionalEnc(`/verses/by_chapter/${chapter}`, {
+      ...query,
+      page: next,
+    }).catch(() => undefined);
+  }
+
   private async cachedVersesWithOptionalEnc(
     path: string,
     query: VersesQueryDto,

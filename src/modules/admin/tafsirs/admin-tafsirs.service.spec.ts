@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import { QuranCacheService } from '../../quran/cache/quran-cache.service';
 import { QfCatalogSyncService } from '../../quran/catalog/qf-catalog-sync.service';
 import { AdminLogsService } from '../logs/admin-logs.service';
 import { AdminTafsirsService } from './admin-tafsirs.service';
@@ -56,6 +57,10 @@ describe('AdminTafsirsService', () => {
         {
           provide: QfCatalogSyncService,
           useValue: { syncTafsirsOnly: jest.fn() },
+        },
+        {
+          provide: QuranCacheService,
+          useValue: { invalidateResourceLists: jest.fn().mockResolvedValue(0) },
         },
       ],
     }).compile();

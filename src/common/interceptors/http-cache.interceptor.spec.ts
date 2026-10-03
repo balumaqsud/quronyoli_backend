@@ -55,4 +55,35 @@ describe('HttpCacheInterceptor', () => {
         },
       });
   });
+
+  it('sets private-long when metadata is present', (done) => {
+    const setHeader = jest.fn();
+    const reflector = {
+      getAllAndOverride: () => 'private-long',
+    } as unknown as Reflector;
+    const interceptor = new HttpCacheInterceptor(reflector);
+    const context = {
+      getHandler: () => ({}),
+      getClass: () => ({}),
+      switchToHttp: () => ({
+        getResponse: () => ({ setHeader }),
+      }),
+    } as unknown as ExecutionContext;
+
+    interceptor
+      .intercept(context, { handle: () => of({ ok: true }) } as CallHandler)
+      .subscribe({
+        complete: () => {
+          expect(setHeader).toHaveBeenCalledWith(
+            'Cache-Control',
+            'private, max-age=3600, stale-while-revalidate=86400',
+          );
+          expect(setHeader).not.toHaveBeenCalledWith(
+            'Cache-Control',
+            expect.stringContaining('public'),
+          );
+          done();
+        },
+      });
+  });
 });

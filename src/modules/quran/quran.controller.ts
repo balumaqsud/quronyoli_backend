@@ -41,6 +41,7 @@ import { QuranService } from './quran.service';
 @ApiUnauthorizedResponse({ description: 'Authentication required' })
 @ApiTooManyRequestsResponse({ description: 'Per-user rate limit exceeded' })
 @UseGuards(QuranRateLimitGuard)
+@HttpCache('private-long')
 @Controller({
   path: 'quran',
   version: '1',
@@ -49,7 +50,6 @@ export class QuranController {
   constructor(private readonly quranService: QuranService) {}
 
   @Get('surahs')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'List surahs/chapters' })
   @ApiOkResponse({ description: 'Surah list from Quran.Foundation' })
   getSurahs(@Query() query: LanguageQueryDto): Promise<unknown> {
@@ -57,7 +57,6 @@ export class QuranController {
   }
 
   @Get('surahs/:id')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get a surah by ID' })
   @ApiParam({ name: 'id', example: 1 })
   getSurah(
@@ -68,7 +67,6 @@ export class QuranController {
   }
 
   @Get('surahs/:id/info')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get surah info' })
   getSurahInfo(
     @Param('id', ParseIntPipe) id: number,
@@ -87,6 +85,7 @@ export class QuranController {
   }
 
   @Get('ayahs/daily')
+  @HttpCache('no-store')
   @ApiOperation({
     summary: 'Get the Daily Ayah for the user local calendar date',
     description:
@@ -101,6 +100,7 @@ export class QuranController {
   }
 
   @Get('ayahs/by-key/:verseKey')
+  @HttpCache('no-store')
   @ApiOperation({
     summary: 'Get an ayah by verse key (e.g. 1:1)',
     description:
@@ -200,7 +200,6 @@ export class QuranController {
   }
 
   @Get('pages')
-  @HttpCache('private-short')
   @ApiOperation({
     summary: 'List Madani Mushaf page metadata',
     description:
@@ -235,7 +234,6 @@ export class QuranController {
   }
 
   @Get('pages/:pageNumber')
-  @HttpCache('private-short')
   @ApiOperation({
     summary: 'Get Mushaf page metadata by page number',
     description:
@@ -251,70 +249,60 @@ export class QuranController {
   }
 
   @Get('hizbs')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'List hizb metadata' })
   getHizbs(): Promise<unknown> {
     return this.quranService.getHizbs();
   }
 
   @Get('hizbs/:id')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get hizb metadata by ID' })
   getHizb(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
     return this.quranService.getHizb(id);
   }
 
   @Get('rub-el-hizbs')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'List rub el hizb metadata' })
   getRubElHizbs(): Promise<unknown> {
     return this.quranService.getRubElHizbs();
   }
 
   @Get('rub-el-hizbs/:id')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get rub el hizb metadata by ID' })
   getRubElHizb(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
     return this.quranService.getRubElHizb(id);
   }
 
   @Get('rukus')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'List ruku metadata' })
   getRukus(): Promise<unknown> {
     return this.quranService.getRukus();
   }
 
   @Get('rukus/:id')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get ruku metadata by ID' })
   getRuku(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
     return this.quranService.getRuku(id);
   }
 
   @Get('manzils')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'List manzil metadata' })
   getManzils(): Promise<unknown> {
     return this.quranService.getManzils();
   }
 
   @Get('manzils/:id')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get manzil metadata by ID' })
   getManzil(@Param('id', ParseIntPipe) id: number): Promise<unknown> {
     return this.quranService.getManzil(id);
   }
 
   @Get('languages')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'List Quran.Foundation language resources' })
   getLanguages(@Query() query: LanguageQueryDto): Promise<unknown> {
     return this.quranService.getLanguages(query);
   }
 
   @Get('mushafs')
-  @HttpCache('private-short')
   @ApiOperation({
     summary: 'List known mushaf IDs for verse/page rendering',
     description:
@@ -352,14 +340,12 @@ export class QuranController {
   }
 
   @Get('translations')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'List translation resources' })
   getTranslations(@Query() query: LanguageQueryDto): Promise<unknown> {
     return this.quranService.getTranslations(query);
   }
 
   @Get('translations/:translationId/info')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'Get translation resource info' })
   getTranslationInfo(
     @Param('translationId') translationId: string,
@@ -407,7 +393,6 @@ export class QuranController {
   }
 
   @Get('tafsirs')
-  @HttpCache('private-short')
   @ApiOperation({ summary: 'List tafsir resources' })
   getTafsirs(@Query() query: LanguageQueryDto): Promise<unknown> {
     return this.quranService.getTafsirs(query);
@@ -518,6 +503,7 @@ export class QuranController {
   }
 
   @Get('search')
+  @HttpCache('no-store')
   @ApiOperation({ summary: 'Search Quran content via Quran.Foundation Search' })
   search(
     @CurrentUser() currentUser: AuthenticatedUser,

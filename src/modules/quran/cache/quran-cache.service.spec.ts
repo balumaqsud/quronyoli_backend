@@ -18,7 +18,11 @@ describe('QuranCacheService', () => {
 
     service = new QuranCacheService(
       redis as unknown as RedisService,
-      { warn: jest.fn(), info: jest.fn() } as unknown as PinoLogger,
+      {
+        warn: jest.fn(),
+        info: jest.fn(),
+        debug: jest.fn(),
+      } as unknown as PinoLogger,
     );
   });
 
@@ -35,6 +39,76 @@ describe('QuranCacheService', () => {
 
     await expect(service.getJson('key')).resolves.toBeNull();
     expect(redis.del).toHaveBeenCalledWith('key');
+  });
+
+  it('returns a fresh envelope without calling the loader', async () => {
+    redis.get.mockResolvedValue(
+      JSON.stringify({
+        v: 1,
+        freshUntil: Date.now() + 60_000,
+        value: { ok: true },
+      }),
+    );
+    const loader = jest.fn();
+
+    await expect(service.getOrSet('fresh', 60, loader)).resolves.toEqual({
+      ok: true,
+    });
+    expect(loader).not.toHaveBeenCalled();
+  });
+
+  it('returns legacy raw JSON as a hit', async () => {
+    redis.get.mockResolvedValue(JSON.stringify({ chapters: [1] }));
+    const loader = jest.fn();
+
+    await expect(service.getOrSet('legacy', 60, loader)).resolves.toEqual({
+      chapters: [1],
+    });
+    expect(loader).not.toHaveBeenCalled();
+  });
+
+  it('returns a stale entry without waiting for refresh', async () => {
+    redis.get.mockResolvedValue(
+      JSON.stringify({
+        v: 1,
+        freshUntil: Date.now() - 1_000,
+        value: { ok: true },
+      }),
+    );
+    let resolveLoader: (value: unknown) => void = () => undefined;
+    const loader = jest.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveLoader = resolve;
+        }),
+    );
+
+    await expect(
+      service.getOrSet('stale', 60, loader, { retainSeconds: 86_400 }),
+    ).resolves.toEqual({ ok: true });
+    expect(loader).toHaveBeenCalledTimes(1);
+    expect(redis.set).not.toHaveBeenCalled();
+
+    resolveLoader({ ok: false });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(redis.set).toHaveBeenCalled();
+  });
+
+  it('keeps the stale body when refresh fails', async () => {
+    redis.get.mockResolvedValue(
+      JSON.stringify({
+        v: 1,
+        freshUntil: Date.now() - 5_000,
+        value: { ok: true },
+      }),
+    );
+    const loader = jest.fn().mockRejectedValue(new Error('upstream'));
+
+    await expect(service.getOrSet('stale-fail', 60, loader)).resolves.toEqual({
+      ok: true,
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(redis.set).not.toHaveBeenCalled();
   });
 
   it('loads once for concurrent misses', async () => {

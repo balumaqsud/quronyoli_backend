@@ -11,6 +11,7 @@ import {
 } from '../../../common/pagination/offset-pagination.dto';
 import { CurrentAdminContext } from '../../../common/decorators/current-admin.decorator';
 import { PrismaService } from '../../../infrastructure/database/prisma.service';
+import { QuranCacheService } from '../../quran/cache/quran-cache.service';
 import { QfCatalogSyncService } from '../../quran/catalog/qf-catalog-sync.service';
 import { resolveCatalogLanguageFilter } from '../../quran/catalog/qf-catalog.mapper';
 import { AuthRequestContext } from '../../auth/interfaces/auth-request-context.interface';
@@ -32,6 +33,7 @@ export class AdminTranslationsService {
     private readonly prisma: PrismaService,
     private readonly adminLogsService: AdminLogsService,
     private readonly catalogSyncService: QfCatalogSyncService,
+    private readonly quranCache: QuranCacheService,
   ) {}
 
   async list(
@@ -113,6 +115,7 @@ export class AdminTranslationsService {
       userAgent: context.userAgent,
     });
 
+    await this.quranCache.invalidateResourceLists();
     return this.toAdminTranslation(translation);
   }
 
@@ -161,6 +164,7 @@ export class AdminTranslationsService {
       userAgent: context.userAgent,
     });
 
+    await this.quranCache.invalidateResourceLists();
     return this.toAdminTranslation(translation);
   }
 
@@ -189,6 +193,7 @@ export class AdminTranslationsService {
       userAgent: context.userAgent,
     });
 
+    await this.quranCache.invalidateResourceLists();
     return { updated: dto.ids.length };
   }
 
@@ -237,6 +242,7 @@ export class AdminTranslationsService {
       userAgent: context.userAgent,
     });
 
+    await this.quranCache.invalidateResourceLists();
     return this.toAdminTranslation(translation);
   }
 

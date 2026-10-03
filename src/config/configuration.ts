@@ -513,7 +513,7 @@ export default (): AppConfiguration => {
           10,
         ),
         versesSeconds: Number.parseInt(
-          process.env.QF_CACHE_TTL_VERSES_SECONDS ?? '3600',
+          process.env.QF_CACHE_TTL_VERSES_SECONDS ?? '86400',
           10,
         ),
         resourcesSeconds: Number.parseInt(
@@ -525,7 +525,7 @@ export default (): AppConfiguration => {
           10,
         ),
         audioSeconds: Number.parseInt(
-          process.env.QF_CACHE_TTL_AUDIO_SECONDS ?? '3600',
+          process.env.QF_CACHE_TTL_AUDIO_SECONDS ?? '86400',
           10,
         ),
       },
